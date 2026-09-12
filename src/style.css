@@ -1,0 +1,342 @@
+:root {
+  --bg-color: #0b110b;
+  --panel-bg: #141f14;
+  --panel-border: #284428;
+  --primary-gold: #f6c026;
+  --forest-green: #38b000;
+  --ruby-red: #ff3333;
+  --text-main: #d0f0c0;
+  --text-dim: #7da57d;
+  --font-retro: 'Press Start 2P', monospace, system-ui;
+  --font-arcade: 'VT323', monospace;
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
+}
+
+html, body {
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  background-color: var(--bg-color);
+  color: var(--text-main);
+  font-family: var(--font-retro);
+  font-size: 12px;
+}
+
+#app {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  height: 100%;
+  position: relative;
+}
+
+/* Header & Status Bar */
+#arcade-header {
+  height: 48px;
+  background: linear-gradient(180deg, #182818 0%, #0d170d 100%);
+  border-bottom: 2px solid var(--panel-border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 16px;
+  z-index: 100;
+  box-shadow: 0 2px 10px rgba(0,0,0,0.6);
+}
+
+.header-brand {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.tree-icon {
+  font-size: 18px;
+}
+
+.game-title {
+  font-size: 13px;
+  letter-spacing: 1px;
+  color: #fff;
+  text-shadow: 2px 2px 0px #1e3306;
+}
+
+.badge-mini-app {
+  font-size: 8px;
+  background-color: var(--primary-gold);
+  color: #12180d;
+  padding: 3px 6px;
+  border-radius: 4px;
+  font-weight: bold;
+  letter-spacing: 0.5px;
+}
+
+.header-status {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.header-actions {
+  display: flex;
+  gap: 6px;
+}
+
+.pixel-icon-btn {
+  background: #192a19;
+  border: 1px solid #335933;
+  color: #fff;
+  border-radius: 4px;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  font-size: 14px;
+  transition: background 0.15s;
+}
+
+.pixel-icon-btn:hover {
+  background: #284428;
+}
+
+.pixel-icon-btn:active {
+  transform: translateY(1px);
+}
+
+/* Game Canvas Wrapper */
+#game-wrapper {
+  flex: 1;
+  position: relative;
+  width: 100%;
+  height: calc(100% - 48px);
+  overflow: hidden;
+  background: #000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+#game-container {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+#game-container canvas {
+  image-rendering: pixelated;
+  image-rendering: crisp-edges;
+  image-rendering: -moz-crisp-edges;
+  max-width: 100%;
+  max-height: 100%;
+  box-shadow: 0 0 20px rgba(0, 0, 0, 0.8);
+}
+
+/* CRT Scanlines Overlay */
+.crt-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 50;
+  opacity: 0;
+  transition: opacity 0.3s;
+}
+
+.crt-overlay.active {
+  opacity: 1;
+  background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%), linear-gradient(90deg, rgba(255, 0, 0, 0.03), rgba(0, 255, 0, 0.01), rgba(0, 0, 255, 0.03));
+  background-size: 100% 3px, 6px 100%;
+}
+
+/* Virtual Touch Controls */
+.touch-controls {
+  position: absolute;
+  bottom: 12px;
+  left: 0;
+  right: 0;
+  padding: 0 20px;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  pointer-events: none;
+  z-index: 60;
+}
+
+.touch-controls.hidden {
+  display: none !important;
+}
+
+.touch-btn {
+  pointer-events: auto;
+  touch-action: none;
+  background: rgba(20, 36, 20, 0.75);
+  border: 2px solid rgba(80, 150, 80, 0.8);
+  border-radius: 8px;
+  color: #fff;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.4);
+}
+
+.touch-btn:active, .touch-btn.pressed {
+  background: rgba(60, 130, 60, 0.9);
+  border-color: #98ff20;
+  transform: translateY(2px);
+}
+
+.touch-dpad {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.touch-dpad-vertical {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.dpad-btn {
+  width: 50px;
+  height: 48px;
+  font-size: 16px;
+}
+
+.touch-actions {
+  display: flex;
+  gap: 12px;
+}
+
+.action-btn {
+  width: 68px;
+  height: 64px;
+  font-family: var(--font-retro);
+  font-size: 10px;
+  border-radius: 50%;
+}
+
+.action-btn.attack {
+  background: rgba(140, 30, 30, 0.75);
+  border-color: #ff5555;
+}
+
+.action-btn.attack:active, .action-btn.attack.pressed {
+  background: rgba(200, 40, 40, 0.9);
+  border-color: #ffaaaa;
+}
+
+.action-btn.jump {
+  background: rgba(30, 80, 140, 0.75);
+  border-color: #55aaff;
+}
+
+.action-btn.jump:active, .action-btn.jump.pressed {
+  background: rgba(40, 120, 200, 0.9);
+  border-color: #aaddff;
+}
+
+.action-btn small {
+  font-size: 7px;
+  opacity: 0.7;
+  margin-top: 2px;
+}
+
+/* Modal Window */
+.modal-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.75);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 200;
+  backdrop-filter: blur(4px);
+}
+
+.modal-overlay.hidden {
+  display: none;
+}
+
+.modal-card {
+  width: 90%;
+  max-width: 540px;
+  max-height: 85%;
+  background: #152215;
+  border: 3px solid #3c6e3c;
+  border-radius: 8px;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 0 25px rgba(0, 0, 0, 0.9);
+  overflow: hidden;
+}
+
+.modal-header {
+  padding: 12px 16px;
+  background: #1e351e;
+  border-bottom: 2px solid #3c6e3c;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.modal-header h3 {
+  font-size: 12px;
+  color: var(--primary-gold);
+}
+
+.pixel-close-btn {
+  background: transparent;
+  border: none;
+  color: #ff5555;
+  font-size: 14px;
+  cursor: pointer;
+}
+
+.modal-body {
+  padding: 16px;
+  overflow-y: auto;
+  font-size: 11px;
+  line-height: 1.6;
+}
+
+/* Responsive adjustments */
+@media (max-width: 600px) {
+  #arcade-header {
+    padding: 0 8px;
+  }
+  .game-title {
+    font-size: 11px;
+  }
+  .badge-mini-app {
+    display: none;
+  }
+  .dpad-btn {
+    width: 44px;
+    height: 42px;
+    font-size: 14px;
+  }
+  .action-btn {
+    width: 58px;
+    height: 56px;
+    font-size: 9px;
+  }
+}

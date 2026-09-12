@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+  <title>Luna Blade: The High Forest | 2D Action-Platformer</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=VT323&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/src/style.css" />
+</head>
+<body>
+  <div id="app">
+    <!-- Retro Arcade Header -->
+    <header id="arcade-header">
+      <div class="header-brand">
+        <span class="tree-icon">🌲</span>
+        <span class="game-title">LUNA BLADE</span>
+        <span class="badge-mini-app">ARCADE EDITION</span>
+      </div>
+      
+      <div class="header-status">
+        <!-- Utility Buttons -->
+        <div class="header-actions">
+          <button id="btn-audio" class="pixel-icon-btn" title="Toggle Sound (M)">🔊</button>
+          <button id="btn-touch" class="pixel-icon-btn" title="Toggle Virtual Touch Controls">📱</button>
+          <button id="btn-crt" class="pixel-icon-btn" title="Toggle Retro CRT Scanlines">📺</button>
+          <button id="btn-fullscreen" class="pixel-icon-btn" title="Toggle Fullscreen">⛶</button>
+        </div>
+      </div>
+    </header>
+
+    <!-- Main Game Canvas Container -->
+    <main id="game-wrapper">
+      <div id="game-container"></div>
+      <div id="crt-overlay" class="crt-overlay active"></div>
+      
+      <!-- Virtual Touch Controls for Mobile Viewport -->
+      <div id="touch-controls" class="touch-controls hidden">
+        <div class="touch-dpad">
+          <button id="touch-left" class="touch-btn dpad-btn" data-key="left">◀</button>
+          <div class="touch-dpad-vertical">
+            <button id="touch-up" class="touch-btn dpad-btn" data-key="up">▲</button>
+            <button id="touch-down" class="touch-btn dpad-btn" data-key="down">▼</button>
+          </div>
+          <button id="touch-right" class="touch-btn dpad-btn" data-key="right">▶</button>
+        </div>
+
+        <div class="touch-actions">
+          <button id="touch-attack" class="touch-btn action-btn attack" data-key="attack">
+            <span>SLASH</span>
+            <small>J</small>
+          </button>
+          <button id="touch-jump" class="touch-btn action-btn jump" data-key="jump">
+            <span>JUMP</span>
+            <small>SPC</small>
+          </button>
+        </div>
+      </div>
+    </main>
+
+    <!-- Game Info / Settings Modal Overlay -->
+    <div id="modal-container" class="modal-overlay hidden">
+      <div class="modal-card">
+        <div class="modal-header">
+          <h3 id="modal-title">GAME INFO</h3>
+          <button id="btn-close-modal" class="pixel-close-btn">✖</button>
+        </div>
+        <div id="modal-body" class="modal-body">
+          <!-- Dynamic Content -->
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script type="module" src="/src/main.js"></script>
+</body>
+</html>

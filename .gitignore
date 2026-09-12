@@ -1,0 +1,16 @@
+# Dependencies
+node_modules/
+
+# Production build
+dist/
+
+# Test screenshots & scratch files
+screenshot_*.png
+*.log
+
+# Archives
+*.zip
+
+# System files
+.DS_Store
+Thumbs.db
