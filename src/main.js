@@ -39,6 +39,7 @@ const phaserConfig = {
 // Start Game
 const game = new Phaser.Game(phaserConfig);
 window.game = game;
+window.__GAME__ = game;
 
 // Initialize Virtual Touch Controls & Header Actions
 window.touchController = new TouchController(game);

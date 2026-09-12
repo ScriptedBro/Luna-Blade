@@ -56,6 +56,42 @@ export default class BootScene extends Phaser.Scene {
     this.load.spritesheet('bee_attack', 'assets/mobs/bee/attack.png', { frameWidth: 64, frameHeight: 64 });
     this.load.spritesheet('bee_hit', 'assets/mobs/bee/hit.png', { frameWidth: 64, frameHeight: 64 });
 
+    // Boar Chieftain (Boss Gorgok) Spritesheets
+    this.load.spritesheet('chieftain_idle', 'assets/mobs/boar_chieftain/idle.png', { frameWidth: 48, frameHeight: 32 });
+    this.load.spritesheet('chieftain_walk', 'assets/mobs/boar_chieftain/walk.png', { frameWidth: 48, frameHeight: 32 });
+    this.load.spritesheet('chieftain_run', 'assets/mobs/boar_chieftain/run.png', { frameWidth: 48, frameHeight: 32 });
+    this.load.spritesheet('chieftain_hit', 'assets/mobs/boar_chieftain/hit.png', { frameWidth: 48, frameHeight: 32 });
+
+    // Mushroom Spritesheets
+    this.load.spritesheet('mushroom_idle', 'assets/mobs/mushroom/idle.png', { frameWidth: 150, frameHeight: 150 });
+    this.load.spritesheet('mushroom_run', 'assets/mobs/mushroom/run.png', { frameWidth: 150, frameHeight: 150 });
+    this.load.spritesheet('mushroom_attack', 'assets/mobs/mushroom/attack.png', { frameWidth: 150, frameHeight: 150 });
+    this.load.spritesheet('mushroom_hit', 'assets/mobs/mushroom/hit.png', { frameWidth: 150, frameHeight: 150 });
+    this.load.spritesheet('mushroom_dead', 'assets/mobs/mushroom/death.png', { frameWidth: 150, frameHeight: 150 });
+    this.load.spritesheet('mushroom_spore', 'assets/mobs/mushroom/spore.png', { frameWidth: 50, frameHeight: 50 });
+
+    // Flying Eye Spritesheets
+    this.load.spritesheet('eye_flight', 'assets/mobs/flying_eye/flight.png', { frameWidth: 150, frameHeight: 150 });
+    this.load.spritesheet('eye_attack', 'assets/mobs/flying_eye/attack.png', { frameWidth: 150, frameHeight: 150 });
+    this.load.spritesheet('eye_hit', 'assets/mobs/flying_eye/hit.png', { frameWidth: 150, frameHeight: 150 });
+    this.load.spritesheet('eye_dead', 'assets/mobs/flying_eye/death.png', { frameWidth: 150, frameHeight: 150 });
+    this.load.spritesheet('eye_projectile', 'assets/mobs/flying_eye/projectile.png', { frameWidth: 48, frameHeight: 48 });
+
+    // Goblin Spritesheets
+    this.load.spritesheet('goblin_idle', 'assets/mobs/goblin/idle.png', { frameWidth: 150, frameHeight: 150 });
+    this.load.spritesheet('goblin_run', 'assets/mobs/goblin/run.png', { frameWidth: 150, frameHeight: 150 });
+    this.load.spritesheet('goblin_attack', 'assets/mobs/goblin/attack.png', { frameWidth: 150, frameHeight: 150 });
+    this.load.spritesheet('goblin_hit', 'assets/mobs/goblin/hit.png', { frameWidth: 150, frameHeight: 150 });
+    this.load.spritesheet('goblin_dead', 'assets/mobs/goblin/death.png', { frameWidth: 150, frameHeight: 150 });
+    this.load.spritesheet('goblin_bomb', 'assets/mobs/goblin/bomb.png', { frameWidth: 100, frameHeight: 100 });
+
+    // Evil Wizard (Boss Malakor) Spritesheets
+    this.load.spritesheet('wizard_idle', 'assets/mobs/wizard/idle.png', { frameWidth: 150, frameHeight: 150 });
+    this.load.spritesheet('wizard_move', 'assets/mobs/wizard/move.png', { frameWidth: 150, frameHeight: 150 });
+    this.load.spritesheet('wizard_attack', 'assets/mobs/wizard/attack.png', { frameWidth: 150, frameHeight: 150 });
+    this.load.spritesheet('wizard_hit', 'assets/mobs/wizard/hit.png', { frameWidth: 150, frameHeight: 150 });
+    this.load.spritesheet('wizard_dead', 'assets/mobs/wizard/death.png', { frameWidth: 150, frameHeight: 150 });
+
     // Environment & Parallax High Forest Layers
     this.load.image('env_bg', 'assets/env/forest_backdrop.png');
     this.load.image('sky_backdrop', 'assets/env/sky_backdrop.png');
@@ -246,6 +282,193 @@ export default class BootScene extends Phaser.Scene {
       key: 'bee_hit_anim',
       frames: this.anims.generateFrameNumbers('bee_hit', { start: 0, end: 3 }),
       frameRate: 10,
+      repeat: 0
+    });
+
+    // Boar Chieftain (Gorgok) Anims
+    this.anims.create({
+      key: 'chieftain_idle_anim',
+      frames: this.anims.generateFrameNumbers('chieftain_idle', { start: 0, end: 3 }),
+      frameRate: 6,
+      repeat: -1
+    });
+
+    this.anims.create({
+      key: 'chieftain_walk_anim',
+      frames: this.anims.generateFrameNumbers('chieftain_walk', { start: 0, end: 5 }),
+      frameRate: 8,
+      repeat: -1
+    });
+
+    this.anims.create({
+      key: 'chieftain_run_anim',
+      frames: this.anims.generateFrameNumbers('chieftain_run', { start: 0, end: 5 }),
+      frameRate: 14,
+      repeat: -1
+    });
+
+    this.anims.create({
+      key: 'chieftain_hit_anim',
+      frames: this.anims.generateFrameNumbers('chieftain_hit', { start: 0, end: 3 }),
+      frameRate: 10,
+      repeat: 0
+    });
+
+    // Mushroom Monster Anims
+    this.anims.create({
+      key: 'mushroom_idle_anim',
+      frames: this.anims.generateFrameNumbers('mushroom_idle', { start: 0, end: 3 }),
+      frameRate: 6,
+      repeat: -1
+    });
+
+    this.anims.create({
+      key: 'mushroom_run_anim',
+      frames: this.anims.generateFrameNumbers('mushroom_run', { start: 0, end: 7 }),
+      frameRate: 8,
+      repeat: -1
+    });
+
+    this.anims.create({
+      key: 'mushroom_attack_anim',
+      frames: this.anims.generateFrameNumbers('mushroom_attack', { start: 0, end: 7 }),
+      frameRate: 10,
+      repeat: 0
+    });
+
+    this.anims.create({
+      key: 'mushroom_hit_anim',
+      frames: this.anims.generateFrameNumbers('mushroom_hit', { start: 0, end: 3 }),
+      frameRate: 10,
+      repeat: 0
+    });
+
+    this.anims.create({
+      key: 'mushroom_dead_anim',
+      frames: this.anims.generateFrameNumbers('mushroom_dead', { start: 0, end: 3 }),
+      frameRate: 8,
+      repeat: 0
+    });
+
+    this.anims.create({
+      key: 'mushroom_spore_anim',
+      frames: this.anims.generateFrameNumbers('mushroom_spore', { start: 0, end: 7 }),
+      frameRate: 12,
+      repeat: -1
+    });
+
+    // Flying Eye Anims
+    this.anims.create({
+      key: 'eye_flight_anim',
+      frames: this.anims.generateFrameNumbers('eye_flight', { start: 0, end: 7 }),
+      frameRate: 10,
+      repeat: -1
+    });
+
+    this.anims.create({
+      key: 'eye_attack_anim',
+      frames: this.anims.generateFrameNumbers('eye_attack', { start: 0, end: 7 }),
+      frameRate: 12,
+      repeat: 0
+    });
+
+    this.anims.create({
+      key: 'eye_hit_anim',
+      frames: this.anims.generateFrameNumbers('eye_hit', { start: 0, end: 3 }),
+      frameRate: 10,
+      repeat: 0
+    });
+
+    this.anims.create({
+      key: 'eye_dead_anim',
+      frames: this.anims.generateFrameNumbers('eye_dead', { start: 0, end: 3 }),
+      frameRate: 8,
+      repeat: 0
+    });
+
+    this.anims.create({
+      key: 'eye_projectile_anim',
+      frames: this.anims.generateFrameNumbers('eye_projectile', { start: 0, end: 7 }),
+      frameRate: 12,
+      repeat: -1
+    });
+
+    // Goblin Raider Anims
+    this.anims.create({
+      key: 'goblin_idle_anim',
+      frames: this.anims.generateFrameNumbers('goblin_idle', { start: 0, end: 3 }),
+      frameRate: 6,
+      repeat: -1
+    });
+
+    this.anims.create({
+      key: 'goblin_run_anim',
+      frames: this.anims.generateFrameNumbers('goblin_run', { start: 0, end: 7 }),
+      frameRate: 10,
+      repeat: -1
+    });
+
+    this.anims.create({
+      key: 'goblin_attack_anim',
+      frames: this.anims.generateFrameNumbers('goblin_attack', { start: 0, end: 7 }),
+      frameRate: 12,
+      repeat: 0
+    });
+
+    this.anims.create({
+      key: 'goblin_hit_anim',
+      frames: this.anims.generateFrameNumbers('goblin_hit', { start: 0, end: 3 }),
+      frameRate: 10,
+      repeat: 0
+    });
+
+    this.anims.create({
+      key: 'goblin_dead_anim',
+      frames: this.anims.generateFrameNumbers('goblin_dead', { start: 0, end: 3 }),
+      frameRate: 8,
+      repeat: 0
+    });
+
+    this.anims.create({
+      key: 'goblin_bomb_anim',
+      frames: this.anims.generateFrameNumbers('goblin_bomb', { start: 0, end: 18 }),
+      frameRate: 14,
+      repeat: 0
+    });
+
+    // Evil Wizard (Boss Malakor) Anims
+    this.anims.create({
+      key: 'wizard_idle_anim',
+      frames: this.anims.generateFrameNumbers('wizard_idle', { start: 0, end: 7 }),
+      frameRate: 8,
+      repeat: -1
+    });
+
+    this.anims.create({
+      key: 'wizard_move_anim',
+      frames: this.anims.generateFrameNumbers('wizard_move', { start: 0, end: 7 }),
+      frameRate: 8,
+      repeat: -1
+    });
+
+    this.anims.create({
+      key: 'wizard_attack_anim',
+      frames: this.anims.generateFrameNumbers('wizard_attack', { start: 0, end: 7 }),
+      frameRate: 10,
+      repeat: 0
+    });
+
+    this.anims.create({
+      key: 'wizard_hit_anim',
+      frames: this.anims.generateFrameNumbers('wizard_hit', { start: 0, end: 3 }),
+      frameRate: 10,
+      repeat: 0
+    });
+
+    this.anims.create({
+      key: 'wizard_dead_anim',
+      frames: this.anims.generateFrameNumbers('wizard_dead', { start: 0, end: 4 }),
+      frameRate: 7,
       repeat: 0
     });
   }

@@ -39,6 +39,41 @@ export const GAME_CONFIG = {
       SWOOP_SPEED: 165,
       PTS: 35,
       DAMAGE: 1,
+    },
+    MUSHROOM: {
+      HP: 45,
+      WALK_SPEED: 35,
+      SPORE_SPEED: 120,
+      PTS: 45,
+      DAMAGE: 1,
+    },
+    FLYING_EYE: {
+      HP: 35,
+      HOVER_SPEED: 60,
+      DIVE_SPEED: 140,
+      PTS: 40,
+      DAMAGE: 1,
+    },
+    GOBLIN: {
+      HP: 40,
+      WALK_SPEED: 70,
+      BOMB_SPEED: 130,
+      PTS: 45,
+      DAMAGE: 1,
+    },
+    BOSS_GORGOK: {
+      HP: 240,
+      NAME: 'GORGOK, FOREST CHIEFTAIN',
+      WALK_SPEED: 55,
+      CHARGE_SPEED: 220,
+      PTS: 500,
+      DAMAGE: 1,
+    },
+    BOSS_WIZARD: {
+      HP: 300,
+      NAME: 'MALAKOR, CORRUPTED ARCHMAGE',
+      PTS: 750,
+      DAMAGE: 1,
     }
   },
 

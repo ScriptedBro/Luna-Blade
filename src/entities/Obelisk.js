@@ -8,6 +8,7 @@ export default class Obelisk extends Phaser.GameObjects.Container {
 
     this.shrineName = shrineName;
     this.isCleansed = false;
+    this.isLocked = false;
     this.cleansingProgress = 0;
     this.requiredHits = 3;
     this.setDepth(18);
@@ -24,6 +25,12 @@ export default class Obelisk extends Phaser.GameObjects.Container {
     // Corruption aura
     this.aura = scene.add.circle(0, -24, 16, 0x550022, 0.4);
     this.add(this.aura);
+
+    // Barrier shield (active when boss locked)
+    this.barrier = scene.add.circle(0, -24, 24, 0xaa0033, 0.35);
+    this.barrier.setStrokeStyle(1.5, 0xff2244);
+    this.barrier.setVisible(false);
+    this.add(this.barrier);
 
     // Prompt text
     this.promptText = scene.add.text(0, -56, 'PURGE CORRUPTION', {
@@ -53,8 +60,61 @@ export default class Obelisk extends Phaser.GameObjects.Container {
     this.body.setImmovable(true);
   }
 
+  lock() {
+    this.isLocked = true;
+    this.barrier.setVisible(true);
+    this.promptText.setText('SEALED BY BOSS 🔒');
+    this.promptText.setColor('#ff4444');
+
+    this.barrierTween = this.scene.tweens.add({
+      targets: this.barrier,
+      scale: 1.15,
+      alpha: 0.6,
+      duration: 600,
+      yoyo: true,
+      loop: -1
+    });
+  }
+
+  unlock() {
+    this.isLocked = false;
+    if (this.barrierTween) this.barrierTween.stop();
+
+    this.scene.tweens.add({
+      targets: this.barrier,
+      scale: 1.8,
+      alpha: 0,
+      duration: 500,
+      onComplete: () => this.barrier.setVisible(false)
+    });
+
+    sound.playObelisk();
+    this.promptText.setText('SHRINE UNLOCKED! STRIKE! ⚔️');
+    this.promptText.setColor('#ffff66');
+  }
+
   strike() {
     if (this.isCleansed) return false;
+
+    if (this.isLocked) {
+      sound.playHit();
+      const lockAlert = this.scene.add.text(this.x, this.y - 68, 'DEFEAT THE BOSS FIRST! 🔒', {
+        fontFamily: 'Press Start 2P',
+        fontSize: '6px',
+        color: '#ff4444',
+        stroke: '#000',
+        strokeThickness: 2
+      }).setOrigin(0.5);
+
+      this.scene.tweens.add({
+        targets: lockAlert,
+        y: this.y - 82,
+        alpha: 0,
+        duration: 800,
+        onComplete: () => lockAlert.destroy()
+      });
+      return false;
+    }
 
     this.cleansingProgress++;
     sound.playHit();

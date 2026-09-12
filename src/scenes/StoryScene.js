@@ -3,8 +3,15 @@ import Player from '../entities/Player.js';
 import Boar from '../entities/Boar.js';
 import Snail from '../entities/Snail.js';
 import Bee from '../entities/Bee.js';
+import Mushroom from '../entities/Mushroom.js';
+import FlyingEye from '../entities/FlyingEye.js';
+import Goblin from '../entities/Goblin.js';
+import BossGorgok from '../entities/BossGorgok.js';
+import BossWizard from '../entities/BossWizard.js';
+import Projectile from '../entities/Projectile.js';
 import Crate from '../entities/Crate.js';
 import Obelisk from '../entities/Obelisk.js';
+import BossHealthBar from '../ui/BossHealthBar.js';
 import { GAME_CONFIG } from '../config.js';
 import { sound } from '../engine/Audio.js';
 import { storage } from '../engine/Storage.js';
@@ -26,6 +33,13 @@ export default class StoryScene extends Phaser.Scene {
     this.levelHeight = 420;
     this.victoryAdvanceCallback = null;
     this.gameOverRetryCallback = null;
+
+    // Boss & Arena state
+    this.boss = null;
+    this.bossHealthBar = null;
+    this.bossTriggered = false;
+    this.arenaGateWall = null;
+    this.arenaGateVisual = null;
   }
 
   create() {
@@ -38,11 +52,12 @@ export default class StoryScene extends Phaser.Scene {
     // Lush Parallax High Forest Background & Atmosphere
     this.createForestBackground();
 
-    // Platform & Hazard groups
+    // Platform, Hazard, Crate, Enemy, and Projectile groups
     this.platforms = this.physics.add.staticGroup();
     this.hazards = this.physics.add.staticGroup();
     this.crates = this.physics.add.group();
     this.enemies = this.physics.add.group();
+    this.projectiles = this.physics.add.group({ runChildUpdate: true });
 
     // Build the Level Geometry & Spawns
     this.buildChapterLevel();
@@ -61,6 +76,15 @@ export default class StoryScene extends Phaser.Scene {
     this.physics.add.collider(this.crates, this.platforms);
     this.physics.add.collider(this.crates, this.crates);
 
+    // Projectile collisions with environment
+    this.physics.add.collider(this.projectiles, this.platforms, (proj) => {
+      if (proj.projType === 'goblin_bomb') {
+        // Bombs bounce with friction
+      } else {
+        proj.explode();
+      }
+    });
+
     // Hazards (Water in ch1, honeycomb traps in ch2, spikes in ch3)
     this.physics.add.overlap(this.player, this.hazards, (player, hazard) => {
       this.handleHazardHit(player, hazard);
@@ -71,6 +95,39 @@ export default class StoryScene extends Phaser.Scene {
       if (this.player.currentSwingHits && this.player.currentSwingHits.has(enemy)) return;
       if (this.player.currentSwingHits) this.player.currentSwingHits.add(enemy);
       this.handlePlayerAttackEnemy(enemy);
+    });
+
+    // Player attack vs projectiles (Deflect or cut!)
+    this.physics.add.overlap(this.player.attackHitbox, this.projectiles, (hitbox, proj) => {
+      if (!this.player.isAttacking || proj.isDead) return;
+      if (proj.isDeflectable && !proj.isDeflected) {
+        proj.deflect(this.player);
+      } else if (!proj.isDeflected) {
+        proj.explode();
+        this.registerComboHit();
+      }
+    });
+
+    // Player body vs projectile
+    this.physics.add.overlap(this.player, this.projectiles, (player, proj) => {
+      if (proj.isDead || proj.isDeflected || player.isDead) return;
+      proj.explode();
+      const knockDir = proj.x < player.x ? 1 : -1;
+      const damaged = player.takeDamage(1, knockDir);
+      if (damaged) {
+        this.comboCount = 0;
+        this.updateHearts();
+        if (player.isDead) {
+          this.handlePlayerGameOver();
+        }
+      }
+    });
+
+    // Deflected projectile vs enemies & bosses!
+    this.physics.add.overlap(this.enemies, this.projectiles, (enemy, proj) => {
+      if (!proj.isDeflected || proj.isDead || enemy.state === 'DEAD') return;
+      proj.explode();
+      enemy.takeDamage(35, proj.x);
     });
 
     // Player attack vs crates
@@ -156,7 +213,7 @@ export default class StoryScene extends Phaser.Scene {
       this.spawnMob('snail', 680, 340);
       this.spawnMob('snail', 860, 220);
       this.spawnMob('bee', 820, 150);
-      this.spawnMob('bee', 1040, 130);
+      this.spawnMob('flying_eye', 1040, 130);
       this.spawnCrate(740, 270);
 
       // --- ZONE 3: Ancient Pine Canopy & Ravine (1120 - 2060px) ---
@@ -171,36 +228,35 @@ export default class StoryScene extends Phaser.Scene {
       this.createPlatform(1700, 230, 100);
       this.createPlatform(1860, 180, 120);
 
-      this.spawnMob('boar', 1280, 340);
+      this.spawnMob('mushroom', 1240, 340);
       this.spawnMob('snail', 1390, 220);
-      this.spawnMob('bee', 1460, 160);
-      this.spawnMob('snail', 1680, 340);
+      this.spawnMob('flying_eye', 1460, 150);
+      this.spawnMob('goblin', 1680, 340);
       this.spawnMob('boar', 1760, 340);
-      this.spawnMob('bee', 1820, 120);
-      this.spawnMob('snail', 1880, 160);
+      this.spawnMob('mushroom', 1860, 340);
+      this.spawnMob('goblin', 1980, 340);
 
       this.spawnCrate(1240, 270);
       this.spawnCrate(1400, 350);
       this.spawnCrate(1720, 200);
       this.spawnCrate(1880, 150);
 
-      // --- ZONE 4: Obelisk Sanctuary & Guardian Horde (2060 - 2800px) ---
+      // --- ZONE 4: Obelisk Sanctuary & Boss Arena (2060 - 2800px) ---
       this.createHazard(2060, 400, 100, 'WATER HAZARD 🌊');
       this.createGround(2160, 380, 640);
 
       this.createPlatform(2260, 300, 100);
       this.createPlatform(2440, 240, 110);
 
-      this.spawnMob('boar', 2320, 340);
-      this.spawnMob('snail', 2460, 220);
-      this.spawnMob('bee', 2500, 140);
-      this.spawnMob('boar', 2540, 340);
+      this.spawnMob('boar', 2220, 340);
+      this.spawnMob('snail', 2280, 340);
 
       this.spawnCrate(2280, 270);
       this.spawnCrate(2520, 350);
 
-      // Ancient Obelisk at the sacred clearing
-      this.obelisk = new Obelisk(this, 2680, 380, 'Shrine of Whispering Waters');
+      // Ancient Obelisk at the sacred clearing (Locked by Chieftain Gorgok!)
+      this.obelisk = new Obelisk(this, 2720, 380, 'Shrine of Whispering Waters');
+      this.obelisk.lock();
 
     } else if (isCh2) {
       // =========================================================================
@@ -227,25 +283,25 @@ export default class StoryScene extends Phaser.Scene {
       this.createPlatform(1760, 280, 100);
       this.createPlatform(1940, 210, 120);
       this.createPlatform(2180, 270, 100);
+      this.createPlatform(2340, 210, 120);
+      this.createPlatform(2480, 270, 100);
 
-      // Bees, Snails & Boars
+      // Bees, Flying Eyes, Mushrooms, Goblins & Boars
       this.spawnMob('bee', 220, 160);
-      this.spawnMob('bee', 450, 120);
+      this.spawnMob('flying_eye', 440, 120);
       this.spawnMob('snail', 460, 155);
       this.spawnMob('boar', 340, 340);
-      this.spawnMob('bee', 720, 110);
+      this.spawnMob('mushroom', 600, 200);
+      this.spawnMob('goblin', 780, 140);
       this.spawnMob('bee', 900, 120);
       this.spawnMob('boar', 820, 340);
-      this.spawnMob('snail', 760, 340);
-      this.spawnMob('bee', 1260, 150);
-      this.spawnMob('snail', 1380, 200);
-      this.spawnMob('boar', 1420, 340);
+      this.spawnMob('flying_eye', 1200, 140);
+      this.spawnMob('mushroom', 1360, 190);
+      this.spawnMob('goblin', 1520, 140);
       this.spawnMob('bee', 1540, 120);
-      this.spawnMob('bee', 1880, 150);
-      this.spawnMob('snail', 1960, 190);
-      this.spawnMob('boar', 2040, 340);
-      this.spawnMob('bee', 2240, 130);
-      this.spawnMob('boar', 2360, 340);
+      this.spawnMob('boar', 1740, 340);
+      this.spawnMob('flying_eye', 1880, 140);
+      this.spawnMob('snail', 1960, 180);
 
       // Crates with high amber chance
       this.spawnCrate(280, 205);
@@ -256,8 +312,9 @@ export default class StoryScene extends Phaser.Scene {
       this.spawnCrate(2200, 245);
       this.spawnCrate(2420, 350);
 
-      // Obelisk
-      this.obelisk = new Obelisk(this, 2480, 380, 'Golden Hive Shrine');
+      // Obelisk (Locked by Boss Malakor!)
+      this.obelisk = new Obelisk(this, 2520, 380, 'Golden Hive Shrine');
+      this.obelisk.lock();
 
     } else {
       // =========================================================================
@@ -290,20 +347,20 @@ export default class StoryScene extends Phaser.Scene {
       // Elite waves
       this.spawnMob('boar', 180, 340);
       this.spawnMob('snail', 310, 200);
-      this.spawnMob('snail', 400, 340);
-      this.spawnMob('bee', 480, 160);
-      this.spawnMob('boar', 700, 340);
+      this.spawnMob('mushroom', 400, 340);
+      this.spawnMob('flying_eye', 480, 160);
+      this.spawnMob('goblin', 700, 340);
       this.spawnMob('boar', 820, 340);
       this.spawnMob('bee', 850, 140);
-      this.spawnMob('snail', 1140, 340);
-      this.spawnMob('boar', 1280, 340);
-      this.spawnMob('bee', 1360, 160);
+      this.spawnMob('mushroom', 1140, 340);
+      this.spawnMob('goblin', 1280, 340);
+      this.spawnMob('flying_eye', 1360, 160);
       this.spawnMob('snail', 1540, 230);
       this.spawnMob('boar', 1740, 340);
-      this.spawnMob('bee', 1820, 140);
-      this.spawnMob('snail', 1940, 210);
-      this.spawnMob('boar', 2220, 340);
-      this.spawnMob('bee', 2340, 150);
+      this.spawnMob('mushroom', 1820, 140);
+      this.spawnMob('goblin', 1940, 200);
+      this.spawnMob('flying_eye', 2220, 140);
+      this.spawnMob('boar', 2340, 340);
 
       // Crates
       this.spawnCrate(310, 195);
@@ -516,12 +573,142 @@ export default class StoryScene extends Phaser.Scene {
       mob = new Snail(this, x, y);
     } else if (type === 'bee') {
       mob = new Bee(this, x, y);
+    } else if (type === 'mushroom') {
+      mob = new Mushroom(this, x, y);
+    } else if (type === 'flying_eye') {
+      mob = new FlyingEye(this, x, y);
+    } else if (type === 'goblin') {
+      mob = new Goblin(this, x, y);
     }
     if (mob) {
       mob.mobType = type;
       this.enemies.add(mob);
     }
     return mob;
+  }
+
+  spawnProjectile(type, x, y, vx, vy, isDeflectable = false) {
+    const proj = new Projectile(this, x, y, type, vx, vy, isDeflectable);
+    this.projectiles.add(proj);
+    return proj;
+  }
+
+  triggerBossEncounter(chapter) {
+    if (this.bossTriggered) return;
+    this.bossTriggered = true;
+
+    sound.playVictory();
+    this.cameras.main.shake(400, 0.02);
+
+    if (chapter === 1) {
+      // Restrict camera to Chapter 1 Boss Arena
+      this.cameras.main.setBounds(2300, 0, 500, this.levelHeight);
+
+      // Arena barricade gate at x = 2310
+      this.arenaGateWall = this.add.rectangle(2310, 340, 20, 100, 0x000000, 0);
+      this.physics.add.existing(this.arenaGateWall, true);
+      this.platforms.add(this.arenaGateWall);
+
+      // Visual gate: wooden spike barricade
+      this.arenaGateVisual = this.add.container(2310, 340);
+      for (let gy = -40; gy <= 40; gy += 24) {
+        const cratePart = this.add.image(0, gy, 'crate').setScale(1.1).setTint(0x4a2a1a);
+        this.arenaGateVisual.add(cratePart);
+      }
+      this.arenaGateVisual.setDepth(15);
+
+      // Boss Health Bar
+      this.bossHealthBar = new BossHealthBar(this, GAME_CONFIG.MOBS.BOSS_GORGOK.NAME, GAME_CONFIG.MOBS.BOSS_GORGOK.HP);
+
+      // Spawn Boss Gorgok
+      this.boss = new BossGorgok(this, 2600, 340, this.bossHealthBar);
+      this.enemies.add(this.boss);
+
+      this.showBossWarningBanner(GAME_CONFIG.MOBS.BOSS_GORGOK.NAME, 'ARMORED WAR BOAR COLOSSUS');
+    } else if (chapter === 2) {
+      // Restrict camera to Chapter 2 Boss Arena
+      this.cameras.main.setBounds(2080, 0, 520, this.levelHeight);
+
+      // Arena barricade gate at x = 2090
+      this.arenaGateWall = this.add.rectangle(2090, 340, 20, 100, 0x000000, 0);
+      this.physics.add.existing(this.arenaGateWall, true);
+      this.platforms.add(this.arenaGateWall);
+
+      // Visual gate: hive blocks
+      this.arenaGateVisual = this.add.container(2090, 340);
+      for (let gy = -40; gy <= 40; gy += 24) {
+        const block = this.add.image(0, gy, 'crate').setScale(1.1).setTint(0x664411);
+        this.arenaGateVisual.add(block);
+      }
+      this.arenaGateVisual.setDepth(15);
+
+      // Boss Health Bar
+      this.bossHealthBar = new BossHealthBar(this, GAME_CONFIG.MOBS.BOSS_WIZARD.NAME, GAME_CONFIG.MOBS.BOSS_WIZARD.HP);
+
+      // Spawn Boss Malakor
+      this.boss = new BossWizard(this, 2380, 240, this.bossHealthBar);
+      this.enemies.add(this.boss);
+
+      this.showBossWarningBanner(GAME_CONFIG.MOBS.BOSS_WIZARD.NAME, 'WIELDER OF TWILIGHT ARCANA');
+    }
+  }
+
+  showBossWarningBanner(name, subtitle) {
+    const w = GAME_CONFIG.WIDTH;
+    const banner = this.add.container(w / 2, 70).setScrollFactor(0).setDepth(480);
+
+    const bg = this.add.rectangle(0, 0, 360, 36, 0x1f0606, 0.9);
+    bg.setStrokeStyle(1.5, 0xff2222);
+    banner.add(bg);
+
+    const warn = this.add.text(0, -9, `⚠️ BOSS BATTLE: ${name} ⚠️`, {
+      fontFamily: 'Press Start 2P',
+      fontSize: '6.5px',
+      color: '#ffdd44'
+    }).setOrigin(0.5);
+    banner.add(warn);
+
+    const sub = this.add.text(0, 7, subtitle, {
+      fontFamily: 'Press Start 2P',
+      fontSize: '5px',
+      color: '#ff9999'
+    }).setOrigin(0.5);
+    banner.add(sub);
+
+    this.tweens.add({
+      targets: banner,
+      alpha: 0,
+      y: 50,
+      delay: 2400,
+      duration: 600,
+      onComplete: () => banner.destroy()
+    });
+  }
+
+  openArenaGate() {
+    if (this.arenaGateWall) {
+      this.platforms.remove(this.arenaGateWall);
+      this.arenaGateWall.destroy();
+      this.arenaGateWall = null;
+    }
+
+    if (this.arenaGateVisual) {
+      this.tweens.add({
+        targets: this.arenaGateVisual,
+        alpha: 0,
+        y: this.arenaGateVisual.y + 40,
+        duration: 800,
+        onComplete: () => {
+          if (this.arenaGateVisual) {
+            this.arenaGateVisual.destroy();
+            this.arenaGateVisual = null;
+          }
+        }
+      });
+    }
+
+    // Unlock camera bounds back to entire level
+    this.cameras.main.setBounds(0, 0, this.levelWidth, this.levelHeight);
   }
 
   spawnCrate(x, y) {
@@ -663,6 +850,12 @@ export default class StoryScene extends Phaser.Scene {
         storage.addMaterials({ amber: 1 });
       } else if (enemy.mobType === 'snail') {
         storage.addMaterials({ bark: 1 });
+      } else if (enemy.mobType === 'mushroom') {
+        storage.addMaterials({ bark: 1, amber: 1 });
+      } else if (enemy.mobType === 'flying_eye') {
+        storage.addMaterials({ amber: 1, iron: 1 });
+      } else if (enemy.mobType === 'goblin') {
+        storage.addMaterials({ iron: 2, bark: 1 });
       }
       this.updateHudMaterials();
     }
@@ -995,6 +1188,15 @@ export default class StoryScene extends Phaser.Scene {
 
     if (this.player) {
       this.player.update(this.cursors, touchInputs);
+
+      // Check arena boss encounter triggers
+      if (!this.bossTriggered && !this.player.isDead) {
+        if (this.chapterId === 1 && this.player.x >= 2320) {
+          this.triggerBossEncounter(1);
+        } else if (this.chapterId === 2 && this.player.x >= 2100) {
+          this.triggerBossEncounter(2);
+        }
+      }
     }
 
     const camScrollX = this.cameras.main.scrollX;
