@@ -18,7 +18,7 @@ export default class Snail extends Phaser.Physics.Arcade.Sprite {
     this.state = 'WALK'; // WALK, SHELLED, SLIDING, DEAD
     this.patrolDir = -1;
     this.bounceCount = 0;
-    this.maxBounces = 3;
+    this.maxBounces = 2; // Shatters after 2 wall bounces
     this.shellSlideSpeed = GAME_CONFIG.MOBS.SNAIL.SHELL_SPEED;
 
     this.play('snail_walk_anim');
@@ -97,13 +97,17 @@ export default class Snail extends Phaser.Physics.Arcade.Sprite {
       // Enter shelled state
       this.enterShelled();
       return { killed: false, pts: 0, shelled: true };
-    } else if (this.state === 'SHELLED' || this.state === 'SLIDING') {
+    } else if (this.state === 'SLIDING') {
+      // Any sword strike on a sliding shell shatters it immediately!
+      this.shatter();
+      return { killed: true, pts: GAME_CONFIG.MOBS.SNAIL.PTS * 1.5, shattered: true };
+    } else if (this.state === 'SHELLED') {
       if (isUpwardSlash) {
-        // Upward slash shatters the shell directly for instant kill score!
+        // Upward slash shatters the stationary shell directly
         this.shatter();
         return { killed: true, pts: GAME_CONFIG.MOBS.SNAIL.PTS * 1.5, shattered: true };
       } else {
-        // Horizontal attack kicks the shell as projectile!
+        // Horizontal attack kicks the stationary shell as a rolling weapon!
         const kickDir = attackFromX < this.x ? 1 : -1;
         this.kickShell(kickDir);
         return { killed: false, pts: 0, kicked: true };
@@ -117,10 +121,10 @@ export default class Snail extends Phaser.Physics.Arcade.Sprite {
     sound.playHit();
     this.play('snail_hide_anim');
 
-    // Pop up "SHELLED! KICK IT!" prompt
-    const tipText = this.scene.add.text(this.x, this.y - 18, 'SHELL READY!', {
+    // Pop up clear guidance prompt
+    const tipText = this.scene.add.text(this.x, this.y - 18, 'SHELL READY! (SLASH TO BREAK / KICK)', {
       fontFamily: 'Press Start 2P',
-      fontSize: '7px',
+      fontSize: '5.5px',
       color: '#98ff20',
       stroke: '#000',
       strokeThickness: 2
@@ -130,7 +134,7 @@ export default class Snail extends Phaser.Physics.Arcade.Sprite {
       targets: tipText,
       y: this.y - 30,
       alpha: 0,
-      duration: 600,
+      duration: 700,
       onComplete: () => tipText.destroy()
     });
   }
@@ -142,10 +146,10 @@ export default class Snail extends Phaser.Physics.Arcade.Sprite {
     this.setVelocityX(dir * this.shellSlideSpeed);
     sound.playShellKick();
 
-    // Speed particles
-    const kickText = this.scene.add.text(this.x, this.y - 18, 'SHELL KICK!', {
+    // Speed particles & hint
+    const kickText = this.scene.add.text(this.x, this.y - 18, 'SHELL SLIDE! (SLASH TO BREAK)', {
       fontFamily: 'Press Start 2P',
-      fontSize: '8px',
+      fontSize: '5.5px',
       color: '#f6c026',
       stroke: '#000',
       strokeThickness: 2
@@ -155,7 +159,7 @@ export default class Snail extends Phaser.Physics.Arcade.Sprite {
       targets: kickText,
       y: this.y - 32,
       alpha: 0,
-      duration: 500,
+      duration: 600,
       onComplete: () => kickText.destroy()
     });
   }

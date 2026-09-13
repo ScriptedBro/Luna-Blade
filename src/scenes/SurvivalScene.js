@@ -750,7 +750,21 @@ export default class SurvivalScene extends Phaser.Scene {
     }
 
     if (enemy.mobType === 'snail' && enemy.state === 'SLIDING') {
-      // Only damages player if moving fast towards player
+      // 1. If player is actively swinging sword, attack has priority and shatters shell safely!
+      if (this.player.isAttacking) {
+        this.handlePlayerAttack(enemy);
+        return;
+      }
+
+      // 2. If player is jumping downward onto the shell, bounce off it Mario-style!
+      if (this.player.body && this.player.body.velocity.y > 0 && this.player.y < enemy.y - 2) {
+        this.player.setVelocityY(-250);
+        sound.playRicochet();
+        enemy.takeDamage(99, this.player.x);
+        return;
+      }
+
+      // 3. Only damages player if moving fast towards player
       const dirTowardsPlayer = (enemy.body.velocity.x > 0 && this.player.x > enemy.x) ||
                                (enemy.body.velocity.x < 0 && this.player.x < enemy.x);
       if (!dirTowardsPlayer) return;

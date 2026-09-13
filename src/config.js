@@ -30,7 +30,7 @@ export const GAME_CONFIG = {
     SNAIL: {
       HP: 30,
       WALK_SPEED: 25,
-      SHELL_SPEED: 380,
+      SHELL_SPEED: 240,
       PTS: 25,
       RICOCHET_BONUS_PTS: 50,
       DAMAGE: 1,
