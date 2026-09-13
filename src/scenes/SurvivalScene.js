@@ -749,7 +749,7 @@ export default class SurvivalScene extends Phaser.Scene {
     const isUpward = this.player.attackType === 'upward';
     const res = enemy.takeDamage(dmg, this.player.x, isUpward);
 
-    if (res && res.killed) {
+    if (res && res.killed && !enemy._killHandled) {
       const label = res.isBackstab ? 'CRIT!' : (res.isCounter ? 'COUNTER! 💥' : (res.shattered ? 'SHATTER! 💥' : (isUpward ? 'UP-SLASH!' : '')));
       const bonus = res.isBackstab ? 25 : (res.isCounter ? 20 : 0);
       this.addKill(enemy.mobType, res.pts, bonus, enemy.x, enemy.y - 12, label, enemy);

@@ -183,6 +183,9 @@ export default class FlyingEye extends Phaser.Physics.Arcade.Sprite {
 
   die() {
     this.state = 'DEAD';
+    if (this.body) {
+      this.body.setEnable(false);
+    }
     sound.playEnemyDeath();
     this.play('eye_dead_anim', true);
     this.body.setAllowGravity(true);
