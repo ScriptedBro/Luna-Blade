@@ -40,21 +40,25 @@ export default class FlyingEye extends Phaser.Physics.Arcade.Sprite {
         const dx = player.x - this.x;
 
         // In Survival arena, follow player rather than getting stuck in patrol range
-        if (this.scene.scene && this.scene.scene.key === 'SurvivalScene') {
+        const isSurvival = this.scene.scene && this.scene.scene.key === 'SurvivalScene';
+        if (isSurvival) {
           if (Math.abs(dx) > 30) {
             this.patrolDir = dx > 0 ? 1 : -1;
           }
-          const desiredY = Math.max(65, player.y - 65);
+          const cam = this.scene.cameras?.main;
+          const minY = cam ? cam.worldView.y + 44 : 155;
+          const maxY = Math.min(player.y - 20, 255);
+          const desiredY = Phaser.Math.Clamp(player.y - 55, minY, maxY);
           this.baseY = Phaser.Math.Linear(this.baseY, desiredY, 0.04);
+          this.y = Phaser.Math.Clamp(this.baseY + Math.sin(this.scene.time.now * 0.004) * 12, minY, maxY + 10);
         } else {
           // Rebound within patrol range in story mode
           if (this.x < this.startX - this.patrolRange) this.patrolDir = 1;
           if (this.x > this.startX + this.patrolRange) this.patrolDir = -1;
+          this.y = this.baseY + Math.sin(this.scene.time.now * 0.004) * 14;
         }
 
-        // Floating sinusoidal oscillation
-        this.y = this.baseY + Math.sin(this.scene.time.now * 0.004) * 14;
-        const speed = (this.scene.scene && this.scene.scene.key === 'SurvivalScene' && Math.abs(dx) > 100)
+        const speed = (isSurvival && Math.abs(dx) > 100)
           ? GAME_CONFIG.MOBS.FLYING_EYE.HOVER_SPEED * 1.6
           : GAME_CONFIG.MOBS.FLYING_EYE.HOVER_SPEED;
         this.setVelocityX(this.patrolDir * speed);
@@ -97,7 +101,12 @@ export default class FlyingEye extends Phaser.Physics.Arcade.Sprite {
       this.setVelocityX(this.patrolDir * (GAME_CONFIG.MOBS.FLYING_EYE.HOVER_SPEED * 0.7));
       this.setVelocityY(-90);
 
-      if (this.y <= this.baseY) {
+      const isSurvival = this.scene.scene && this.scene.scene.key === 'SurvivalScene';
+      const cam = this.scene.cameras?.main;
+      const minY = isSurvival ? (cam ? cam.worldView.y + 44 : 155) : 60;
+
+      if (this.y <= this.baseY || this.y <= minY) {
+        this.baseY = Math.max(this.baseY, minY);
         this.y = this.baseY;
         this.state = 'HOVER';
         this.setVelocityY(0);
