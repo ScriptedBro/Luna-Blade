@@ -155,11 +155,6 @@ export default class StoryScene extends Phaser.Scene {
       this.handlePlayerEnemyCollision(enemy);
     });
 
-    // Sliding snail shell vs other enemies (Ricochet mechanic!)
-    this.physics.add.overlap(this.enemies, this.enemies, (e1, e2) => {
-      this.handleEnemyEnemyCollision(e1, e2);
-    });
-
     // Keyboard inputs
     this.cursors = this.input.keyboard.createCursorKeys();
     this.cursors.keys = this.input.keyboard.addKeys('W,A,S,D,J,K,Z,X,E,R,ENTER,ESC');
@@ -835,6 +830,13 @@ export default class StoryScene extends Phaser.Scene {
   handlePlayerAttackEnemy(enemy) {
     if (!this.player.isAttacking || enemy.state === 'DEAD') return;
 
+    // Direction check: ensure player is facing the enemy for horizontal attacks
+    if (this.player.attackType !== 'upward') {
+      const enemyCenterX = enemy.body ? enemy.body.center.x : enemy.x;
+      if (!this.player.flipX && enemyCenterX < this.player.x) return;
+      if (this.player.flipX && enemyCenterX > this.player.x) return;
+    }
+
     const dmg = this.player.getAttackDamage();
     const isUpward = this.player.attackType === 'upward';
     const res = enemy.takeDamage(dmg, this.player.x, isUpward);
@@ -881,13 +883,7 @@ export default class StoryScene extends Phaser.Scene {
     }
 
     if (enemy.mobType === 'snail' && enemy.state === 'SLIDING') {
-      // 1. If player is actively swinging sword, attack has priority and shatters shell safely!
-      if (this.player.isAttacking) {
-        this.handlePlayerAttackEnemy(enemy);
-        return;
-      }
-
-      // 2. If player is jumping downward onto the shell, bounce off it Mario-style!
+      // 1. If player is jumping downward onto the shell, bounce off it Mario-style!
       if (this.player.body && this.player.body.velocity.y > 0 && this.player.y < enemy.y - 2) {
         this.player.setVelocityY(-250);
         sound.playRicochet();
@@ -898,7 +894,7 @@ export default class StoryScene extends Phaser.Scene {
         return;
       }
 
-      // 3. Only damages player if moving fast towards player
+      // 2. Only damages player if moving fast towards player
       const dirTowardsPlayer = (enemy.body.velocity.x > 0 && this.player.x > enemy.x) ||
                                (enemy.body.velocity.x < 0 && this.player.x < enemy.x);
       if (!dirTowardsPlayer) return;
@@ -906,16 +902,7 @@ export default class StoryScene extends Phaser.Scene {
 
     // Boar collision mechanics
     if (enemy.mobType === 'boar') {
-      // 1. If player is actively swinging sword, attack has priority and counters/staggers the boar!
-      if (this.player.isAttacking) {
-        if (!this.player.currentSwingHits.has(enemy)) {
-          this.player.currentSwingHits.add(enemy);
-          this.handlePlayerAttackEnemy(enemy);
-        }
-        return;
-      }
-
-      // 2. If player is jumping downward onto the boar, bounce off it Mario-style!
+      // If player is jumping downward onto the boar, bounce off it Mario-style!
       if (this.player.body && this.player.body.velocity.y > 0 && this.player.y < enemy.y - 2) {
         this.player.setVelocityY(-250);
         sound.playRicochet();
@@ -930,15 +917,6 @@ export default class StoryScene extends Phaser.Scene {
       }
     }
 
-    // General attack priority for all regular mobs (excluding bosses)
-    if (this.player.isAttacking && enemy.mobType !== 'boss_gorgok' && enemy.mobType !== 'boss_malakor') {
-      if (!this.player.currentSwingHits.has(enemy)) {
-        this.player.currentSwingHits.add(enemy);
-        this.handlePlayerAttackEnemy(enemy);
-      }
-      return;
-    }
-
     // Normal damage
     const knockDir = enemy.x < this.player.x ? 1 : -1;
     const damaged = this.player.takeDamage(1, knockDir);
@@ -947,49 +925,6 @@ export default class StoryScene extends Phaser.Scene {
       this.updateHearts();
       if (this.player.isDead) {
         this.handlePlayerGameOver();
-      }
-    }
-  }
-
-  handleEnemyEnemyCollision(e1, e2) {
-    // Check if one of them is a sliding snail shell projectile!
-    let projectile = null;
-    let victim = null;
-
-    if (e1.mobType === 'snail' && e1.state === 'SLIDING') {
-      projectile = e1;
-      victim = e2;
-    } else if (e2.mobType === 'snail' && e2.state === 'SLIDING') {
-      projectile = e2;
-      victim = e1;
-    }
-
-    if (projectile && victim && victim.state !== 'DEAD' && victim !== projectile) {
-      sound.playRicochet();
-      this.cameras.main.shake(100, 0.012);
-
-      // Ricochet kill!
-      const res = victim.takeDamage(99, projectile.x);
-      if (res && res.killed) {
-        this.killsCount++;
-        this.registerComboHit(true);
-
-        // Ricochet popup
-        const ricoText = this.add.text(victim.x, victim.y - 18, '+50 RICOCHET KILL! 💥', {
-          fontFamily: 'Press Start 2P',
-          fontSize: '7px',
-          color: '#ffd700',
-          stroke: '#000',
-          strokeThickness: 2
-        }).setOrigin(0.5);
-
-        this.tweens.add({
-          targets: ricoText,
-          y: victim.y - 36,
-          alpha: 0,
-          duration: 700,
-          onComplete: () => ricoText.destroy()
-        });
       }
     }
   }

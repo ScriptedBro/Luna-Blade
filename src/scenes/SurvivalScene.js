@@ -131,11 +131,6 @@ export default class SurvivalScene extends Phaser.Scene {
       }
     });
 
-    // Sliding shell ricochet
-    this.physics.add.overlap(this.enemies, this.enemies, (e1, e2) => {
-      this.handleRicochet(e1, e2);
-    });
-
     // Controls
     this.cursors = this.input.keyboard.createCursorKeys();
     this.cursors.keys = this.input.keyboard.addKeys('W,A,S,D,J,K,Z,X,ENTER,ESC');
@@ -939,6 +934,13 @@ export default class SurvivalScene extends Phaser.Scene {
   handlePlayerAttack(enemy) {
     if (!this.player.isAttacking || enemy.state === 'DEAD' || enemy._killHandled) return;
 
+    // Direction check: ensure player is facing the enemy for horizontal attacks
+    if (this.player.attackType !== 'upward') {
+      const enemyCenterX = enemy.body ? enemy.body.center.x : enemy.x;
+      if (!this.player.flipX && enemyCenterX < this.player.x) return;
+      if (this.player.flipX && enemyCenterX > this.player.x) return;
+    }
+
     const dmg = this.player.getAttackDamage();
     const isUpward = this.player.attackType === 'upward';
     const res = enemy.takeDamage(dmg, this.player.x, isUpward);
@@ -960,13 +962,7 @@ export default class SurvivalScene extends Phaser.Scene {
     }
 
     if (enemy.mobType === 'snail' && enemy.state === 'SLIDING') {
-      // 1. If player is actively swinging sword, attack has priority and shatters shell safely!
-      if (this.player.isAttacking) {
-        this.handlePlayerAttack(enemy);
-        return;
-      }
-
-      // 2. If player is jumping downward onto the shell, bounce off it Mario-style!
+      // 1. If player is jumping downward onto the shell, bounce off it Mario-style!
       if (this.player.body && this.player.body.velocity.y > 0 && this.player.y < enemy.y - 2) {
         this.player.setVelocityY(-250);
         sound.playRicochet();
@@ -977,7 +973,7 @@ export default class SurvivalScene extends Phaser.Scene {
         return;
       }
 
-      // 3. Only damages player if moving fast towards player
+      // 2. Only damages player if moving fast towards player
       const dirTowardsPlayer = (enemy.body.velocity.x > 0 && this.player.x > enemy.x) ||
                                (enemy.body.velocity.x < 0 && this.player.x < enemy.x);
       if (!dirTowardsPlayer) return;
@@ -985,16 +981,7 @@ export default class SurvivalScene extends Phaser.Scene {
 
     // Boar collision mechanics
     if (enemy.mobType === 'boar') {
-      // 1. If player is actively swinging sword, attack has priority and counters/staggers the boar!
-      if (this.player.isAttacking) {
-        if (!this.player.currentSwingHits.has(enemy)) {
-          this.player.currentSwingHits.add(enemy);
-          this.handlePlayerAttack(enemy);
-        }
-        return;
-      }
-
-      // 2. If player is jumping downward onto the boar, bounce off it Mario-style!
+      // If player is jumping downward onto the boar, bounce off it Mario-style!
       if (this.player.body && this.player.body.velocity.y > 0 && this.player.y < enemy.y - 2) {
         this.player.setVelocityY(-250);
         sound.playRicochet();
@@ -1004,15 +991,6 @@ export default class SurvivalScene extends Phaser.Scene {
         }
         return;
       }
-    }
-
-    // General attack priority for all regular mobs (excluding bosses)
-    if (this.player.isAttacking && enemy.mobType !== 'boss_gorgok' && enemy.mobType !== 'boss_malakor') {
-      if (!this.player.currentSwingHits.has(enemy)) {
-        this.player.currentSwingHits.add(enemy);
-        this.handlePlayerAttack(enemy);
-      }
-      return;
     }
 
     const knockDir = enemy.x < this.player.x ? 1 : -1;
@@ -1026,45 +1004,6 @@ export default class SurvivalScene extends Phaser.Scene {
 
       if (this.player.isDead) {
         this.handleGameOver();
-      }
-    }
-  }
-
-  handleRicochet(e1, e2) {
-    let projectile = null;
-    let victim = null;
-
-    if (e1.mobType === 'snail' && e1.state === 'SLIDING') {
-      projectile = e1;
-      victim = e2;
-    } else if (e2.mobType === 'snail' && e2.state === 'SLIDING') {
-      projectile = e2;
-      victim = e1;
-    }
-
-    if (projectile && victim && victim.state !== 'DEAD' && !victim._killHandled && victim !== projectile) {
-      sound.playRicochet();
-      this.cameras.main.shake(100, 0.012);
-
-      const res = victim.takeDamage(99, projectile.x);
-      if (res && res.killed) {
-        const earned = this.addKill(victim.mobType, res.pts, GAME_CONFIG.MOBS.SNAIL.RICOCHET_BONUS_PTS, victim.x, victim.y, '', victim);
-
-        const ricoText = this.add.text(victim.x, victim.y - 18, `+${earned} SHELL RICOCHET! 💥`, {
-          fontFamily: 'Press Start 2P',
-          fontSize: '7px',
-          color: '#ffd700',
-          stroke: '#000',
-          strokeThickness: 2
-        }).setOrigin(0.5);
-
-        this.tweens.add({
-          targets: ricoText,
-          y: victim.y - 32,
-          alpha: 0,
-          duration: 600,
-          onComplete: () => ricoText.destroy()
-        });
       }
     }
   }

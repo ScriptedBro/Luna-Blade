@@ -44,7 +44,7 @@ export default class Player extends Phaser.Physics.Arcade.Sprite {
     this.setupCosmeticParticles(scene);
 
     // Attack hitbox (separate invisible physics trigger)
-    this.attackHitbox = scene.add.rectangle(x, y, 28, 28, 0xffffff, 0);
+    this.attackHitbox = scene.add.rectangle(x, y, 28, 28, 0xffffff, 0).setOrigin(0, 0);
     scene.physics.add.existing(this.attackHitbox);
     this.attackHitbox.body.setAllowGravity(false);
     this.attackHitbox.body.setEnable(false);
@@ -196,14 +196,14 @@ export default class Player extends Phaser.Physics.Arcade.Sprite {
   getAttackBounds() {
     const rangeMul = this.weaponConfig.rangeMul || 1.0;
     if (this.attackType === 'upward') {
-      const w = 44 * rangeMul;
-      const h = 54 * rangeMul;
-      return new Phaser.Geom.Rectangle(this.x - w / 2, this.y - 38 * rangeMul, w, h);
+      const w = 40 * rangeMul;
+      const h = 48 * rangeMul;
+      return new Phaser.Geom.Rectangle(this.x - w / 2, this.y - 36 * rangeMul, w, h);
     } else {
-      const w = (this.attackType === 'combo2' ? 56 : 48) * rangeMul;
-      const h = 44 * rangeMul;
-      const x = this.flipX ? (this.x - w + 6) : (this.x - 6);
-      const y = this.y - 8;
+      const w = (this.attackType === 'combo2' ? 48 : 42) * rangeMul;
+      const h = 38 * rangeMul;
+      const x = this.flipX ? (this.x - w) : this.x;
+      const y = this.y - 12;
       return new Phaser.Geom.Rectangle(x, y, w, h);
     }
   }
@@ -270,7 +270,7 @@ export default class Player extends Phaser.Physics.Arcade.Sprite {
     if (!this.attackHitbox || !this.attackHitbox.body) return;
     const bounds = this.getAttackBounds();
 
-    this.attackHitbox.setPosition(bounds.centerX, bounds.centerY);
+    this.attackHitbox.setPosition(bounds.x, bounds.y);
     this.attackHitbox.setSize(bounds.width, bounds.height);
     this.attackHitbox.body.setSize(bounds.width, bounds.height);
     this.attackHitbox.body.reset(bounds.x, bounds.y);
@@ -287,8 +287,20 @@ export default class Player extends Phaser.Physics.Arcade.Sprite {
         const enemy = enemyList[i];
         if (!enemy || !enemy.active || enemy.state === 'DEAD' || this.currentSwingHits.has(enemy)) continue;
 
-        const enemyBounds = enemy.getBounds();
-        if (Phaser.Geom.Intersects.RectangleToRectangle(attackBounds, enemyBounds)) {
+        // Facing direction check for horizontal swings
+        if (this.attackType !== 'upward') {
+          const enemyCenterX = enemy.body ? enemy.body.center.x : enemy.x;
+          if (!this.flipX && enemyCenterX < this.x) continue;
+          if (this.flipX && enemyCenterX > this.x) continue;
+        }
+
+        // Use the enemy's physical Arcade body bounds if available, else getBounds()
+        const eb = enemy.body;
+        const enemyRect = eb
+          ? new Phaser.Geom.Rectangle(eb.x, eb.y, eb.width, eb.height)
+          : enemy.getBounds();
+
+        if (Phaser.Geom.Intersects.RectangleToRectangle(attackBounds, enemyRect)) {
           this.currentSwingHits.add(enemy);
           if (this.scene.handlePlayerAttackEnemy) {
             this.scene.handlePlayerAttackEnemy(enemy);
