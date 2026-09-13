@@ -585,6 +585,7 @@ export default class StoryScene extends Phaser.Scene {
   spawnProjectile(type, x, y, vx, vy, isDeflectable = false) {
     const proj = new Projectile(this, x, y, type, vx, vy, isDeflectable);
     this.projectiles.add(proj);
+    proj.setVelocity(vx, vy);
     return proj;
   }
 

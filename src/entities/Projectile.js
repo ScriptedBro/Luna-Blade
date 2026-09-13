@@ -26,6 +26,7 @@ export default class Projectile extends Phaser.Physics.Arcade.Sprite {
       this.body.setOffset(17, 17);
       this.body.setAllowGravity(false);
       this.setVelocity(vx, vy);
+      this.setRotation(Math.atan2(vy, vx));
       this.play('mushroom_spore_anim');
     } else if (type === 'eye_dart') {
       this.body.setSize(18, 18);
@@ -91,11 +92,6 @@ export default class Projectile extends Phaser.Physics.Arcade.Sprite {
     if (this.glow) {
       this.glow.x = this.x;
       this.glow.y = this.y;
-    }
-
-    // Spore slight float wave
-    if (this.projType === 'spore' && !this.isDeflected) {
-      this.body.velocity.y = Math.sin(this.scene.time.now * 0.008) * 20;
     }
   }
 

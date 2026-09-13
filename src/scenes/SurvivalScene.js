@@ -295,6 +295,7 @@ export default class SurvivalScene extends Phaser.Scene {
     if (this.isGameOver) return null;
     const proj = new Projectile(this, x, y, type, vx, vy, isDeflectable);
     this.projectiles.add(proj);
+    proj.setVelocity(vx, vy);
     return proj;
   }
 
@@ -337,10 +338,21 @@ export default class SurvivalScene extends Phaser.Scene {
     this.maxConcurrentEnemies = this.getMaxConcurrentForWave(index);
     this.pendingSpawns = [];
     this.inFlightSpawns = 0;
+    if (this.waveSpawnTimers) {
+      this.waveSpawnTimers.forEach(t => t && t.remove && t.remove(false));
+    }
+    this.waveSpawnTimers = [];
+
+    if (this.pendingWaveSpawns) {
+      this.pendingWaveSpawns.forEach(e => {
+        if (e && e.timer && e.timer.remove) e.timer.remove(false);
+        if (e && e.spawnTimer && e.spawnTimer.remove) e.spawnTimer.remove(false);
+        if (e) e.done = true;
+      });
+    }
     this.pendingWaveSpawns = [];
     this.waveStartTime = performance.now();
     this.endlessMode = false;
-    this.waveSpawnTimers = [];
     this.emptyArenaSince = null;
     this.updateWaveHud();
 
@@ -553,7 +565,7 @@ export default class SurvivalScene extends Phaser.Scene {
       return;
     }
 
-    const availableSlots = this.maxConcurrentEnemies - (blockerCount + pendingCount);
+    const availableSlots = this.maxConcurrentEnemies - (activeCount + pendingCount);
     if (availableSlots <= 0 || this.waveSpawnQueue.length === 0) {
       return;
     }

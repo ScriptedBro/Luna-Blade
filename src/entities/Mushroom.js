@@ -52,12 +52,12 @@ export default class Mushroom extends Phaser.Physics.Arcade.Sprite {
     this.setVelocityX(this.patrolDir * GAME_CONFIG.MOBS.MUSHROOM.WALK_SPEED);
     this.setFlipX(this.patrolDir < 0);
 
-    // Check player for ranged toxic spore attack (expanded vertical reach)
+    // Check player for ranged toxic spore attack (farther range and player targeting)
     if (player && !player.isDead && this.scene.time.now > this.attackCooldownUntil) {
       const dist = Phaser.Math.Distance.Between(this.x, this.y, player.x, player.y);
       const dy = Math.abs(this.y - player.y);
 
-      if (dist < 280 && dy < 180) {
+      if (dist < 380 && dy < 220) {
         this.startAttack(player);
       }
     }
@@ -89,28 +89,38 @@ export default class Mushroom extends Phaser.Physics.Arcade.Sprite {
   startAttack(player) {
     this.state = 'ATTACK';
     this.setVelocityX(0);
-    this.attackCooldownUntil = this.scene.time.now + 2800;
+    this.attackCooldownUntil = this.scene.time.now + 2600;
 
     const dir = player.x < this.x ? -1 : 1;
     this.setFlipX(dir < 0);
 
     this.play('mushroom_attack_anim', true);
 
+    // Telegraph charge effect at spore cap so player can anticipate and dodge
+    const chargeEffect = this.scene.add.circle(this.x + dir * 16, this.y - 6, 4, 0x88ff44, 0.8).setDepth(21);
+    this.scene.tweens.add({
+      targets: chargeEffect,
+      scale: 2.0,
+      alpha: 0,
+      duration: 380,
+      onComplete: () => chargeEffect.destroy()
+    });
+
     // Fire spore on windup completion
     this.scene.time.delayedCall(400, () => {
-      if (this.state === 'DEAD' || !this.scene) return;
-      this.fireSpore(dir);
+      if (!this.active || !this.scene || this.state === 'DEAD') return;
+      this.fireSpore(dir, player);
     });
 
     this.once(Phaser.Animations.Events.ANIMATION_COMPLETE, () => {
-      if (this.state !== 'DEAD') {
-        this.state = 'PATROL';
-        this.play('mushroom_run_anim', true);
-      }
+      if (!this.active || !this.scene || this.state === 'DEAD') return;
+      this.state = 'PATROL';
+      this.play('mushroom_run_anim', true);
     });
 
     // Failsafe timer to return to PATROL if animation complete doesn't trigger
     this.scene.time.delayedCall(900, () => {
+      if (!this.active || !this.scene || this.state === 'DEAD') return;
       if (this.state === 'ATTACK') {
         this.state = 'PATROL';
         this.play('mushroom_run_anim', true);
@@ -118,22 +128,28 @@ export default class Mushroom extends Phaser.Physics.Arcade.Sprite {
     });
   }
 
-  fireSpore(dir) {
+  fireSpore(dir, targetPlayer) {
     sound.playSlash(1);
     const spawnX = this.x + (dir * 18);
-    const spawnY = this.y - 4;
+    const spawnY = this.y - 6;
 
     if (this.scene && typeof this.scene.spawnProjectile === 'function') {
-      const player = this.scene.player;
-      let vx = dir * GAME_CONFIG.MOBS.MUSHROOM.SPORE_SPEED;
+      const player = (targetPlayer && !targetPlayer.isDead) ? targetPlayer : this.scene.player;
+      const speed = GAME_CONFIG.MOBS.MUSHROOM.SPORE_SPEED || 180;
+
+      let vx = dir * speed;
       let vy = 0;
-      if (player && !player.isDead && player.y > this.y + 30) {
-        // Angle spore downward toward player
-        const angle = Phaser.Math.Angle.Between(spawnX, spawnY, player.x, player.y);
-        vx = Math.cos(angle) * GAME_CONFIG.MOBS.MUSHROOM.SPORE_SPEED;
-        vy = Math.sin(angle) * GAME_CONFIG.MOBS.MUSHROOM.SPORE_SPEED;
+
+      if (player && !player.isDead) {
+        // Accurately aim toward the player's center so player can react and dodge
+        const targetX = player.x;
+        const targetY = player.y - 12;
+        const angle = Phaser.Math.Angle.Between(spawnX, spawnY, targetX, targetY);
+        vx = Math.cos(angle) * speed;
+        vy = Math.sin(angle) * speed;
       }
-      this.scene.spawnProjectile('spore', spawnX, spawnY, vx, vy);
+
+      this.scene.spawnProjectile('spore', spawnX, spawnY, vx, vy, true);
     }
   }
 

@@ -47,7 +47,7 @@ export const GAME_CONFIG = {
     MUSHROOM: {
       HP: 45,
       WALK_SPEED: 35,
-      SPORE_SPEED: 120,
+      SPORE_SPEED: 180,
       PTS: 45,
       DAMAGE: 1,
     },
