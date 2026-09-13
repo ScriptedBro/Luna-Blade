@@ -37,7 +37,7 @@ export default class SurvivalScene extends Phaser.Scene {
     this.createArenaForestBackground();
 
     // Game stats
-    this.startTime = this.time.now;
+    this.startTime = performance.now();
     this.secondsSurvived = 0;
     this.totalScore = 0;
     this.killCount = { boar: 0, snail: 0, bee: 0, mushroom: 0, flying_eye: 0, goblin: 0, boss_gorgok: 0, total: 0 };
@@ -153,7 +153,7 @@ export default class SurvivalScene extends Phaser.Scene {
     this.waveHpMul = 1;
     this.endlessMode = false;
     this.endlessWave = 1;
-    this.waveStartTime = this.time.now;
+    this.waveStartTime = performance.now();
     this.waveSpawnTimers = [];
     this.modalButtons = null;
     this.player.body.setCollideWorldBounds(true);
@@ -339,8 +339,9 @@ export default class SurvivalScene extends Phaser.Scene {
     this.waveRemainingFoes = wave.spawns.length;
     this.wavePendingCount = wave.spawns.length;
     this.maxConcurrentEnemies = this.getMaxConcurrentForWave(index);
+    this.pendingSpawns = [];
     this.inFlightSpawns = 0;
-    this.waveStartTime = this.time.now;
+    this.waveStartTime = performance.now();
     this.endlessMode = false;
     this.waveSpawnTimers = [];
     this.updateWaveHud();
@@ -357,26 +358,31 @@ export default class SurvivalScene extends Phaser.Scene {
   checkSpawnQueue() {
     if (this.isGameOver || this.endlessMode) return;
 
-    // Clean up dispatched/finished timers
-    this.waveSpawnTimers = this.waveSpawnTimers.filter(t => t && !t.hasDispatched);
-
-    // Sanitize inFlightSpawns: if no timers are pending, reset inFlightSpawns
-    if (this.inFlightSpawns > 0 && this.waveSpawnTimers.length === 0) {
-      this.inFlightSpawns = 0;
-    }
-
     // Count living active enemies currently in the arena
     const activeEnemies = this.enemies.getChildren().filter(e => e && e.active && e.state !== 'DEAD' && !e._killHandled);
     const activeCount = activeEnemies.length;
+    const inFlight = this.inFlightSpawns || 0;
 
-    // If no foes left in queue, no in-flight spawns, and all active enemies are dead, wave is cleared
-    if (this.waveRemainingFoes <= 0 && activeCount === 0 && this.waveSpawnQueue.length === 0 && this.inFlightSpawns === 0) {
+    // Self-healing fail-safe: if arena is completely empty for > 1.5s while enemies are queued, reset inFlight
+    if (activeCount === 0 && this.waveSpawnQueue.length > 0) {
+      if (!this.emptyArenaSince) {
+        this.emptyArenaSince = performance.now();
+      } else if (performance.now() - this.emptyArenaSince > 1500) {
+        this.inFlightSpawns = 0;
+        this.emptyArenaSince = null;
+      }
+    } else {
+      this.emptyArenaSince = null;
+    }
+
+    // If no foes left in queue, no in-flight spawns, and all active enemies are dead, wave is cleared!
+    if (this.waveSpawnQueue.length === 0 && activeCount === 0 && (this.inFlightSpawns || 0) === 0) {
       this.waveCleared();
       return;
     }
 
     // Available concurrency slots
-    const availableSlots = this.maxConcurrentEnemies - (activeCount + this.inFlightSpawns);
+    const availableSlots = this.maxConcurrentEnemies - (activeCount + (this.inFlightSpawns || 0));
     if (availableSlots <= 0 || this.waveSpawnQueue.length === 0) {
       return;
     }
@@ -385,23 +391,25 @@ export default class SurvivalScene extends Phaser.Scene {
     const toSpawn = Math.min(availableSlots, this.waveSpawnQueue.length);
     for (let i = 0; i < toSpawn; i++) {
       const spawn = this.waveSpawnQueue.shift();
-      this.inFlightSpawns++;
-      const staggerDelay = i * 250;
+      this.inFlightSpawns = (this.inFlightSpawns || 0) + 1;
 
-      const timer = this.time.delayedCall(staggerDelay, () => {
-        if (this.isGameOver) return;
+      const staggerDelay = i * 180;
+
+      this.time.delayedCall(staggerDelay, () => {
+        if (this.isGameOver) {
+          this.inFlightSpawns = Math.max(0, (this.inFlightSpawns || 0) - 1);
+          return;
+        }
         this.showSpawnTelegraph(spawn.x, spawn.y);
 
-        const spawnTimer = this.time.delayedCall(450, () => {
+        this.time.delayedCall(350, () => {
+          this.inFlightSpawns = Math.max(0, (this.inFlightSpawns || 0) - 1);
           if (this.isGameOver) return;
-          this.inFlightSpawns = Math.max(0, this.inFlightSpawns - 1);
           this.spawnEnemy(spawn.type, spawn.x, spawn.y, this.waveHpMul);
           // Check if another slot opened
           this.checkSpawnQueue();
         });
-        this.waveSpawnTimers.push(spawnTimer);
       });
-      this.waveSpawnTimers.push(timer);
     }
   }
 
@@ -411,15 +419,23 @@ export default class SurvivalScene extends Phaser.Scene {
       targets: rune,
       scale: 1.6,
       alpha: 0,
-      duration: 450,
+      duration: 350,
       onComplete: () => rune.destroy()
     });
+    return rune;
   }
 
   waveCleared() {
     if (this.isGameOver || this.isWaveTransitioning) return;
     this.isWaveTransitioning = true;
 
+    if (this.pendingSpawns) {
+      this.pendingSpawns.forEach(p => {
+        if (p && p.timer) p.timer.remove(false);
+        if (p && p.spawnTimer) p.spawnTimer.remove(false);
+      });
+      this.pendingSpawns = [];
+    }
     this.waveSpawnTimers.forEach(t => t.remove(false));
     this.waveSpawnTimers = [];
     this.waveSpawnQueue = [];
@@ -432,7 +448,7 @@ export default class SurvivalScene extends Phaser.Scene {
     const baseBonus = GAME_CONFIG.SURVIVAL.WAVE_CLEAR_BONUS + (this.currentWaveIndex * 50);
 
     // Speed bonus: finishing the wave faster awards more score!
-    const waveDurationSec = Math.max(1, Math.floor((this.time.now - this.waveStartTime) / 1000));
+    const waveDurationSec = Math.max(1, Math.floor((performance.now() - this.waveStartTime) / 1000));
     const targetParSec = 30 + this.currentWaveIndex * 10; // Target time: W1: 30s, W2: 40s, W3: 50s...
     const speedBonus = waveDurationSec < targetParSec
       ? (targetParSec - waveDurationSec) * 20
@@ -574,11 +590,12 @@ export default class SurvivalScene extends Phaser.Scene {
       this.updateWaveHud();
 
       const livingCount = this.enemies.getChildren().filter(e => e && e.active && e.state !== 'DEAD' && !e._killHandled).length;
-      if (this.waveRemainingFoes === 0 && livingCount === 0 && this.waveSpawnQueue.length === 0 && this.inFlightSpawns === 0) {
+      const pendingCount = this.pendingSpawns ? this.pendingSpawns.length : 0;
+      if (this.waveRemainingFoes === 0 && livingCount === 0 && this.waveSpawnQueue.length === 0 && pendingCount === 0) {
         this.waveCleared();
       } else {
         // A slot has opened up in the arena! Check queue to dispatch next foe
-        this.time.delayedCall(350, () => this.checkSpawnQueue());
+        this.checkSpawnQueue();
       }
     }
 
@@ -732,7 +749,7 @@ export default class SurvivalScene extends Phaser.Scene {
       color: '#ffdd55',
       stroke: '#000000',
       strokeThickness: 2
-    }).setOrigin(0.5).setScrollFactor(0).setDepth(201).setVisible(false);
+    }).setOrigin(0.5).setScrollFactor(0).setDepth(300).setVisible(false);
   }
 
   updateHearts() {
@@ -1035,7 +1052,7 @@ export default class SurvivalScene extends Phaser.Scene {
     if (this.isGameOver) return;
 
     // Update survival timer
-    const elapsedSec = Math.floor((this.time.now - this.startTime) / 1000);
+    const elapsedSec = Math.floor((performance.now() - this.startTime) / 1000);
     if (elapsedSec !== this.secondsSurvived) {
       this.secondsSurvived = elapsedSec;
       this.txtTimer.setText(`TIME: ${this.secondsSurvived}s`);
@@ -1055,9 +1072,9 @@ export default class SurvivalScene extends Phaser.Scene {
     if (this.bgFogPines) this.bgFogPines.tilePositionX = camScrollX * 0.12;
     if (this.bgMidPines) this.bgMidPines.tilePositionX = camScrollX * 0.22;
 
-    // Heartbeat check for spawn queue every 800ms
-    if (!this.nextSpawnQueueCheck || this.time.now > this.nextSpawnQueueCheck) {
-      this.nextSpawnQueueCheck = this.time.now + 800;
+    // Heartbeat check for spawn queue every 400ms
+    if (!this.nextSpawnQueueCheck || performance.now() > this.nextSpawnQueueCheck) {
+      this.nextSpawnQueueCheck = performance.now() + 400;
       this.checkSpawnQueue();
     }
 
@@ -1074,6 +1091,7 @@ export default class SurvivalScene extends Phaser.Scene {
       const isLeft = offscreenEnemy.x < cam.worldView.x;
       const isRight = offscreenEnemy.x > cam.worldView.right;
       const isAbove = offscreenEnemy.y < cam.worldView.y;
+      const isBelow = offscreenEnemy.y > cam.worldView.bottom;
 
       if (isLeft) {
         // Offscreen to the left
@@ -1093,6 +1111,13 @@ export default class SurvivalScene extends Phaser.Scene {
         this.offscreenArrow.setX(screenX);
         this.offscreenArrow.setY(34);
         this.offscreenArrow.setText(`▲ ${mobName} ▲`);
+        this.offscreenArrow.setVisible(true);
+      } else if (isBelow) {
+        // Offscreen strictly below
+        const screenX = Phaser.Math.Clamp(offscreenEnemy.x - cam.worldView.x, 60, GAME_CONFIG.WIDTH - 60);
+        this.offscreenArrow.setX(screenX);
+        this.offscreenArrow.setY(GAME_CONFIG.HEIGHT - 22);
+        this.offscreenArrow.setText(`▼ ${mobName} ▼`);
         this.offscreenArrow.setVisible(true);
       } else {
         this.offscreenArrow.setVisible(false);

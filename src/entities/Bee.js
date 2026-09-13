@@ -40,17 +40,18 @@ export default class Bee extends Phaser.Physics.Arcade.Sprite {
           this.patrolDir = dx > 0 ? 1 : -1;
         }
 
-        // Dynamically adjust hover altitude to hover ~50-70px above player
-        const desiredHoverY = Math.max(65, player.y - 65);
+        // Dynamically adjust hover altitude to hover ~50-70px above player (clamped to visible playable area)
+        const desiredHoverY = Phaser.Math.Clamp(player.y - 65, 75, 230);
         this.originY = Phaser.Math.Linear(this.originY, desiredHoverY, 0.05);
 
         // Sinusoidal bobbing around originY
-        const wave = Math.sin(this.scene.time.now * 0.005) * 16;
-        this.y = this.originY + wave;
+        const wave = Math.sin(this.scene.time.now * 0.005) * 14;
+        this.y = Phaser.Math.Clamp(this.originY + wave, 65, 260);
 
         // Close in faster if player is far away
         const speed = Math.abs(dx) > 100 ? GAME_CONFIG.MOBS.BEE.HOVER_SPEED * 1.8 : GAME_CONFIG.MOBS.BEE.HOVER_SPEED;
         this.setVelocityX(this.patrolDir * speed);
+        this.setVelocityY(0);
         this.setFlipX(this.patrolDir > 0);
 
         const swoopRange = GAME_CONFIG.MOBS.BEE.SWOOP_RANGE || 320;
@@ -60,9 +61,10 @@ export default class Bee extends Phaser.Physics.Arcade.Sprite {
         }
       } else {
         this.setVelocityX(this.patrolDir * GAME_CONFIG.MOBS.BEE.HOVER_SPEED);
+        this.setVelocityY(0);
         this.setFlipX(this.patrolDir > 0);
-        const wave = Math.sin(this.scene.time.now * 0.005) * 20;
-        this.y = this.originY + wave;
+        const wave = Math.sin(this.scene.time.now * 0.005) * 16;
+        this.y = Phaser.Math.Clamp(this.originY + wave, 65, 260);
       }
 
       // Reverse horizontal direction at boundaries
@@ -82,11 +84,12 @@ export default class Bee extends Phaser.Physics.Arcade.Sprite {
       this.setVelocityY(-110);
       this.setVelocityX(this.patrolDir * 60);
 
-      const targetRecoveryY = player && !player.isDead ? Math.max(65, player.y - 65) : this.originY;
-      if (this.y <= targetRecoveryY || this.y <= 60) {
+      const targetRecoveryY = player && !player.isDead ? Phaser.Math.Clamp(player.y - 65, 75, 230) : this.originY;
+      if (this.y <= targetRecoveryY || this.y <= 65) {
         this.originY = targetRecoveryY;
         this.y = targetRecoveryY;
         this.state = 'HOVER';
+        this.setVelocityY(0);
         this.swoopCooldownUntil = this.scene.time.now + 2400;
         this.play('bee_fly_anim', true);
       }

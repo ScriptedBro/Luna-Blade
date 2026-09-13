@@ -82,8 +82,12 @@ export default class Boar extends Phaser.Physics.Arcade.Sprite {
       const dy = Math.abs(this.y - player.y);
       const dx = player.x - this.x;
 
-      // Proximity tracking: turn to face player if safe to walk
-      if (dist < 180 && dy < 60) {
+      // Proximity tracking: in Survival arena, seek player across full arena; in Story, use local proximity
+      const isSurvival = this.scene && this.scene.scene && this.scene.scene.key === 'SurvivalScene';
+      const maxSeekDist = isSurvival ? 840 : 180;
+      const maxSeekDy = isSurvival ? 140 : 60;
+
+      if (dist < maxSeekDist && dy < maxSeekDy) {
         const targetDir = dx >= 0 ? 1 : -1;
         if (!this.isLedgeAhead(targetDir)) {
           this.patrolDir = targetDir;
