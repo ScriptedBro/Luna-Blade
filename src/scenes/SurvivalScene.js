@@ -346,6 +346,7 @@ export default class SurvivalScene extends Phaser.Scene {
     this.waveStartTime = performance.now();
     this.endlessMode = false;
     this.waveSpawnTimers = [];
+    this.emptyArenaSince = null;
     this.updateWaveHud();
 
     // Replenish supply crates at each wave so player can find healing!
@@ -358,7 +359,13 @@ export default class SurvivalScene extends Phaser.Scene {
   }
 
   getLivingWaveEnemies() {
-    return this.enemies.getChildren().filter(e => e && e.active && e.state !== 'DEAD' && !e._killHandled);
+    return this.enemies.getChildren().filter(e => (
+      e
+      && e.active
+      && !e._killHandled
+      && e.state !== 'DEAD'
+      && e.mobType
+    ));
   }
 
   getCountedWaveEnemies(enemies) {
@@ -366,12 +373,48 @@ export default class SurvivalScene extends Phaser.Scene {
     return livingEnemies.filter(e => e.countsTowardWave !== false);
   }
 
+  isFlyer(enemy) {
+    return enemy && (enemy.mobType === 'bee' || enemy.mobType === 'flying_eye');
+  }
+
+  getWaveSpawnBlockerCount(enemies) {
+    const livingEnemies = enemies || this.getCountedWaveEnemies();
+    return livingEnemies.filter(e => !this.isFlyer(e)).length;
+  }
+
+  prunePendingWaveSpawns() {
+    this.pendingWaveSpawns = (this.pendingWaveSpawns || []).filter(entry => entry && !entry.done);
+    this.inFlightSpawns = this.pendingWaveSpawns.length;
+  }
+
+  recoverStalePendingWaveSpawns() {
+    const now = performance.now();
+    (this.pendingWaveSpawns || []).forEach(entry => {
+      if (entry && !entry.done && now - (entry.createdAt || now) > 2500) {
+        if (entry.spawn) this.waveSpawnQueue.unshift(entry.spawn);
+        if (entry.timer) entry.timer.remove(false);
+        if (entry.spawnTimer) entry.spawnTimer.remove(false);
+        entry.done = true;
+      }
+    });
+    this.prunePendingWaveSpawns();
+  }
+
+  completePendingWaveSpawn(entry) {
+    if (!entry || entry.done) return;
+    entry.done = true;
+    this.pendingWaveSpawns = (this.pendingWaveSpawns || []).filter(p => p !== entry);
+    this.inFlightSpawns = this.pendingWaveSpawns.length;
+  }
+
   syncWaveFoeCounter(activeEnemies) {
     if (this.endlessMode || this.isWaveTransitioning) return false;
 
-    const living = activeEnemies || this.getLivingWaveEnemies();
+    this.prunePendingWaveSpawns();
+    const living = this.getCountedWaveEnemies(activeEnemies);
     const queuedCount = this.waveSpawnQueue ? this.waveSpawnQueue.length : 0;
-    const inFlightCount = this.inFlightSpawns || 0;
+    const inFlightCount = this.pendingWaveSpawns ? this.pendingWaveSpawns.length : 0;
+    this.inFlightSpawns = inFlightCount;
     const actualRemaining = living.length + queuedCount + inFlightCount;
 
     if (this.waveRemainingFoes !== actualRemaining || this.wavePendingCount !== actualRemaining) {
@@ -390,7 +433,7 @@ export default class SurvivalScene extends Phaser.Scene {
 
   keepFlyerInCombat(enemy) {
     if (!enemy || !this.player || this.player.isDead) return;
-    if (enemy.mobType !== 'bee' && enemy.mobType !== 'flying_eye') return;
+    if (!this.isFlyer(enemy)) return;
 
     enemy.setVisible(true);
     enemy.setAlpha(1);
@@ -398,83 +441,156 @@ export default class SurvivalScene extends Phaser.Scene {
     if (enemy.body && !enemy.body.enable) enemy.body.setEnable(true);
 
     const cam = this.cameras.main;
+    const isVisible =
+      enemy.x >= cam.worldView.x + 24 &&
+      enemy.x <= cam.worldView.right - 24 &&
+      enemy.y >= cam.worldView.y + 44 &&
+      enemy.y <= cam.worldView.bottom - 24;
 
-    // If flyer has drifted far beyond screen horizontally, steer back toward player
-    if (enemy.x < cam.worldView.x - 16) {
-      enemy.patrolDir = 1;
-    } else if (enemy.x > cam.worldView.right + 16) {
-      enemy.patrolDir = -1;
+    const livingEnemies = this.getLivingWaveEnemies();
+    const onlyFlyersLeft =
+      livingEnemies.length > 0 &&
+      livingEnemies.every(e => this.isFlyer(e)) &&
+      (!this.waveSpawnQueue || this.waveSpawnQueue.length === 0) &&
+      (!this.pendingWaveSpawns || this.pendingWaveSpawns.length === 0);
+
+    if (isVisible) {
+      enemy.offscreenSince = null;
+    } else {
+      if (!enemy.offscreenSince) enemy.offscreenSince = performance.now();
+
+      if (onlyFlyersLeft || performance.now() - enemy.offscreenSince > 900) {
+        const side = enemy.x < this.player.x ? -1 : 1;
+        const x = Phaser.Math.Clamp(this.player.x + side * 130, cam.worldView.x + 72, cam.worldView.right - 72);
+        const y = Phaser.Math.Clamp(this.player.y - 62, cam.worldView.y + 76, cam.worldView.bottom - 48);
+
+        enemy.setPosition(x, y);
+        enemy.setVelocity(side * -40, 0);
+        enemy.patrolDir = enemy.x < this.player.x ? 1 : -1;
+        enemy.offscreenSince = null;
+
+        enemy.baseY = y;
+        enemy.state = 'HOVER';
+      } else if (enemy.x < cam.worldView.x) {
+        enemy.patrolDir = 1;
+      } else if (enemy.x > cam.worldView.right) {
+        enemy.patrolDir = -1;
+      }
     }
 
-    // If only flyers are left in the wave, trigger frequent swoops so the player has quick combat opportunities
-    const livingEnemies = this.getLivingWaveEnemies();
-    const onlyFlyersLeft = livingEnemies.length > 0 && livingEnemies.every(e => e.mobType === 'bee' || e.mobType === 'flying_eye');
-    if (onlyFlyersLeft && enemy.state === 'HOVER') {
-      if (enemy.swoopCooldownUntil && enemy.swoopCooldownUntil > this.time.now + 1000) {
-        enemy.swoopCooldownUntil = this.time.now + 600;
+    if (onlyFlyersLeft) {
+      const dx = this.player.x - enemy.x;
+      const dy = this.player.y - enemy.y;
+      const stagingX = Phaser.Math.Clamp(
+        this.player.x + (dx >= 0 ? -95 : 95),
+        cam.worldView.x + 64,
+        cam.worldView.right - 64
+      );
+      const stagingY = Phaser.Math.Clamp(
+        this.player.y - 58,
+        cam.worldView.y + 74,
+        cam.worldView.bottom - 50
+      );
+
+      if (enemy.mobType === 'bee' && enemy.state === 'RECOVER') {
+        enemy.state = 'HOVER';
+        enemy.baseY = stagingY;
+        enemy.swoopCooldownUntil = Math.min(enemy.swoopCooldownUntil || 0, this.time.now + 400);
+      }
+
+      if (enemy.state === 'HOVER' || enemy.state === 'RECOVER') {
+        enemy.setVelocity(
+          Phaser.Math.Clamp((stagingX - enemy.x) * 4, -220, 220),
+          Phaser.Math.Clamp((stagingY - enemy.y) * 4, -160, 160)
+        );
+
+        enemy.baseY = stagingY;
+      }
+
+      if (enemy.mobType === 'bee' && enemy.state === 'HOVER') {
+        const closeEnough = Math.abs(dx) < 260 && dy > 8;
+        if (closeEnough && this.time.now > (enemy.forcedSwoopAt || 0) && typeof enemy.startSwoop === 'function') {
+          enemy.forcedSwoopAt = this.time.now + 900;
+          enemy.swoopCooldownUntil = 0;
+          enemy.startSwoop(this.player);
+        } else if (enemy.swoopCooldownUntil && enemy.swoopCooldownUntil > this.time.now + 400) {
+          enemy.swoopCooldownUntil = this.time.now + 400;
+        }
       }
     }
   }
 
   checkSpawnQueue() {
-    if (this.isGameOver || this.endlessMode) return;
+    if (this.isGameOver || this.endlessMode || this.isWaveTransitioning) return;
 
-    // Count living active enemies currently in the arena
-    const activeEnemies = this.getLivingWaveEnemies();
+    this.prunePendingWaveSpawns();
+    this.recoverStalePendingWaveSpawns();
+
+    const activeEnemies = this.getCountedWaveEnemies();
     const activeCount = activeEnemies.length;
+    const blockerCount = this.getWaveSpawnBlockerCount(activeEnemies);
 
-    this.syncWaveFoeCounter(activeEnemies);
+    if (this.syncWaveFoeCounter(activeEnemies)) return;
 
-    // Self-healing fail-safe: if arena is completely empty for > 1.5s while enemies are queued, reset inFlight
-    if (activeCount === 0 && this.waveSpawnQueue.length > 0) {
+    // Self-healing fail-safe: empty arena with queued/pending foes must keep spawning
+    let pendingCount = this.pendingWaveSpawns ? this.pendingWaveSpawns.length : 0;
+    if (activeCount === 0 && (this.waveSpawnQueue.length > 0 || pendingCount > 0)) {
       if (!this.emptyArenaSince) {
         this.emptyArenaSince = performance.now();
       } else if (performance.now() - this.emptyArenaSince > 1500) {
+        (this.pendingWaveSpawns || []).forEach(entry => {
+          if (entry && entry.spawn) this.waveSpawnQueue.unshift(entry.spawn);
+          if (entry && entry.timer) entry.timer.remove(false);
+          if (entry && entry.spawnTimer) entry.spawnTimer.remove(false);
+          if (entry) entry.done = true;
+        });
+        this.pendingWaveSpawns = [];
         this.inFlightSpawns = 0;
+        pendingCount = 0;
         this.emptyArenaSince = null;
       }
     } else {
       this.emptyArenaSince = null;
     }
 
-    // If no scheduled foes are left, the wave is cleared.
-    if (this.waveSpawnQueue.length === 0 && activeCount === 0 && (this.inFlightSpawns || 0) === 0) {
+    if (this.waveSpawnQueue.length === 0 && activeCount === 0 && pendingCount === 0) {
       this.waveCleared();
       return;
     }
 
-    // Available concurrency slots
-    const availableSlots = this.maxConcurrentEnemies - (activeCount + (this.inFlightSpawns || 0));
+    const availableSlots = this.maxConcurrentEnemies - (blockerCount + pendingCount);
     if (availableSlots <= 0 || this.waveSpawnQueue.length === 0) {
       return;
     }
 
-    // Dispatch up to availableSlots from the queue, slightly staggered
     const toSpawn = Math.min(availableSlots, this.waveSpawnQueue.length);
     for (let i = 0; i < toSpawn; i++) {
       const spawn = this.waveSpawnQueue.shift();
-      this.inFlightSpawns = (this.inFlightSpawns || 0) + 1;
+      if (!spawn) continue;
+
+      const entry = { spawn, done: false, timer: null, spawnTimer: null, createdAt: performance.now() };
+      this.pendingWaveSpawns.push(entry);
+      this.inFlightSpawns = this.pendingWaveSpawns.length;
 
       const staggerDelay = i * 180;
 
-      const telegraphTimer = this.time.delayedCall(staggerDelay, () => {
-        if (this.isGameOver) {
-          this.inFlightSpawns = Math.max(0, (this.inFlightSpawns || 0) - 1);
+      entry.timer = this.time.delayedCall(staggerDelay, () => {
+        if (this.isGameOver || this.isWaveTransitioning || entry.done) {
+          this.completePendingWaveSpawn(entry);
           return;
         }
         this.showSpawnTelegraph(spawn.x, spawn.y);
-
-        const spawnTimer = this.time.delayedCall(350, () => {
-          this.inFlightSpawns = Math.max(0, (this.inFlightSpawns || 0) - 1);
-          if (this.isGameOver) return;
-          this.spawnEnemy(spawn.type, spawn.x, spawn.y, this.waveHpMul);
-          this.syncWaveFoeCounter();
-          // Check if another slot opened
-          this.checkSpawnQueue();
-        });
-        this.waveSpawnTimers.push(spawnTimer);
       });
-      this.waveSpawnTimers.push(telegraphTimer);
+
+      entry.spawnTimer = this.time.delayedCall(staggerDelay + 350, () => {
+        this.completePendingWaveSpawn(entry);
+        if (this.isGameOver || this.isWaveTransitioning) return;
+        this.spawnEnemy(spawn.type, spawn.x, spawn.y, this.waveHpMul);
+        this.syncWaveFoeCounter();
+        this.checkSpawnQueue();
+      });
+
+      this.waveSpawnTimers.push(entry.timer, entry.spawnTimer);
     }
   }
 
@@ -501,10 +617,11 @@ export default class SurvivalScene extends Phaser.Scene {
       });
       this.pendingSpawns = [];
     }
-    this.waveSpawnTimers.forEach(t => t.remove(false));
+    this.waveSpawnTimers.forEach(t => t && t.remove(false));
     this.waveSpawnTimers = [];
     this.waveSpawnQueue = [];
     this.inFlightSpawns = 0;
+    (this.pendingWaveSpawns || []).forEach(entry => { if (entry) entry.done = true; });
     this.pendingWaveSpawns = [];
     this.waveRemainingFoes = 0;
     this.wavePendingCount = 0;
@@ -651,17 +768,7 @@ export default class SurvivalScene extends Phaser.Scene {
     this.showScorePopup(popupX, popupY, ptsEarned, fullLabel);
 
     if (!this.endlessMode) {
-      this.waveRemainingFoes = Math.max(0, (this.waveRemainingFoes !== undefined ? this.waveRemainingFoes : this.wavePendingCount) - 1);
-      this.wavePendingCount = this.waveRemainingFoes;
-      this.updateWaveHud();
-
-      const livingCount = this.enemies.getChildren().filter(e => e && e.active && e.state !== 'DEAD' && !e._killHandled).length;
-      if (this.waveRemainingFoes === 0 && livingCount === 0 && this.waveSpawnQueue.length === 0 && (this.inFlightSpawns || 0) === 0) {
-        this.waveCleared();
-      } else {
-        // A slot has opened up in the arena! Check queue to dispatch next foe
-        this.checkSpawnQueue();
-      }
+      this.checkSpawnQueue();
     }
 
     return ptsEarned;
@@ -718,7 +825,7 @@ export default class SurvivalScene extends Phaser.Scene {
       const speedBoost = 1 + (this.currentWaveIndex || 0) * 0.05;
       if (enemy.walkSpeed) enemy.walkSpeed *= speedBoost;
 
-      enemy.body.setCollideWorldBounds(true);
+      if (enemy.body) enemy.body.setCollideWorldBounds(true);
       this.enemies.add(enemy);
 
       // Spawn puff

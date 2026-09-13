@@ -17,7 +17,7 @@ export default class Bee extends Phaser.Physics.Arcade.Sprite {
     this.mobType = 'bee';
     this.hp = GAME_CONFIG.MOBS.BEE.HP;
     this.state = 'HOVER'; // HOVER, SWOOP, RECOVER, DEAD
-    this.originY = y;
+    this.baseY = y;
     this.patrolDir = -1;
     this.swoopCooldownUntil = 0;
     this.swoopTargetX = 0;
@@ -30,9 +30,19 @@ export default class Bee extends Phaser.Physics.Arcade.Sprite {
     if (this.state === 'DEAD') return;
 
     const isSurvival = this.scene.scene && this.scene.scene.key === 'SurvivalScene';
+    const livingEnemies = isSurvival && typeof this.scene.getLivingWaveEnemies === 'function'
+      ? this.scene.getLivingWaveEnemies()
+      : [];
+    const onlyFlyersLeft = isSurvival
+      && this.scene.waveSpawnQueue?.length === 0
+      && this.scene.pendingWaveSpawns?.length === 0
+      && livingEnemies.length > 0
+      && livingEnemies.every(e => this.scene.isFlyer ? this.scene.isFlyer(e) : e.mobType === 'bee' || e.mobType === 'flying_eye');
+
     if (isSurvival) {
-      const minX = 32;
-      const maxX = (this.scene.arenaWidth || GAME_CONFIG.WIDTH) - 32;
+      const cam = this.scene.cameras?.main;
+      const minX = cam ? cam.worldView.x + 48 : 32;
+      const maxX = cam ? cam.worldView.right - 48 : (this.scene.arenaWidth || GAME_CONFIG.WIDTH) - 32;
       if (this.x <= minX) {
         this.x = minX;
         this.patrolDir = 1;
@@ -47,9 +57,14 @@ export default class Bee extends Phaser.Physics.Arcade.Sprite {
       if (player && !player.isDead) {
         const dist = Phaser.Math.Distance.Between(this.x, this.y, player.x, player.y);
         const dx = player.x - this.x;
+        const desiredSide = dx >= 0 ? -1 : 1;
+        const desiredX = Phaser.Math.Clamp(player.x + desiredSide * 95, 48, (this.scene.arenaWidth || GAME_CONFIG.WIDTH) - 48);
+        const dxToStaging = desiredX - this.x;
 
-        // Actively drift horizontally toward player
-        if (Math.abs(dx) > 30) {
+        // In survival, bees stage near the hero so the final flyers cannot stall a wave.
+        if (isSurvival && Math.abs(dxToStaging) > 14) {
+          this.patrolDir = dxToStaging > 0 ? 1 : -1;
+        } else if (Math.abs(dx) > 30) {
           this.patrolDir = dx > 0 ? 1 : -1;
         }
 
@@ -57,21 +72,27 @@ export default class Bee extends Phaser.Physics.Arcade.Sprite {
         const cam = this.scene.cameras?.main;
         const minY = isSurvival ? (cam ? cam.worldView.y + 44 : 155) : 75;
         const maxY = isSurvival ? Math.min(player.y - 20, 255) : 255;
-        const desiredHoverY = Phaser.Math.Clamp(player.y - 55, minY, maxY);
-        this.originY = Phaser.Math.Linear(this.originY, desiredHoverY, 0.05);
+        const desiredHoverY = Phaser.Math.Clamp(player.y - (onlyFlyersLeft ? 44 : 55), minY, maxY);
+        this.baseY = Phaser.Math.Linear(this.baseY, desiredHoverY, onlyFlyersLeft ? 0.12 : 0.05);
 
-        // Sinusoidal bobbing around originY
+        // Sinusoidal bobbing around baseY
         const wave = Math.sin(this.scene.time.now * 0.005) * 12;
-        this.y = Phaser.Math.Clamp(this.originY + wave, minY, maxY + 10);
+        this.y = Phaser.Math.Clamp(this.baseY + wave, minY, maxY + 10);
 
         // Close in faster if player is far away
-        const speed = Math.abs(dx) > 100 ? GAME_CONFIG.MOBS.BEE.HOVER_SPEED * 1.8 : GAME_CONFIG.MOBS.BEE.HOVER_SPEED;
-        this.setVelocityX(this.patrolDir * speed);
+        const speed = onlyFlyersLeft
+          ? GAME_CONFIG.MOBS.BEE.HOVER_SPEED * 2.8
+          : (Math.abs(dx) > 100 ? GAME_CONFIG.MOBS.BEE.HOVER_SPEED * 1.8 : GAME_CONFIG.MOBS.BEE.HOVER_SPEED);
+        const velocityX = isSurvival && Math.abs(dxToStaging) > 14
+          ? Math.sign(dxToStaging) * speed
+          : this.patrolDir * speed;
+        this.setVelocityX(velocityX);
         this.setVelocityY(0);
-        this.setFlipX(this.patrolDir > 0);
+        this.setFlipX(dx > 0);
 
         const swoopRange = GAME_CONFIG.MOBS.BEE.SWOOP_RANGE || 320;
-        const canSwoop = dist < swoopRange && (player.y > this.y + 10) && this.scene.time.now > this.swoopCooldownUntil;
+        const survivalSwoopRange = onlyFlyersLeft ? 520 : Math.max(swoopRange, 380);
+        const canSwoop = dist < survivalSwoopRange && player.y > this.y + 8 && this.scene.time.now > this.swoopCooldownUntil;
         if (canSwoop) {
           this.startSwoop(player);
         }
@@ -80,7 +101,7 @@ export default class Bee extends Phaser.Physics.Arcade.Sprite {
         this.setVelocityY(0);
         this.setFlipX(this.patrolDir > 0);
         const wave = Math.sin(this.scene.time.now * 0.005) * 16;
-        this.y = Phaser.Math.Clamp(this.originY + wave, 150, 260);
+        this.y = Phaser.Math.Clamp(this.baseY + wave, 150, 260);
       }
 
       // Reverse horizontal direction at boundaries
@@ -88,6 +109,11 @@ export default class Bee extends Phaser.Physics.Arcade.Sprite {
       if (this.body.blocked.right) this.patrolDir = -1;
     } else if (this.state === 'SWOOP') {
       // Check if reached swoop depth or ground or out of bounds
+      if (isSurvival && player && !player.isDead) {
+        this.swoopTargetX = player.x;
+        this.swoopTargetY = Math.min(player.y + 8, 300);
+      }
+
       if (this.y >= this.swoopTargetY - 10 || this.y >= 310 || this.body.blocked.down) {
         this.recover();
       } else {
@@ -103,9 +129,9 @@ export default class Bee extends Phaser.Physics.Arcade.Sprite {
       const cam = this.scene.cameras?.main;
       const minY = isSurvival ? (cam ? cam.worldView.y + 44 : 155) : 75;
       const maxY = isSurvival ? Math.min(player.y - 20, 255) : 255;
-      const targetRecoveryY = player && !player.isDead ? Phaser.Math.Clamp(player.y - 55, minY, maxY) : this.originY;
+      const targetRecoveryY = player && !player.isDead ? Phaser.Math.Clamp(player.y - 55, minY, maxY) : this.baseY;
       if (this.y <= targetRecoveryY || this.y <= minY) {
-        this.originY = targetRecoveryY;
+        this.baseY = targetRecoveryY;
         this.y = targetRecoveryY;
         this.state = 'HOVER';
         this.setVelocityY(0);
@@ -119,7 +145,7 @@ export default class Bee extends Phaser.Physics.Arcade.Sprite {
     if (!player || player.isDead) return;
     this.state = 'SWOOP';
     this.swoopTargetX = player.x;
-    this.swoopTargetY = Math.min(player.y, 300);
+    this.swoopTargetY = Math.min(player.y + 8, 300);
     this.play('bee_attack_anim', true);
 
     // Visual telegraph arrow / warning
