@@ -305,6 +305,22 @@ class SoundEngine {
     });
   }
 
+  playBlip(high = false) {
+    if (this.muted || !this.ctx) return;
+    this.resume();
+    const t = this.ctx.currentTime;
+    const osc = this.ctx.createOscillator();
+    const gain = this.ctx.createGain();
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(high ? 580 : 380, t);
+    gain.gain.setValueAtTime(0.08, t);
+    gain.gain.exponentialRampToValueAtTime(0.001, t + 0.05);
+    osc.connect(gain);
+    gain.connect(this.sfxGain);
+    osc.start(t);
+    osc.stop(t + 0.05);
+  }
+
   startBGM() {
     if (this.bgmPlaying) return;
     this.init();

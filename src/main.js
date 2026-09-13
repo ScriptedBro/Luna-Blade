@@ -2,7 +2,9 @@ import Phaser from 'phaser';
 import { GAME_CONFIG } from './config.js';
 import BootScene from './scenes/BootScene.js';
 import MenuScene from './scenes/MenuScene.js';
+import StoryIntroScene from './scenes/StoryIntroScene.js';
 import StoryScene from './scenes/StoryScene.js';
+import StoryEndingScene from './scenes/StoryEndingScene.js';
 import SurvivalScene from './scenes/SurvivalScene.js';
 import ForgeScene from './scenes/ForgeScene.js';
 import LeaderboardScene from './scenes/LeaderboardScene.js';
@@ -31,7 +33,9 @@ const phaserConfig = {
   scene: [
     BootScene,
     MenuScene,
+    StoryIntroScene,
     StoryScene,
+    StoryEndingScene,
     SurvivalScene,
     ForgeScene,
     LeaderboardScene

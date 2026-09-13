@@ -69,8 +69,8 @@ export default class MenuScene extends Phaser.Scene {
     const options = [
       {
         text: '⚔️ 1. STORY MODE',
-        desc: 'Restoration of the Shrines (3 Chapters)',
-        action: () => this.scene.start('StoryScene', { chapter: 1 })
+        desc: 'The Shattered Moon & The Blighted Roots',
+        action: () => this.openStoryModal()
       },
       {
         text: '🏆 2. DAILY LUNA TRIAL',
@@ -180,6 +180,135 @@ export default class MenuScene extends Phaser.Scene {
         }
       });
     }
+  }
+
+  openStoryModal() {
+    if (this.storyModalContainer) return;
+    const w = GAME_CONFIG.WIDTH;
+    const h = GAME_CONFIG.HEIGHT;
+
+    const modal = this.add.container(w / 2, h / 2).setDepth(600);
+    this.storyModalContainer = modal;
+
+    // Dim overlay
+    const overlay = this.add.rectangle(0, 0, w, h, 0x000000, 0.65).setInteractive();
+    modal.add(overlay);
+
+    // Modal panel
+    const panel = this.add.rectangle(0, 0, 360, 204, 0x071217, 0.95);
+    panel.setStrokeStyle(2, 0x1d4754);
+    modal.add(panel);
+
+    // Header
+    const title = this.add.text(0, -84, '⚔️ CHOOSE CHAPTER', {
+      fontFamily: 'Press Start 2P',
+      fontSize: '8px',
+      color: '#ffd166'
+    }).setOrigin(0.5);
+    modal.add(title);
+
+    const sub = this.add.text(0, -70, 'THE SHATTERED MOON & THE BLIGHTED ROOTS', {
+      fontFamily: 'Press Start 2P',
+      fontSize: '4.5px',
+      color: '#7ba0ab'
+    }).setOrigin(0.5);
+    modal.add(sub);
+
+    const ch2Unlocked = storage.isChapterUnlocked(2);
+    const ch3Unlocked = storage.isChapterUnlocked(3);
+    const epilogueUnlocked = !!storage.data.storyProgress?.chapter3?.completed;
+
+    const entries = [
+      {
+        title: '📜 PROLOGUE: THE SHATTERED MOON',
+        desc: 'Illustrated Origin of the Pale Blight',
+        unlocked: true,
+        action: () => this.scene.start('StoryIntroScene')
+      },
+      {
+        title: '🌲 CHAPTER 1: WHISPERING WOODS',
+        desc: 'Cleanse the Shrine of Whispering Waters',
+        unlocked: true,
+        action: () => this.scene.start('StoryScene', { chapter: 1 })
+      },
+      {
+        title: '🍯 CHAPTER 2: THE HIVE CANOPY',
+        desc: ch2Unlocked ? 'Defeat Archmage Malakor on High Boughs' : '🔒 Complete Chapter 1 to Unlock',
+        unlocked: ch2Unlocked,
+        action: () => this.scene.start('StoryScene', { chapter: 2 })
+      },
+      {
+        title: '🏛️ CHAPTER 3: THE SUNKEN RUINS',
+        desc: ch3Unlocked ? 'Purge the Primordial Corrupted Obelisk' : '🔒 Complete Chapter 2 to Unlock',
+        unlocked: ch3Unlocked,
+        action: () => this.scene.start('StoryScene', { chapter: 3 })
+      }
+    ];
+
+    if (epilogueUnlocked) {
+      entries.push({
+        title: '✨ EPILOGUE: THE SILVER DAWN',
+        desc: 'Watch the Forest Restoration Cinematic',
+        unlocked: true,
+        action: () => this.scene.start('StoryEndingScene')
+      });
+    }
+
+    entries.forEach((item, idx) => {
+      const ey = -46 + idx * 26;
+      const btnBg = this.add.rectangle(0, ey, 324, 22, item.unlocked ? 0x0d222b : 0x0a1417, 0.9);
+      btnBg.setStrokeStyle(1, item.unlocked ? 0x225566 : 0x1a2d33);
+      modal.add(btnBg);
+
+      const t = this.add.text(-150, ey - 3, item.title, {
+        fontFamily: 'Press Start 2P',
+        fontSize: '5.5px',
+        color: item.unlocked ? '#ffffff' : '#556b73'
+      }).setOrigin(0, 0.5);
+      modal.add(t);
+
+      const d = this.add.text(-150, ey + 6, item.desc, {
+        fontFamily: 'Press Start 2P',
+        fontSize: '4px',
+        color: item.unlocked ? '#6ab2c4' : '#3d5259'
+      }).setOrigin(0, 0.5);
+      modal.add(d);
+
+      if (item.unlocked) {
+        btnBg.setInteractive({ useHandCursor: true });
+        btnBg.on('pointerover', () => {
+          btnBg.setFillStyle(0x194254);
+          t.setColor('#ffd166');
+          sound.playBlip(true);
+        });
+        btnBg.on('pointerout', () => {
+          btnBg.setFillStyle(0x0d222b);
+          t.setColor('#ffffff');
+        });
+        btnBg.on('pointerdown', () => {
+          sound.playCoin();
+          modal.destroy();
+          this.storyModalContainer = null;
+          item.action();
+        });
+      }
+    });
+
+    // Close button
+    const closeBtn = this.add.text(0, 84, '[CLOSE ✕]', {
+      fontFamily: 'Press Start 2P',
+      fontSize: '6px',
+      color: '#ff6666'
+    }).setOrigin(0.5).setInteractive({ useHandCursor: true });
+
+    closeBtn.on('pointerover', () => closeBtn.setColor('#ff9999'));
+    closeBtn.on('pointerout', () => closeBtn.setColor('#ff6666'));
+    closeBtn.on('pointerdown', () => {
+      sound.playBlip(false);
+      modal.destroy();
+      this.storyModalContainer = null;
+    });
+    modal.add(closeBtn);
   }
 
   update() {

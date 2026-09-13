@@ -13,6 +13,7 @@ import Crate from '../entities/Crate.js';
 import Obelisk from '../entities/Obelisk.js';
 import BossHealthBar from '../ui/BossHealthBar.js';
 import HeroHealthBar from '../ui/HeroHealthBar.js';
+import StoryDialogueBox from '../ui/StoryDialogueBox.js';
 import { GAME_CONFIG } from '../config.js';
 import { sound } from '../engine/Audio.js';
 import { storage } from '../engine/Storage.js';
@@ -28,6 +29,7 @@ export default class StoryScene extends Phaser.Scene {
     this.chapterConfig = GAME_CONFIG.CHAPTERS.find(c => c.id === this.chapterId) || GAME_CONFIG.CHAPTERS[0];
     this.killsCount = 0;
     this.isVictory = false;
+    this.inDialogue = false;
     this.comboCount = 0;
     this.comboTimer = 0;
     this.levelWidth = this.chapterId === 1 ? 2800 : 2600;
@@ -617,11 +619,22 @@ export default class StoryScene extends Phaser.Scene {
       // Boss Health Bar
       this.bossHealthBar = new BossHealthBar(this, GAME_CONFIG.MOBS.BOSS_GORGOK.NAME, GAME_CONFIG.MOBS.BOSS_GORGOK.HP);
 
-      // Spawn Boss Gorgok
+      // Spawn Boss Gorgok (halt AI until dialogue concludes)
       this.boss = new BossGorgok(this, 2600, 340, this.bossHealthBar);
       this.enemies.add(this.boss);
+      this.boss.actionCooldown = this.time.now + 999999;
 
-      this.showBossWarningBanner(GAME_CONFIG.MOBS.BOSS_GORGOK.NAME, 'ARMORED WAR BOAR COLOSSUS');
+      this.startDialogue([
+        { speaker: 'GORGOK', text: 'GRAAAAGH! WHO ENTERS MY GLADE?! THE CRYSTAL... IT SINGS IN MY BLOOD!' },
+        { speaker: 'LUNA', text: 'Gorgok! Fight the corruption! You were the revered guardian of these woods!' },
+        { speaker: 'GORGOK', text: 'GUARDIAN NO MORE! I AM THE TUSK OF THE BLIGHT! CRUSH THE MOONWARDEN!' },
+        { speaker: 'LUNA', text: 'Forgive me, ancient friend. The Luna Blade will shatter your chains!' }
+      ], () => {
+        if (this.boss && this.boss.active) {
+          this.boss.actionCooldown = this.time.now + 600;
+        }
+        this.showBossWarningBanner(GAME_CONFIG.MOBS.BOSS_GORGOK.NAME, 'ARMORED WAR BOAR COLOSSUS');
+      });
     } else if (chapter === 2) {
       // Restrict camera to Chapter 2 Boss Arena
       this.cameras.main.setBounds(2080, 0, 520, this.levelHeight);
@@ -642,11 +655,56 @@ export default class StoryScene extends Phaser.Scene {
       // Boss Health Bar
       this.bossHealthBar = new BossHealthBar(this, GAME_CONFIG.MOBS.BOSS_WIZARD.NAME, GAME_CONFIG.MOBS.BOSS_WIZARD.HP);
 
-      // Spawn Boss Malakor
+      // Spawn Boss Malakor (halt AI until dialogue concludes)
       this.boss = new BossWizard(this, 2380, 240, this.bossHealthBar);
       this.enemies.add(this.boss);
+      this.boss.nextActionTime = this.time.now + 999999;
 
-      this.showBossWarningBanner(GAME_CONFIG.MOBS.BOSS_WIZARD.NAME, 'WIELDER OF TWILIGHT ARCANA');
+      this.startDialogue([
+        { speaker: 'MALAKOR', text: 'Ah, the little Moonwarden finally arrives. How tragic that you climbed so high only to fall.' },
+        { speaker: 'LUNA', text: 'Surrender the lunar shard, Malakor! Your experiments are rotting the forest from within!' },
+        { speaker: 'MALAKOR', text: 'Rot? This is TRANSCENDENCE! With the celestial core, I shall bend reality itself! DIE!' }
+      ], () => {
+        if (this.boss && this.boss.active) {
+          this.boss.nextActionTime = this.time.now + 700;
+        }
+        this.showBossWarningBanner(GAME_CONFIG.MOBS.BOSS_WIZARD.NAME, 'WIELDER OF TWILIGHT ARCANA');
+      });
+    } else if (chapter === 3) {
+      // Restrict camera to Chapter 3 Climax Arena
+      this.cameras.main.setBounds(2080, 0, 520, this.levelHeight);
+
+      // Arena barricade gate at x = 2090
+      this.arenaGateWall = this.add.rectangle(2090, 340, 20, 100, 0x000000, 0);
+      this.physics.add.existing(this.arenaGateWall, true);
+      this.platforms.add(this.arenaGateWall);
+
+      // Visual gate: dark ruin stone pillars
+      this.arenaGateVisual = this.add.container(2090, 340);
+      for (let gy = -40; gy <= 40; gy += 24) {
+        const block = this.add.image(0, gy, 'crate').setScale(1.1).setTint(0x221133);
+        this.arenaGateVisual.add(block);
+      }
+      this.arenaGateVisual.setDepth(15);
+
+      // Lock the final obelisk until guardians are purged
+      if (this.obelisk) {
+        this.obelisk.lock();
+      }
+
+      this.startDialogue([
+        { speaker: 'SHRINE', text: 'A dark resonance echoes from the abyss: "YOU CANNOT CLEANSE THE CORE, LITTLE MOTH..."' },
+        { speaker: 'LUNA', text: 'The Blight has formed a consciousness... Stand behind me, Sparky! Luna Blade, ignite!' }
+      ], () => {
+        this.showBossWarningBanner('SHADOW OF THE BLIGHT', 'PRIMORDIAL CRYSTALLINE GUARDIANS');
+
+        // Spawn Elite Shadow Guardians
+        const m1 = this.spawnMob('flying_eye', 2280, 150);
+        const m2 = this.spawnMob('goblin', 2360, 340);
+        const m3 = this.spawnMob('boar', 2420, 340);
+        const m4 = this.spawnMob('mushroom', 2520, 340);
+        this.climaxFoes = [m1, m2, m3, m4].filter(Boolean);
+      });
     }
   }
 
@@ -816,9 +874,51 @@ export default class StoryScene extends Phaser.Scene {
         onComplete: () => {
           if (this.chapterIntroCard === card) this.chapterIntroCard = null;
           card.destroy();
+          this.triggerChapterOpeningDialogue();
         }
       });
     });
+  }
+
+  triggerChapterOpeningDialogue() {
+    if (this.chapterId === 1) {
+      this.startDialogue([
+        { speaker: 'COMPANION', text: 'Luna! Look at the lake shoreline... the water is thick with jagged purple crystals!' },
+        { speaker: 'LUNA', text: 'The Pale Blight has spread this far... The Shrine of Whispering Waters is in grave danger.' },
+        { speaker: 'COMPANION', text: 'Chieftain Gorgok is guarding the glade ahead, but the crystal madness has taken him. Be careful!' },
+        { speaker: 'LUNA', text: 'We must free Gorgok from his pain and cleanse the sacred Obelisk. To the glade!' }
+      ]);
+    } else if (this.chapterId === 2) {
+      this.startDialogue([
+        { speaker: 'LUNA', text: 'The air up here smells of scorched honey and sulfur... We have reached the Golden Canopy.' },
+        { speaker: 'COMPANION', text: 'Archmage Malakor has built alchemical extraction rigs into the elder boughs!' },
+        { speaker: 'LUNA', text: 'He is siphoning the fallen moon shards to forge forbidden arcana. His arrogance ends now.' }
+      ]);
+    } else if (this.chapterId === 3) {
+      this.startDialogue([
+        { speaker: 'LUNA', text: 'The Sunken Ruins... we have descended to the subterranean roots of the World-Tree.' },
+        { speaker: 'COMPANION', text: 'I can feel it, Luna... the Primordial Heart Shard is beating right ahead in the dark.' },
+        { speaker: 'LUNA', text: 'This is where the blight began, and where it will end. Hold fast to the Luna Blade!' }
+      ]);
+    }
+  }
+
+  startDialogue(lines, onComplete) {
+    if (this.chapterIntroCard) {
+      this.chapterIntroCard.destroy();
+      this.chapterIntroCard = null;
+    }
+    this.inDialogue = true;
+    if (this.player && this.player.body) {
+      this.player.setVelocity(0, 0);
+      this.player.play('player_idle', true);
+    }
+    const box = new StoryDialogueBox(this);
+    box.startDialogue(lines, () => {
+      this.inDialogue = false;
+      if (onComplete) onComplete();
+    });
+    return box;
   }
 
   handlePlayerAttackEnemy(enemy) {
@@ -960,6 +1060,39 @@ export default class StoryScene extends Phaser.Scene {
     // Mark progression in Storage
     storage.markChapterComplete(this.chapterId, this.killsCount);
 
+    if (this.chapterIntroCard) {
+      this.chapterIntroCard.destroy();
+      this.chapterIntroCard = null;
+    }
+
+    if (this.chapterId === 1) {
+      this.startDialogue([
+        { speaker: 'SHRINE', text: '✨ "The first root inhales pure moonlight. The waters run crystal-clear once more."' },
+        { speaker: 'COMPANION', text: 'Gorgok is at peace, Luna! But the golden canopy above is still shrouded in dark arcana. Onward!' }
+      ], () => {
+        this.showVictoryBanner();
+      });
+    } else if (this.chapterId === 2) {
+      this.startDialogue([
+        { speaker: 'SHRINE', text: '✨ "The Golden Hive hums in harmony. The false sorcerer is broken, and the boughs are cleansed."' },
+        { speaker: 'LUNA', text: 'Only the Sunken Ruins remain below. The primordial Heart Shard awaits in the abyss.' }
+      ], () => {
+        this.showVictoryBanner();
+      });
+    } else if (this.chapterId === 3) {
+      this.startDialogue([
+        { speaker: 'SHRINE', text: '✨ "THE PRIMORDIAL CORE SHATTERS! Pure celestial light cascades through every root of the World-Tree!"' },
+        { speaker: 'LUNA', text: 'We did it, Sparky... The High Forest is saved. The Silver Moon is restored!' }
+      ], () => {
+        this.cameras.main.fade(800, 255, 255, 255);
+        this.time.delayedCall(850, () => {
+          this.scene.start('StoryEndingScene');
+        });
+      });
+    }
+  }
+
+  showVictoryBanner() {
     // Celebration Confetti
     try {
       confetti({
@@ -972,11 +1105,6 @@ export default class StoryScene extends Phaser.Scene {
     const w = GAME_CONFIG.WIDTH;
     const h = GAME_CONFIG.HEIGHT;
     this.victoryInputReadyTime = this.time.now + 350; // brief delay so final attack swing doesn't accidentally skip
-
-    if (this.chapterIntroCard) {
-      this.chapterIntroCard.destroy();
-      this.chapterIntroCard = null;
-    }
 
     // Victory Banner Container
     const banner = this.add.container(w / 2, h / 2).setScrollFactor(0).setDepth(500);
@@ -1138,6 +1266,13 @@ export default class StoryScene extends Phaser.Scene {
   }
 
   update() {
+    if (this.inDialogue) {
+      if (this.player && this.player.body) {
+        this.player.setVelocityX(0);
+      }
+      return;
+    }
+
     const touchInputs = window.touchController ? {
       ...window.touchController.state,
       ...window.touchController.consumeTriggers()
@@ -1180,11 +1315,25 @@ export default class StoryScene extends Phaser.Scene {
       this.player.update(this.cursors, touchInputs);
 
       // Check arena boss encounter triggers
-      if (!this.bossTriggered && !this.player.isDead) {
+      if (!this.bossTriggered && !this.player.isDead && !this.inDialogue) {
         if (this.chapterId === 1 && this.player.x >= 2320) {
           this.triggerBossEncounter(1);
         } else if (this.chapterId === 2 && this.player.x >= 2100) {
           this.triggerBossEncounter(2);
+        } else if (this.chapterId === 3 && this.player.x >= 2080) {
+          this.triggerBossEncounter(3);
+        }
+      }
+    }
+
+    // Check Chapter 3 Climax Arena Foes Defeat
+    if (this.chapterId === 3 && this.bossTriggered && this.climaxFoes && this.climaxFoes.length > 0) {
+      this.climaxFoes = this.climaxFoes.filter(f => f && f.active && f.state !== 'DEAD');
+      if (this.climaxFoes.length === 0) {
+        this.climaxFoes = null;
+        this.openArenaGate();
+        if (this.obelisk) {
+          this.obelisk.unlock();
         }
       }
     }
