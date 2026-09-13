@@ -140,6 +140,7 @@ class StorageManager {
   }
 
   recordDailyTrial(dateStr, score, details) {
+    if (!this.data.dailyRecords) this.data.dailyRecords = {};
     const prev = this.data.dailyRecords[dateStr];
     if (!prev || score > prev.score) {
       this.data.dailyRecords[dateStr] = {
@@ -153,6 +154,7 @@ class StorageManager {
   }
 
   getDailyRecord(dateStr) {
+    if (!this.data.dailyRecords) this.data.dailyRecords = {};
     return this.data.dailyRecords[dateStr] || null;
   }
 }

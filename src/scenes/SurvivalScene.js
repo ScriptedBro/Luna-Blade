@@ -123,11 +123,11 @@ export default class SurvivalScene extends Phaser.Scene {
 
     // Deflected projectiles vs enemies
     this.physics.add.overlap(this.projectiles, this.enemies, (proj, enemy) => {
-      if (!proj || proj.isDead || !proj.isDeflected || !enemy || enemy.state === 'DEAD') return;
+      if (!proj || proj.isDead || !proj.isDeflected || !enemy || enemy.state === 'DEAD' || enemy._killHandled) return;
       const res = enemy.takeDamage(60, proj.x);
       proj.destroyProj ? proj.destroyProj() : proj.destroy();
       if (res && res.killed) {
-        this.addKill(enemy.mobType, res.pts, 40, enemy.x, enemy.y - 12, 'DEFLECT KILL! ⚡');
+        this.addKill(enemy.mobType, res.pts, 40, enemy.x, enemy.y - 12, 'DEFLECT KILL! ⚡', enemy);
       }
     });
 
@@ -143,14 +143,19 @@ export default class SurvivalScene extends Phaser.Scene {
     // HUD
     this.createSurvivalHUD();
 
-    // Start wave progression (kill-gated)
+    // Start wave progression (kill-gated with concurrency cap)
     this.currentWaveIndex = 0;
     this.wavePendingCount = 0;
+    this.waveRemainingFoes = 0;
+    this.waveSpawnQueue = [];
+    this.maxConcurrentEnemies = 2;
+    this.inFlightSpawns = 0;
     this.waveHpMul = 1;
     this.endlessMode = false;
     this.endlessWave = 1;
     this.failsafeTimer = null;
     this.waveSpawnTimers = [];
+    this.modalButtons = null;
     this.player.body.setCollideWorldBounds(true);
     this.startWave(this.currentWaveIndex);
   }
@@ -300,6 +305,15 @@ export default class SurvivalScene extends Phaser.Scene {
     return proj;
   }
 
+  getMaxConcurrentForWave(waveIndex) {
+    if (waveIndex === 0) return 2; // Wave 1: max 2 active enemies
+    if (waveIndex === 1) return 3; // Wave 2: max 3 active enemies
+    if (waveIndex === 2) return 3; // Wave 3: max 3 active enemies
+    if (waveIndex === 3) return 4; // Wave 4: max 4 active enemies
+    if (waveIndex === 4) return 4; // Wave 5: max 4 active enemies (Boss + 3 minions)
+    return 4;
+  }
+
   startWave(index) {
     if (this.isGameOver) return;
 
@@ -312,32 +326,65 @@ export default class SurvivalScene extends Phaser.Scene {
     const wave = waves[index];
     this.currentWaveIndex = index;
     this.waveHpMul = this.getWaveHpMul(index);
+    this.waveSpawnQueue = [...wave.spawns];
+    this.waveRemainingFoes = wave.spawns.length;
     this.wavePendingCount = wave.spawns.length;
+    this.maxConcurrentEnemies = this.getMaxConcurrentForWave(index);
+    this.inFlightSpawns = 0;
     this.endlessMode = false;
     this.waveSpawnTimers = [];
     this.updateWaveHud();
 
     this.announceWave(wave.title);
 
-    wave.spawns.forEach(spawn => {
-      // Telegraph warning pulse 500ms before mob materializes
-      if (spawn.delay >= 500) {
-        const warnTimer = this.time.delayedCall(spawn.delay - 500, () => {
-          if (this.isGameOver) return;
-          this.showSpawnTelegraph(spawn.x, spawn.y);
-        });
-        this.waveSpawnTimers.push(warnTimer);
-      }
+    // Initial spawn check to populate arena up to maxConcurrentEnemies
+    this.checkSpawnQueue();
 
-      const timer = this.time.delayedCall(spawn.delay, () => {
+    // Fail-safe: if a wave can't be cleared, force it forward
+    this.startWaveFailsafe();
+  }
+
+  checkSpawnQueue() {
+    if (this.isGameOver || this.endlessMode) return;
+
+    // Count living active enemies currently in the arena
+    const activeEnemies = this.enemies.getChildren().filter(e => e && e.active && e.state !== 'DEAD' && !e._killHandled);
+    const activeCount = activeEnemies.length;
+
+    // If no foes left in queue, no in-flight spawns, and all active enemies are dead, wave is cleared
+    if (this.waveRemainingFoes <= 0 && activeCount === 0 && this.waveSpawnQueue.length === 0 && this.inFlightSpawns === 0) {
+      this.waveCleared();
+      return;
+    }
+
+    // Available concurrency slots
+    const availableSlots = this.maxConcurrentEnemies - (activeCount + this.inFlightSpawns);
+    if (availableSlots <= 0 || this.waveSpawnQueue.length === 0) {
+      return;
+    }
+
+    // Spawn up to availableSlots from the queue, slightly staggered
+    const toSpawn = Math.min(availableSlots, this.waveSpawnQueue.length);
+    for (let i = 0; i < toSpawn; i++) {
+      const spawn = this.waveSpawnQueue.shift();
+      this.inFlightSpawns++;
+      const staggerDelay = i * 250;
+
+      const timer = this.time.delayedCall(staggerDelay, () => {
         if (this.isGameOver) return;
-        this.spawnEnemy(spawn.type, spawn.x, spawn.y, this.waveHpMul);
+        this.showSpawnTelegraph(spawn.x, spawn.y);
+
+        const spawnTimer = this.time.delayedCall(450, () => {
+          if (this.isGameOver) return;
+          this.inFlightSpawns = Math.max(0, this.inFlightSpawns - 1);
+          this.spawnEnemy(spawn.type, spawn.x, spawn.y, this.waveHpMul);
+          // Check if another slot opened
+          this.checkSpawnQueue();
+        });
+        this.waveSpawnTimers.push(spawnTimer);
       });
       this.waveSpawnTimers.push(timer);
-    });
-
-    // Fail-safe: if a wave can't be cleared (stuck shell, glitched mob), force it forward
-    this.startWaveFailsafe();
+    }
   }
 
   showSpawnTelegraph(x, y) {
@@ -346,7 +393,7 @@ export default class SurvivalScene extends Phaser.Scene {
       targets: rune,
       scale: 1.6,
       alpha: 0,
-      duration: 480,
+      duration: 450,
       onComplete: () => rune.destroy()
     });
   }
@@ -357,6 +404,9 @@ export default class SurvivalScene extends Phaser.Scene {
     this.stopWaveFailsafe();
     this.waveSpawnTimers.forEach(t => t.remove(false));
     this.waveSpawnTimers = [];
+    this.waveSpawnQueue = [];
+    this.inFlightSpawns = 0;
+    this.waveRemainingFoes = 0;
     this.wavePendingCount = 0;
     this.updateWaveHud();
 
@@ -369,7 +419,7 @@ export default class SurvivalScene extends Phaser.Scene {
     confetti({ particleCount: 35, spread: 70, origin: { y: 0.6 } });
     this.announceWave(`✨ WAVE ${this.currentWaveIndex + 1} CLEARED! +${bonus} PTS ✨`);
 
-    this.time.delayedCall(1200, () => {
+    this.time.delayedCall(1400, () => {
       if (this.isGameOver) return;
       this.startWave(this.currentWaveIndex + 1);
     });
@@ -383,6 +433,8 @@ export default class SurvivalScene extends Phaser.Scene {
         if (this.isGameOver) return;
         this.waveSpawnTimers.forEach(t => t.remove(false));
         this.waveSpawnTimers = [];
+        this.waveSpawnQueue = [];
+        this.inFlightSpawns = 0;
         this.enemies.getChildren().forEach(enemy => {
           if (enemy && enemy.active && enemy.state !== 'DEAD') {
             enemy.die();
@@ -404,34 +456,44 @@ export default class SurvivalScene extends Phaser.Scene {
     if (this.isGameOver) return;
 
     this.endlessMode = true;
+    this.waveRemainingFoes = 0;
     this.wavePendingCount = 0;
     this.endlessWave = 1;
+    this.maxConcurrentEnemies = 4;
+    this.inFlightSpawns = 0;
     this.waveHpMul = GAME_CONFIG.SURVIVAL.ENDLESS_HP_MUL_BASE;
     this.stopWaveFailsafe();
     this.updateWaveHud();
 
     this.announceWave('SURVIVAL RUSH!');
 
+    // Endless mode periodic spawner: checks every 2 seconds if arena has open slots up to maxConcurrentEnemies
     this.endlessTimer = this.time.addEvent({
-      delay: 14000,
+      delay: 2000,
       loop: true,
       callback: () => {
         if (this.isGameOver) return;
-        const count = Phaser.Math.Between(3, 5);
-        for (let i = 0; i < count; i++) {
+        const activeCount = this.enemies.getChildren().filter(e => e && e.active && e.state !== 'DEAD' && !e._killHandled).length;
+        const openSlots = this.maxConcurrentEnemies - (activeCount + this.inFlightSpawns);
+        if (openSlots <= 0) return;
+
+        for (let i = 0; i < openSlots; i++) {
           const types = ['boar', 'snail', 'bee', 'mushroom', 'flying_eye', 'goblin'];
           const chosen = Phaser.Utils.Array.GetRandom(types);
           const spawnX = Math.random() < 0.5 ? 80 : 760;
-          let spawnY = 310;
+          let spawnY = 280;
           if (chosen === 'bee' || chosen === 'flying_eye') spawnY = Phaser.Math.Between(80, 140);
-          else if (chosen === 'mushroom' || chosen === 'goblin') spawnY = Math.random() < 0.5 ? 180 : 240;
-          this.spawnEnemy(chosen, spawnX, spawnY, this.waveHpMul);
+          else if (chosen === 'mushroom' || chosen === 'goblin') spawnY = Math.random() < 0.5 ? 150 : 210;
+
+          this.inFlightSpawns++;
+          this.showSpawnTelegraph(spawnX, spawnY);
+          const t = this.time.delayedCall(450, () => {
+            if (this.isGameOver) return;
+            this.inFlightSpawns = Math.max(0, this.inFlightSpawns - 1);
+            this.spawnEnemy(chosen, spawnX, spawnY, this.waveHpMul);
+          });
+          this.waveSpawnTimers.push(t);
         }
-        this.endlessWave++;
-        this.waveHpMul =
-          GAME_CONFIG.SURVIVAL.ENDLESS_HP_MUL_BASE +
-          (this.endlessWave - 1) * GAME_CONFIG.SURVIVAL.ENDLESS_HP_ADD;
-        this.updateWaveHud();
       }
     });
   }
@@ -473,8 +535,13 @@ export default class SurvivalScene extends Phaser.Scene {
     }
   }
 
-  addKill(mobType, basePts, bonusPts = 0, hitX = null, hitY = null, label = '') {
+  addKill(mobType, basePts, bonusPts = 0, hitX = null, hitY = null, label = '', enemy = null) {
     if (this.isGameOver) return 0;
+
+    if (enemy) {
+      if (enemy._killHandled) return 0;
+      enemy._killHandled = true;
+    }
 
     this.killCount[mobType] = (this.killCount[mobType] || 0) + 1;
     this.killCount.total++;
@@ -497,10 +564,16 @@ export default class SurvivalScene extends Phaser.Scene {
     this.showScorePopup(popupX, popupY, ptsEarned, fullLabel);
 
     if (!this.endlessMode) {
-      this.wavePendingCount = Math.max(0, this.wavePendingCount - 1);
+      this.waveRemainingFoes = Math.max(0, (this.waveRemainingFoes !== undefined ? this.waveRemainingFoes : this.wavePendingCount) - 1);
+      this.wavePendingCount = this.waveRemainingFoes;
       this.updateWaveHud();
-      if (this.wavePendingCount === 0) {
+
+      const livingCount = this.enemies.getChildren().filter(e => e && e.active && e.state !== 'DEAD' && !e._killHandled).length;
+      if (this.waveRemainingFoes === 0 && livingCount === 0 && this.waveSpawnQueue.length === 0 && this.inFlightSpawns === 0) {
         this.waveCleared();
+      } else {
+        // A slot has opened up in the arena! Check queue to dispatch next foe
+        this.time.delayedCall(350, () => this.checkSpawnQueue());
       }
     }
 
@@ -508,8 +581,8 @@ export default class SurvivalScene extends Phaser.Scene {
   }
 
   onEnemyShattered(enemy) {
-    if (!enemy || enemy.state !== 'DEAD') return;
-    this.addKill('snail', GAME_CONFIG.MOBS.SNAIL.PTS * 1.5, 0, enemy.x, enemy.y - 12, 'SHATTER! 💥');
+    if (!enemy || enemy._killHandled) return;
+    this.addKill('snail', GAME_CONFIG.MOBS.SNAIL.PTS * 1.5, 0, enemy.x, enemy.y - 12, 'SHATTER! 💥', enemy);
   }
 
   updateWaveHud() {
@@ -520,7 +593,8 @@ export default class SurvivalScene extends Phaser.Scene {
       this.txtWave.setText(label);
     }
     if (this.txtFoes) {
-      this.txtFoes.setText(this.endlessMode ? 'FOES: ∞' : `FOES: ${this.wavePendingCount}`);
+      const count = this.waveRemainingFoes !== undefined ? this.waveRemainingFoes : this.wavePendingCount;
+      this.txtFoes.setText(this.endlessMode ? 'FOES: ∞' : `FOES: ${count}`);
     }
   }
 
@@ -653,7 +727,7 @@ export default class SurvivalScene extends Phaser.Scene {
   }
 
   handlePlayerAttack(enemy) {
-    if (!this.player.isAttacking || enemy.state === 'DEAD') return;
+    if (!this.player.isAttacking || enemy.state === 'DEAD' || enemy._killHandled) return;
 
     const dmg = this.player.getAttackDamage();
     const isUpward = this.player.attackType === 'upward';
@@ -662,7 +736,7 @@ export default class SurvivalScene extends Phaser.Scene {
     if (res && res.killed) {
       const label = res.isBackstab ? 'CRIT!' : (res.shattered ? 'SHATTER! 💥' : (isUpward ? 'UP-SLASH!' : ''));
       const bonus = res.isBackstab ? 25 : 0;
-      this.addKill(enemy.mobType, res.pts, bonus, enemy.x, enemy.y - 12, label);
+      this.addKill(enemy.mobType, res.pts, bonus, enemy.x, enemy.y - 12, label, enemy);
     }
   }
 
@@ -709,13 +783,13 @@ export default class SurvivalScene extends Phaser.Scene {
       victim = e1;
     }
 
-    if (projectile && victim && victim.state !== 'DEAD' && victim !== projectile) {
+    if (projectile && victim && victim.state !== 'DEAD' && !victim._killHandled && victim !== projectile) {
       sound.playRicochet();
       this.cameras.main.shake(100, 0.012);
 
       const res = victim.takeDamage(99, projectile.x);
       if (res && res.killed) {
-        const earned = this.addKill(victim.mobType, res.pts, GAME_CONFIG.MOBS.SNAIL.RICOCHET_BONUS_PTS);
+        const earned = this.addKill(victim.mobType, res.pts, GAME_CONFIG.MOBS.SNAIL.RICOCHET_BONUS_PTS, victim.x, victim.y, '', victim);
 
         const ricoText = this.add.text(victim.x, victim.y - 18, `+${earned} SHELL RICOCHET! 💥`, {
           fontFamily: 'Press Start 2P',
@@ -761,7 +835,7 @@ export default class SurvivalScene extends Phaser.Scene {
       proofHash
     });
 
-    this.time.delayedCall(800, () => {
+    this.time.delayedCall(300, () => {
       this.showGameOverModal(proofHash);
     });
   }
@@ -770,58 +844,126 @@ export default class SurvivalScene extends Phaser.Scene {
     const w = GAME_CONFIG.WIDTH;
     const h = GAME_CONFIG.HEIGHT;
 
-    const modal = this.add.container(w / 2, h / 2).setScrollFactor(0).setDepth(300);
+    // Full screen backdrop overlay to capture clicks and dim the arena
+    const backdrop = this.add.rectangle(w / 2, h / 2, w, h, 0x000000, 0.78)
+      .setScrollFactor(0)
+      .setDepth(490)
+      .setInteractive();
 
-    const box = this.add.rectangle(0, 0, 360, 190, 0x141e14, 0.96);
-    box.setStrokeStyle(2, 0xe9b213);
-    modal.add(box);
+    // Modal Card Frame
+    const box = this.add.rectangle(w / 2, h / 2, 400, 206, 0x121c12, 0.98)
+      .setStrokeStyle(2, 0xe9b213)
+      .setScrollFactor(0)
+      .setDepth(500);
 
-    const title = this.add.text(0, -74, 'DAILY TRIAL LOCKED IN', {
+    const title = this.add.text(w / 2, h / 2 - 76, 'DAILY TRIAL LOCKED IN', {
       fontFamily: 'Press Start 2P',
       fontSize: '10px',
       color: '#f6c026'
-    }).setOrigin(0.5);
-    modal.add(title);
+    }).setOrigin(0.5).setScrollFactor(0).setDepth(501);
 
-    const scoreDisplay = this.add.text(0, -52, `FINAL SCORE: ${this.totalScore}`, {
+    const scoreDisplay = this.add.text(w / 2, h / 2 - 54, `FINAL SCORE: ${this.totalScore}`, {
       fontFamily: 'Press Start 2P',
       fontSize: '12px',
       color: '#ffffff'
-    }).setOrigin(0.5);
-    modal.add(scoreDisplay);
+    }).setOrigin(0.5).setScrollFactor(0).setDepth(501);
 
-    const details = this.add.text(0, -18, [
+    const details = this.add.text(w / 2, h / 2 - 14, [
       `Date: ${this.seedString} (UTC)`,
       `Time Survived: ${this.secondsSurvived}s (+${this.secondsSurvived * 10} pts)`,
       `Kills: 🐗${this.killCount.boar || 0} 🐌${this.killCount.snail || 0} 🐝${this.killCount.bee || 0} 🍄${this.killCount.mushroom || 0} 👁️${this.killCount.flying_eye || 0} 👺${this.killCount.goblin || 0}`,
-      `Anti-Cheat: ${proofHash}`
+      `Anti-Cheat Proof: ${proofHash}`
     ].join('\n'), {
       fontFamily: 'Press Start 2P',
       fontSize: '6px',
       color: '#a0c4a0',
       lineSpacing: 5,
       align: 'center'
-    }).setOrigin(0.5);
-    modal.add(details);
+    }).setOrigin(0.5).setScrollFactor(0).setDepth(501);
 
-    // Buttons
-    const btnLeaderboard = this.add.rectangle(-80, 58, 140, 24, 0x1c3a1c).setStrokeStyle(1, 0x98ff20).setInteractive({ useHandCursor: true });
-    modal.add(btnLeaderboard);
-    modal.add(this.add.text(-80, 58, 'LEADERBOARD', { fontFamily: 'Press Start 2P', fontSize: '6px', color: '#fff' }).setOrigin(0.5));
+    // Navigation callbacks with listener cleanup
+    let modalClosed = false;
+    const cleanup = () => {
+      if (modalClosed) return;
+      modalClosed = true;
+      this.input.keyboard.off('keydown', onKeyDown);
+    };
 
-    const btnMenu = this.add.rectangle(80, 58, 140, 24, 0x2a2414).setStrokeStyle(1, 0xf6c026).setInteractive({ useHandCursor: true });
-    modal.add(btnMenu);
-    modal.add(this.add.text(80, 58, 'MAIN MENU', { fontFamily: 'Press Start 2P', fontSize: '6px', color: '#fff' }).setOrigin(0.5));
+    const goRetry = () => {
+      cleanup();
+      sound.playCoin();
+      this.scene.restart();
+    };
 
-    btnLeaderboard.on('pointerdown', () => {
+    const goLeaderboard = () => {
+      cleanup();
       sound.playCoin();
       this.scene.start('LeaderboardScene', { lastScore: this.totalScore });
-    });
+    };
 
-    btnMenu.on('pointerdown', () => {
+    const goMenu = () => {
+      cleanup();
       sound.playCoin();
       this.scene.start('MenuScene');
-    });
+    };
+
+    const onKeyDown = (event) => {
+      if (modalClosed) return;
+      const key = (event.key || '').toUpperCase();
+      if (key === 'R' || key === ' ') {
+        goRetry();
+      } else if (key === 'L') {
+        goLeaderboard();
+      } else if (key === 'ESCAPE' || key === 'M' || key === 'ENTER') {
+        goMenu();
+      }
+    };
+    this.input.keyboard.on('keydown', onKeyDown);
+
+    // Button builder helper
+    const createBtn = (bx, by, bw, bh, bgCol, borderCol, textCol, label, action) => {
+      const rect = this.add.rectangle(bx, by, bw, bh, bgCol)
+        .setStrokeStyle(1, borderCol)
+        .setScrollFactor(0)
+        .setDepth(502)
+        .setInteractive({ useHandCursor: true });
+
+      const txt = this.add.text(bx, by, label, {
+        fontFamily: 'Press Start 2P',
+        fontSize: '6px',
+        color: textCol
+      }).setOrigin(0.5).setScrollFactor(0).setDepth(503).setInteractive({ useHandCursor: true });
+
+      const setHover = (hover) => {
+        const s = hover ? 1.05 : 1.0;
+        rect.setScale(s);
+        txt.setScale(s);
+      };
+
+      rect.on('pointerover', () => setHover(true));
+      txt.on('pointerover', () => setHover(true));
+      rect.on('pointerout', () => setHover(false));
+      txt.on('pointerout', () => setHover(false));
+
+      rect.on('pointerdown', action);
+      txt.on('pointerdown', action);
+
+      return { rect, txt };
+    };
+
+    const btnY = h / 2 + 65;
+    // RETRY [R]
+    const retryBtn = createBtn(w / 2 - 124, btnY, 108, 26, 0x163816, 0x4ade80, '#4ade80', 'RETRY [R]', goRetry);
+    // LEADERBOARD [L]
+    const lbBtn = createBtn(w / 2, btnY, 124, 26, 0x15283c, 0x38bdf8, '#38bdf8', 'LEADERBOARD [L]', goLeaderboard);
+    // MAIN MENU [ESC]
+    const menuBtn = createBtn(w / 2 + 124, btnY, 108, 26, 0x382414, 0xf59e0b, '#f59e0b', 'MAIN MENU [ESC]', goMenu);
+
+    this.modalButtons = {
+      retry: retryBtn,
+      leaderboard: lbBtn,
+      menu: menuBtn
+    };
   }
 
   update() {
