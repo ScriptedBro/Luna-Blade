@@ -44,29 +44,28 @@ export default class Crate extends Phaser.Physics.Arcade.Sprite {
   }
 
   spawnDrop(player) {
-    const r = Math.random();
-    let dropType = 'bark';
-    let color = '#8b5a2b';
-    let label = '+1 Forest Bark';
+    let color = '#ff3333';
+    let label = '+1 Life ❤️';
 
-    if (player && player.health < player.maxHealth && Math.random() < 0.35) {
-      dropType = 'heart';
-      color = '#ff3333';
-      label = '+1 Heart ❤️';
+    if (player && player.health < player.maxHealth) {
       player.heal(1);
-    } else if (r < 0.45) {
-      dropType = 'bark';
-      storage.addMaterials({ bark: 1 });
-    } else if (r < 0.75) {
-      dropType = 'amber';
-      color = '#ffaa00';
-      label = '+1 Amber 🍯';
-      storage.addMaterials({ amber: 1 });
+      color = '#ff3333';
+      label = '+1 Life ❤️';
     } else {
-      dropType = 'iron';
-      color = '#a0a0b0';
-      label = '+1 Iron Ore ⚙️';
-      storage.addMaterials({ iron: 1 });
+      // Full health bonus (capped at max 3 lives)
+      if (this.scene.totalScore !== undefined) {
+        // Daily Luna Trial / Survival Scene
+        const bonusPts = 100;
+        this.scene.totalScore += bonusPts;
+        if (this.scene.txtScore) this.scene.txtScore.setText(`SCORE: ${this.scene.totalScore}`);
+        color = '#ffd700';
+        label = `FULL LIFE! +${bonusPts} PTS ✨`;
+      } else {
+        // Story Scene
+        storage.addMaterials({ bark: 1, amber: 1 });
+        color = '#ffaa00';
+        label = '+Spoils 🪵🍯';
+      }
     }
 
     sound.playCoin();
@@ -78,13 +77,13 @@ export default class Crate extends Phaser.Physics.Arcade.Sprite {
       color: color,
       stroke: '#000',
       strokeThickness: 2
-    }).setOrigin(0.5);
+    }).setOrigin(0.5).setDepth(210);
 
     this.scene.tweens.add({
       targets: dropText,
-      y: this.y - 28,
+      y: this.y - 30,
       alpha: 0,
-      duration: 700,
+      duration: 800,
       onComplete: () => dropText.destroy()
     });
   }

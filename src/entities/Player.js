@@ -357,8 +357,13 @@ export default class Player extends Phaser.Physics.Arcade.Sprite {
   }
 
   heal(amount = 1) {
+    if (this.health >= this.maxHealth) return false;
     this.health = Math.min(this.maxHealth, this.health + amount);
     sound.playCoin();
+    if (this.scene && this.scene.updateHearts) {
+      this.scene.updateHearts();
+    }
+    return true;
   }
 
   die() {

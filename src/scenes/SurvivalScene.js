@@ -153,7 +153,7 @@ export default class SurvivalScene extends Phaser.Scene {
     this.waveHpMul = 1;
     this.endlessMode = false;
     this.endlessWave = 1;
-    this.failsafeTimer = null;
+    this.waveStartTime = this.time.now;
     this.waveSpawnTimers = [];
     this.modalButtons = null;
     this.player.body.setCollideWorldBounds(true);
@@ -282,11 +282,8 @@ export default class SurvivalScene extends Phaser.Scene {
       }
     });
 
-    // Spawn deterministic crates
-    this.spec.crates.forEach(spot => {
-      const crate = new Crate(this, spot.x, spot.y);
-      this.crates.add(crate);
-    });
+    // Spawn initial supply crates
+    this.spawnCrates();
 
     // Solid boundary barriers at edges to prevent clipping out of arena
     const leftWall = this.add.rectangle(-10, this.arenaHeight / 2, 20, this.arenaHeight, 0x000000, 0);
@@ -314,6 +311,17 @@ export default class SurvivalScene extends Phaser.Scene {
     return 4;
   }
 
+  spawnCrates() {
+    if (!this.spec?.crates) return;
+    this.spec.crates.forEach(spot => {
+      const existing = this.crates.getChildren().find(c => c && c.active && Math.abs(c.x - spot.x) < 12 && Math.abs(c.y - spot.y) < 12);
+      if (!existing) {
+        const crate = new Crate(this, spot.x, spot.y);
+        this.crates.add(crate);
+      }
+    });
+  }
+
   startWave(index) {
     if (this.isGameOver) return;
 
@@ -331,17 +339,18 @@ export default class SurvivalScene extends Phaser.Scene {
     this.wavePendingCount = wave.spawns.length;
     this.maxConcurrentEnemies = this.getMaxConcurrentForWave(index);
     this.inFlightSpawns = 0;
+    this.waveStartTime = this.time.now;
     this.endlessMode = false;
     this.waveSpawnTimers = [];
     this.updateWaveHud();
+
+    // Replenish supply crates at each wave so player can find healing!
+    this.spawnCrates();
 
     this.announceWave(wave.title);
 
     // Initial spawn check to populate arena up to maxConcurrentEnemies
     this.checkSpawnQueue();
-
-    // Fail-safe: if a wave can't be cleared, force it forward
-    this.startWaveFailsafe();
   }
 
   checkSpawnQueue() {
@@ -401,7 +410,6 @@ export default class SurvivalScene extends Phaser.Scene {
   waveCleared() {
     if (this.isGameOver) return;
 
-    this.stopWaveFailsafe();
     this.waveSpawnTimers.forEach(t => t.remove(false));
     this.waveSpawnTimers = [];
     this.waveSpawnQueue = [];
@@ -410,46 +418,34 @@ export default class SurvivalScene extends Phaser.Scene {
     this.wavePendingCount = 0;
     this.updateWaveHud();
 
-    const bonus = GAME_CONFIG.SURVIVAL.WAVE_CLEAR_BONUS + (this.currentWaveIndex * 50);
-    this.totalScore += bonus;
+    // Base wave clear bonus
+    const baseBonus = GAME_CONFIG.SURVIVAL.WAVE_CLEAR_BONUS + (this.currentWaveIndex * 50);
+
+    // Speed bonus: finishing the wave faster awards more score!
+    const waveDurationSec = Math.max(1, Math.floor((this.time.now - this.waveStartTime) / 1000));
+    const targetParSec = 30 + this.currentWaveIndex * 10; // Target time: W1: 30s, W2: 40s, W3: 50s...
+    const speedBonus = waveDurationSec < targetParSec
+      ? (targetParSec - waveDurationSec) * 20
+      : 25; // Minimum speed bonus
+
+    const totalBonus = baseBonus + speedBonus;
+    this.totalScore += totalBonus;
     this.txtScore.setText(`SCORE: ${this.totalScore}`);
-    this.showScorePopup(this.player ? this.player.x : 400, (this.player ? this.player.y : 200) - 24, bonus, 'WAVE CLEAR! ✨');
+
+    const bonusLabel = waveDurationSec < targetParSec
+      ? `SPEED CLEAR! +${totalBonus} PTS ⚡ (${waveDurationSec}s)`
+      : `WAVE CLEAR! +${totalBonus} PTS ✨ (${waveDurationSec}s)`;
+
+    this.showScorePopup(this.player ? this.player.x : 400, (this.player ? this.player.y : 200) - 24, totalBonus, bonusLabel);
 
     sound.playCoin();
-    confetti({ particleCount: 35, spread: 70, origin: { y: 0.6 } });
-    this.announceWave(`✨ WAVE ${this.currentWaveIndex + 1} CLEARED! +${bonus} PTS ✨`);
+    confetti({ particleCount: 40, spread: 70, origin: { y: 0.6 } });
+    this.announceWave(`✨ WAVE ${this.currentWaveIndex + 1} CLEARED! +${totalBonus} PTS (${waveDurationSec}s) ✨`);
 
-    this.time.delayedCall(1400, () => {
+    this.time.delayedCall(1500, () => {
       if (this.isGameOver) return;
       this.startWave(this.currentWaveIndex + 1);
     });
-  }
-
-  startWaveFailsafe() {
-    this.stopWaveFailsafe();
-    this.failsafeTimer = this.time.addEvent({
-      delay: GAME_CONFIG.SURVIVAL.WAVE_FAILSAFE_SECONDS * 1000,
-      callback: () => {
-        if (this.isGameOver) return;
-        this.waveSpawnTimers.forEach(t => t.remove(false));
-        this.waveSpawnTimers = [];
-        this.waveSpawnQueue = [];
-        this.inFlightSpawns = 0;
-        this.enemies.getChildren().forEach(enemy => {
-          if (enemy && enemy.active && enemy.state !== 'DEAD') {
-            enemy.die();
-          }
-        });
-        this.waveCleared();
-      }
-    });
-  }
-
-  stopWaveFailsafe() {
-    if (this.failsafeTimer) {
-      this.failsafeTimer.remove(false);
-      this.failsafeTimer = null;
-    }
   }
 
   startEndless() {
@@ -462,7 +458,6 @@ export default class SurvivalScene extends Phaser.Scene {
     this.maxConcurrentEnemies = 4;
     this.inFlightSpawns = 0;
     this.waveHpMul = GAME_CONFIG.SURVIVAL.ENDLESS_HP_MUL_BASE;
-    this.stopWaveFailsafe();
     this.updateWaveHud();
 
     this.announceWave('SURVIVAL RUSH!');
