@@ -74,9 +74,9 @@ export default class Bee extends Phaser.Physics.Arcade.Sprite {
 
         // Dynamically adjust hover altitude to stay strictly within the visible playable area below HUD
         const cam = this.scene.cameras?.main;
-        const minY = isSurvival ? (cam ? cam.worldView.y + 44 : 155) : 75;
-        const maxY = isSurvival ? Math.min(player.y - 20, 255) : 255;
-        const desiredHoverY = Phaser.Math.Clamp(player.y - (onlyFlyersLeft ? 44 : 55), minY, maxY);
+        const minY = isSurvival ? (cam ? cam.worldView.y + 44 : 155) : (cam ? cam.worldView.y + 30 : 60);
+        const maxY = player.y - 30;
+        const desiredHoverY = Phaser.Math.Clamp(player.y - (onlyFlyersLeft ? 42 : 55), minY, maxY);
         this.baseY = Phaser.Math.Linear(this.baseY, desiredHoverY, onlyFlyersLeft ? 0.12 : 0.05);
 
         // Sinusoidal bobbing around baseY
@@ -105,20 +105,21 @@ export default class Bee extends Phaser.Physics.Arcade.Sprite {
         this.setVelocityY(0);
         this.setFlipX(this.patrolDir > 0);
         const wave = Math.sin(this.scene.time.now * 0.005) * 16;
-        this.y = Phaser.Math.Clamp(this.baseY + wave, 150, 260);
+        this.y = Phaser.Math.Clamp(this.baseY + wave, 60, 360);
       }
 
       // Reverse horizontal direction at boundaries
       if (this.body.blocked.left) this.patrolDir = 1;
       if (this.body.blocked.right) this.patrolDir = -1;
     } else if (this.state === 'SWOOP') {
-      // Check if reached swoop depth or ground or out of bounds
-      if (isSurvival && player && !player.isDead) {
+      if (player && !player.isDead) {
         this.swoopTargetX = player.x;
-        this.swoopTargetY = Math.min(player.y + 8, 300);
+        this.swoopTargetY = player.y;
       }
 
-      if (this.y >= this.swoopTargetY - 10 || this.y >= 310 || this.body.blocked.down) {
+      const dist = Phaser.Math.Distance.Between(this.x, this.y, this.swoopTargetX, this.swoopTargetY);
+      const floorLimit = (this.scene.levelHeight ? this.scene.levelHeight - 30 : 400);
+      if (this.y >= this.swoopTargetY + 12 || this.y >= floorLimit || dist < 16 || this.body.blocked.down) {
         this.recover();
       } else {
         const angle = Phaser.Math.Angle.Between(this.x, this.y, this.swoopTargetX, this.swoopTargetY);
@@ -131,9 +132,8 @@ export default class Bee extends Phaser.Physics.Arcade.Sprite {
       this.setVelocityX(this.patrolDir * 60);
 
       const cam = this.scene.cameras?.main;
-      const minY = isSurvival ? (cam ? cam.worldView.y + 44 : 155) : 75;
-      const maxY = isSurvival ? Math.min(player.y - 20, 255) : 255;
-      const targetRecoveryY = player && !player.isDead ? Phaser.Math.Clamp(player.y - 55, minY, maxY) : this.baseY;
+      const minY = isSurvival ? (cam ? cam.worldView.y + 44 : 155) : (cam ? cam.worldView.y + 30 : 60);
+      const targetRecoveryY = player && !player.isDead ? Math.max(minY, player.y - 55) : this.baseY;
       if (this.y <= targetRecoveryY || this.y <= minY) {
         this.baseY = targetRecoveryY;
         this.y = targetRecoveryY;
@@ -149,7 +149,7 @@ export default class Bee extends Phaser.Physics.Arcade.Sprite {
     if (!player || player.isDead) return;
     this.state = 'SWOOP';
     this.swoopTargetX = player.x;
-    this.swoopTargetY = Math.min(player.y + 8, 300);
+    this.swoopTargetY = player.y;
     this.play('bee_attack_anim', true);
 
     // Visual telegraph arrow / warning

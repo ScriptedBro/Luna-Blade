@@ -94,7 +94,7 @@ export default class FlyingEye extends Phaser.Physics.Arcade.Sprite {
 
       // Reached dive target or hit ground
       const dist = Phaser.Math.Distance.Between(this.x, this.y, this.diveTarget.x, this.diveTarget.y);
-      if (dist < 20 || this.y > this.baseY + 90 || this.body.blocked.down) {
+      if (dist < 20 || this.y >= this.diveTarget.y + 12 || this.body.blocked.down) {
         this.state = 'RETURN';
       }
       return;

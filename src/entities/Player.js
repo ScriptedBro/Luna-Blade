@@ -193,12 +193,13 @@ export default class Player extends Phaser.Physics.Arcade.Sprite {
     }
   }
 
-  getAttackBounds() {
+  getAttackBounds(forceUpward) {
     const rangeMul = this.weaponConfig.rangeMul || 1.0;
-    if (this.attackType === 'upward') {
-      const w = 40 * rangeMul;
-      const h = 48 * rangeMul;
-      return new Phaser.Geom.Rectangle(this.x - w / 2, this.y - 36 * rangeMul, w, h);
+    const isUp = forceUpward !== undefined ? forceUpward : (this.attackType === 'upward');
+    if (isUp) {
+      const w = 52 * rangeMul;
+      const h = 60 * rangeMul;
+      return new Phaser.Geom.Rectangle(this.x - w / 2, this.y - 48 * rangeMul, w, h);
     } else {
       const w = (this.attackType === 'combo2' ? 48 : 42) * rangeMul;
       const h = 38 * rangeMul;
@@ -206,6 +207,79 @@ export default class Player extends Phaser.Physics.Arcade.Sprite {
       const y = this.y - 12;
       return new Phaser.Geom.Rectangle(x, y, w, h);
     }
+  }
+
+  spawnUpwardSlashEffect() {
+    const slash = this.scene.add.graphics();
+    slash.setDepth(this.depth + 10);
+    const flip = this.flipX;
+    const startX = this.x + (flip ? -8 : 8);
+    const startY = this.y - 6;
+
+    // Outer luminous cyan blade arc
+    const arcRadius = 32;
+    slash.lineStyle(3.5, 0x00f0ff, 0.95);
+    slash.beginPath();
+    if (!flip) {
+      slash.arc(startX - 6, startY - 10, arcRadius, Phaser.Math.DegToRad(35), Phaser.Math.DegToRad(-110), true);
+    } else {
+      slash.arc(startX + 6, startY - 10, arcRadius, Phaser.Math.DegToRad(145), Phaser.Math.DegToRad(290), false);
+    }
+    slash.strokePath();
+
+    // Inner pure white celestial core
+    slash.lineStyle(2, 0xffffff, 1.0);
+    slash.beginPath();
+    if (!flip) {
+      slash.arc(startX - 6, startY - 10, arcRadius - 3, Phaser.Math.DegToRad(30), Phaser.Math.DegToRad(-105), true);
+    } else {
+      slash.arc(startX + 6, startY - 10, arcRadius - 3, Phaser.Math.DegToRad(150), Phaser.Math.DegToRad(285), false);
+    }
+    slash.strokePath();
+
+    // Rising sparkle burst
+    if (this.particles) {
+      this.particles.emitParticleAt(startX, startY - 20, 8);
+    }
+
+    // Upward expanding animation
+    this.scene.tweens.add({
+      targets: slash,
+      scaleX: 1.25,
+      scaleY: 1.35,
+      y: slash.y - 14,
+      alpha: 0,
+      duration: 180,
+      ease: 'Quad.easeOut',
+      onComplete: () => slash.destroy()
+    });
+  }
+
+  spawnHorizontalSlashEffect(isCombo2) {
+    const slash = this.scene.add.graphics();
+    slash.setDepth(this.depth + 10);
+    const flip = this.flipX;
+    const startX = this.x + (flip ? -16 : 16);
+    const startY = this.y - 4;
+
+    const color = isCombo2 ? 0xffbb33 : 0x48cae4;
+    slash.lineStyle(isCombo2 ? 3.5 : 2.5, color, 0.95);
+    slash.beginPath();
+    if (!flip) {
+      slash.arc(startX, startY, 22, Phaser.Math.DegToRad(-50), Phaser.Math.DegToRad(50), false);
+    } else {
+      slash.arc(startX, startY, 22, Phaser.Math.DegToRad(130), Phaser.Math.DegToRad(230), false);
+    }
+    slash.strokePath();
+
+    this.scene.tweens.add({
+      targets: slash,
+      scaleX: 1.3,
+      scaleY: 1.15,
+      alpha: 0,
+      duration: 150,
+      onComplete: () => slash.destroy()
+    });
   }
 
   executeAttack(isUpward) {
@@ -217,12 +291,21 @@ export default class Player extends Phaser.Physics.Arcade.Sprite {
     if (isUpward) {
       this.attackType = 'upward';
       sound.playUpwardSlash();
+      this.spawnUpwardSlashEffect();
+      // Upward anti-air leap/lift
+      if (this.body.blocked.down) {
+        this.setVelocityY(-140);
+      } else {
+        this.setVelocityY(-165);
+      }
     } else if (isCombo) {
       this.attackType = 'combo2';
       sound.playSlash(2);
+      this.spawnHorizontalSlashEffect(true);
     } else {
       this.attackType = 'combo1';
       sound.playSlash(1);
+      this.spawnHorizontalSlashEffect(false);
     }
     this.lastAttackTime = now;
 
@@ -242,7 +325,7 @@ export default class Player extends Phaser.Physics.Arcade.Sprite {
       this.play('player_attack_combo1', true);
     }
 
-    // Briefly halt horizontal momentum for grounded heavy slash
+    // Heavy slash slight push
     if (this.body.blocked.down && this.attackType === 'combo2') {
       this.setVelocityX(this.flipX ? -30 : 30);
     }
