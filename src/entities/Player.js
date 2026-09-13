@@ -101,6 +101,8 @@ export default class Player extends Phaser.Physics.Arcade.Sprite {
                           (cursors.keys?.Z && Phaser.Input.Keyboard.JustDown(cursors.keys.Z)) ||
                           (cursors.keys?.ENTER && Phaser.Input.Keyboard.JustDown(cursors.keys.ENTER)) ||
                           customInputs.justAttack;
+    const upSlashPressed = (cursors.keys?.K && Phaser.Input.Keyboard.JustDown(cursors.keys.K)) ||
+                           customInputs.justUpSlash;
 
     // Wall slide detection
     if (!onGround && (touchingLeftWall || touchingRightWall) && this.body.velocity.y > 0) {
@@ -112,8 +114,8 @@ export default class Player extends Phaser.Physics.Arcade.Sprite {
     }
 
     // Attack triggering
-    if (attackPressed && !this.isAttacking) {
-      this.executeAttack(up);
+    if ((attackPressed || upSlashPressed) && !this.isAttacking) {
+      this.executeAttack(up || upSlashPressed);
     }
 
     // Movement (locked or restricted during heavy attack swing)

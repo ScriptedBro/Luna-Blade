@@ -3,6 +3,12 @@ import Player from '../entities/Player.js';
 import Boar from '../entities/Boar.js';
 import Snail from '../entities/Snail.js';
 import Bee from '../entities/Bee.js';
+import Mushroom from '../entities/Mushroom.js';
+import FlyingEye from '../entities/FlyingEye.js';
+import Goblin from '../entities/Goblin.js';
+import BossGorgok from '../entities/BossGorgok.js';
+import Projectile from '../entities/Projectile.js';
+import BossHealthBar from '../ui/BossHealthBar.js';
 import Crate from '../entities/Crate.js';
 import { GAME_CONFIG } from '../config.js';
 import { sound } from '../engine/Audio.js';
@@ -34,7 +40,7 @@ export default class SurvivalScene extends Phaser.Scene {
     this.startTime = this.time.now;
     this.secondsSurvived = 0;
     this.totalScore = 0;
-    this.killCount = { boar: 0, snail: 0, bee: 0, total: 0 };
+    this.killCount = { boar: 0, snail: 0, bee: 0, mushroom: 0, flying_eye: 0, goblin: 0, boss_gorgok: 0, total: 0 };
     this.comboCount = 0;
     this.currentComboMultiplier = 1.0;
     this.isGameOver = false;
@@ -43,6 +49,7 @@ export default class SurvivalScene extends Phaser.Scene {
     this.platforms = this.physics.add.staticGroup();
     this.crates = this.physics.add.group();
     this.enemies = this.physics.add.group();
+    this.projectiles = this.physics.add.group({ runChildUpdate: true });
 
     // Build seeded arena
     this.buildSeededArena();
@@ -59,13 +66,33 @@ export default class SurvivalScene extends Phaser.Scene {
     this.physics.add.collider(this.enemies, this.platforms);
     this.physics.add.collider(this.crates, this.platforms);
 
-    // Player attack
+    // Projectile terrain collision
+    this.physics.add.collider(this.projectiles, this.platforms, (proj) => {
+      if (proj && proj.active) {
+        if (proj.projType === 'goblin_bomb') {
+          // bombs bounce on ground
+        } else {
+          proj.destroyProj ? proj.destroyProj() : proj.destroy();
+        }
+      }
+    });
+
+    // Player attack vs enemies
     this.physics.add.overlap(this.player.attackHitbox, this.enemies, (hitbox, enemy) => {
       if (this.player.currentSwingHits && this.player.currentSwingHits.has(enemy)) return;
       if (this.player.currentSwingHits) this.player.currentSwingHits.add(enemy);
       this.handlePlayerAttack(enemy);
     });
 
+    // Player attack vs projectiles (deflection)
+    this.physics.add.overlap(this.player.attackHitbox, this.projectiles, (hitbox, proj) => {
+      if (!this.player.isAttacking || !proj || proj.isDead || proj.isDeflected) return;
+      if (proj.isDeflectable) {
+        proj.deflect(this.player);
+      }
+    });
+
+    // Player attack vs crates
     this.physics.add.overlap(this.player.attackHitbox, this.crates, (hitbox, crate) => {
       if (this.player.currentSwingHits && this.player.currentSwingHits.has(crate)) return;
       if (this.player.currentSwingHits) this.player.currentSwingHits.add(crate);
@@ -75,6 +102,33 @@ export default class SurvivalScene extends Phaser.Scene {
     // Player vs enemy body
     this.physics.add.overlap(this.player, this.enemies, (player, enemy) => {
       this.handlePlayerHurt(enemy);
+    });
+
+    // Player vs projectiles
+    this.physics.add.overlap(this.player, this.projectiles, (player, proj) => {
+      if (this.player.isDead || !proj || proj.isDead || proj.isDeflected) return;
+      const knockDir = proj.x < this.player.x ? 1 : -1;
+      const damaged = this.player.takeDamage(proj.damage || 1, knockDir);
+      if (damaged) {
+        this.comboCount = 0;
+        this.currentComboMultiplier = 1.0;
+        this.txtCombo.setText('COMBO: 1.0x');
+        this.updateHearts();
+        if (this.player.isDead) {
+          this.handleGameOver();
+        }
+      }
+      proj.destroyProj ? proj.destroyProj() : proj.destroy();
+    });
+
+    // Deflected projectiles vs enemies
+    this.physics.add.overlap(this.projectiles, this.enemies, (proj, enemy) => {
+      if (!proj || proj.isDead || !proj.isDeflected || !enemy || enemy.state === 'DEAD') return;
+      const res = enemy.takeDamage(60, proj.x);
+      proj.destroyProj ? proj.destroyProj() : proj.destroy();
+      if (res && res.killed) {
+        this.addKill(enemy.mobType, res.pts, 40, enemy.x, enemy.y - 12, 'DEFLECT KILL! ⚡');
+      }
     });
 
     // Sliding shell ricochet
@@ -89,9 +143,16 @@ export default class SurvivalScene extends Phaser.Scene {
     // HUD
     this.createSurvivalHUD();
 
-    // Start wave scheduler
+    // Start wave progression (kill-gated)
     this.currentWaveIndex = 0;
-    this.scheduleWaves();
+    this.wavePendingCount = 0;
+    this.waveHpMul = 1;
+    this.endlessMode = false;
+    this.endlessWave = 1;
+    this.failsafeTimer = null;
+    this.waveSpawnTimers = [];
+    this.player.body.setCollideWorldBounds(true);
+    this.startWave(this.currentWaveIndex);
   }
 
   createArenaForestBackground() {
@@ -221,46 +282,249 @@ export default class SurvivalScene extends Phaser.Scene {
       const crate = new Crate(this, spot.x, spot.y);
       this.crates.add(crate);
     });
+
+    // Solid boundary barriers at edges to prevent clipping out of arena
+    const leftWall = this.add.rectangle(-10, this.arenaHeight / 2, 20, this.arenaHeight, 0x000000, 0);
+    this.physics.add.existing(leftWall, true);
+    this.platforms.add(leftWall);
+
+    const rightWall = this.add.rectangle(this.arenaWidth + 10, this.arenaHeight / 2, 20, this.arenaHeight, 0x000000, 0);
+    this.physics.add.existing(rightWall, true);
+    this.platforms.add(rightWall);
   }
 
-  scheduleWaves() {
-    this.spec.waves.forEach((wave, idx) => {
-      // Trigger wave with a delay
-      const waveDelay = idx * 12000;
-      this.time.delayedCall(waveDelay, () => {
-        if (this.isGameOver) return;
-        this.announceWave(wave.title);
+  spawnProjectile(type, x, y, vx, vy, isDeflectable = true) {
+    if (this.isGameOver) return null;
+    const proj = new Projectile(this, x, y, type, vx, vy, isDeflectable);
+    this.projectiles.add(proj);
+    return proj;
+  }
 
-        wave.spawns.forEach(spawn => {
-          this.time.delayedCall(spawn.delay, () => {
-            if (this.isGameOver) return;
-            this.spawnEnemy(spawn.type, spawn.x, spawn.y);
-          });
-        });
-      });
-    });
+  startWave(index) {
+    if (this.isGameOver) return;
 
-    // Endless scaling waves beyond wave 5 (starts at 60s)
-    this.time.delayedCall(60000, () => {
-      this.time.addEvent({
-        delay: 15000,
-        loop: true,
-        callback: () => {
+    const waves = this.spec.waves;
+    if (index >= waves.length) {
+      this.startEndless();
+      return;
+    }
+
+    const wave = waves[index];
+    this.currentWaveIndex = index;
+    this.waveHpMul = this.getWaveHpMul(index);
+    this.wavePendingCount = wave.spawns.length;
+    this.endlessMode = false;
+    this.waveSpawnTimers = [];
+    this.updateWaveHud();
+
+    this.announceWave(wave.title);
+
+    wave.spawns.forEach(spawn => {
+      // Telegraph warning pulse 500ms before mob materializes
+      if (spawn.delay >= 500) {
+        const warnTimer = this.time.delayedCall(spawn.delay - 500, () => {
           if (this.isGameOver) return;
-          const count = Phaser.Math.Between(2, 4);
-          this.announceWave('SURVIVAL RUSH!');
-          for (let i = 0; i < count; i++) {
-            const types = ['boar', 'snail', 'bee'];
-            const chosen = Phaser.Utils.Array.GetRandom(types);
-            const spawnX = Math.random() < 0.5 ? 80 : 760;
-            this.spawnEnemy(chosen, spawnX, chosen === 'bee' ? 100 : 310);
-          }
-        }
+          this.showSpawnTelegraph(spawn.x, spawn.y);
+        });
+        this.waveSpawnTimers.push(warnTimer);
+      }
+
+      const timer = this.time.delayedCall(spawn.delay, () => {
+        if (this.isGameOver) return;
+        this.spawnEnemy(spawn.type, spawn.x, spawn.y, this.waveHpMul);
       });
+      this.waveSpawnTimers.push(timer);
+    });
+
+    // Fail-safe: if a wave can't be cleared (stuck shell, glitched mob), force it forward
+    this.startWaveFailsafe();
+  }
+
+  showSpawnTelegraph(x, y) {
+    const rune = this.add.circle(x, y, 12, 0xf6c026, 0.7).setDepth(18);
+    this.tweens.add({
+      targets: rune,
+      scale: 1.6,
+      alpha: 0,
+      duration: 480,
+      onComplete: () => rune.destroy()
     });
   }
 
-  spawnEnemy(type, x, y) {
+  waveCleared() {
+    if (this.isGameOver) return;
+
+    this.stopWaveFailsafe();
+    this.waveSpawnTimers.forEach(t => t.remove(false));
+    this.waveSpawnTimers = [];
+    this.wavePendingCount = 0;
+    this.updateWaveHud();
+
+    const bonus = GAME_CONFIG.SURVIVAL.WAVE_CLEAR_BONUS + (this.currentWaveIndex * 50);
+    this.totalScore += bonus;
+    this.txtScore.setText(`SCORE: ${this.totalScore}`);
+    this.showScorePopup(this.player ? this.player.x : 400, (this.player ? this.player.y : 200) - 24, bonus, 'WAVE CLEAR! ✨');
+
+    sound.playCoin();
+    confetti({ particleCount: 35, spread: 70, origin: { y: 0.6 } });
+    this.announceWave(`✨ WAVE ${this.currentWaveIndex + 1} CLEARED! +${bonus} PTS ✨`);
+
+    this.time.delayedCall(1200, () => {
+      if (this.isGameOver) return;
+      this.startWave(this.currentWaveIndex + 1);
+    });
+  }
+
+  startWaveFailsafe() {
+    this.stopWaveFailsafe();
+    this.failsafeTimer = this.time.addEvent({
+      delay: GAME_CONFIG.SURVIVAL.WAVE_FAILSAFE_SECONDS * 1000,
+      callback: () => {
+        if (this.isGameOver) return;
+        this.waveSpawnTimers.forEach(t => t.remove(false));
+        this.waveSpawnTimers = [];
+        this.enemies.getChildren().forEach(enemy => {
+          if (enemy && enemy.active && enemy.state !== 'DEAD') {
+            enemy.die();
+          }
+        });
+        this.waveCleared();
+      }
+    });
+  }
+
+  stopWaveFailsafe() {
+    if (this.failsafeTimer) {
+      this.failsafeTimer.remove(false);
+      this.failsafeTimer = null;
+    }
+  }
+
+  startEndless() {
+    if (this.isGameOver) return;
+
+    this.endlessMode = true;
+    this.wavePendingCount = 0;
+    this.endlessWave = 1;
+    this.waveHpMul = GAME_CONFIG.SURVIVAL.ENDLESS_HP_MUL_BASE;
+    this.stopWaveFailsafe();
+    this.updateWaveHud();
+
+    this.announceWave('SURVIVAL RUSH!');
+
+    this.endlessTimer = this.time.addEvent({
+      delay: 14000,
+      loop: true,
+      callback: () => {
+        if (this.isGameOver) return;
+        const count = Phaser.Math.Between(3, 5);
+        for (let i = 0; i < count; i++) {
+          const types = ['boar', 'snail', 'bee', 'mushroom', 'flying_eye', 'goblin'];
+          const chosen = Phaser.Utils.Array.GetRandom(types);
+          const spawnX = Math.random() < 0.5 ? 80 : 760;
+          let spawnY = 310;
+          if (chosen === 'bee' || chosen === 'flying_eye') spawnY = Phaser.Math.Between(80, 140);
+          else if (chosen === 'mushroom' || chosen === 'goblin') spawnY = Math.random() < 0.5 ? 180 : 240;
+          this.spawnEnemy(chosen, spawnX, spawnY, this.waveHpMul);
+        }
+        this.endlessWave++;
+        this.waveHpMul =
+          GAME_CONFIG.SURVIVAL.ENDLESS_HP_MUL_BASE +
+          (this.endlessWave - 1) * GAME_CONFIG.SURVIVAL.ENDLESS_HP_ADD;
+        this.updateWaveHud();
+      }
+    });
+  }
+
+  getWaveHpMul(index) {
+    return 1 + index * GAME_CONFIG.SURVIVAL.HP_SCALE_PER_WAVE;
+  }
+
+  showScorePopup(x, y, pts, label = '') {
+    const text = label ? `+${pts} ${label}` : `+${pts}`;
+    const popup = this.add.text(x, y, text, {
+      fontFamily: 'Press Start 2P',
+      fontSize: '7px',
+      color: label ? '#ffd700' : '#ffffff',
+      stroke: '#000000',
+      strokeThickness: 2
+    }).setOrigin(0.5).setDepth(220);
+
+    this.tweens.add({
+      targets: popup,
+      y: y - 26,
+      alpha: 0,
+      duration: 650,
+      ease: 'Cubic.easeOut',
+      onComplete: () => popup.destroy()
+    });
+
+    // Score HUD punch animation
+    if (this.txtScore) {
+      this.tweens.killTweensOf(this.txtScore);
+      this.txtScore.setScale(1.25);
+      this.txtScore.setTint(0xffd700);
+      this.tweens.add({
+        targets: this.txtScore,
+        scale: 1.0,
+        duration: 180,
+        onComplete: () => this.txtScore.clearTint()
+      });
+    }
+  }
+
+  addKill(mobType, basePts, bonusPts = 0, hitX = null, hitY = null, label = '') {
+    if (this.isGameOver) return 0;
+
+    this.killCount[mobType] = (this.killCount[mobType] || 0) + 1;
+    this.killCount.total++;
+
+    this.comboCount++;
+    this.currentComboMultiplier = Math.min(
+      GAME_CONFIG.SURVIVAL.MAX_COMBO,
+      1.0 + this.comboCount * GAME_CONFIG.SURVIVAL.COMBO_INCREMENT
+    );
+
+    const ptsEarned = Math.round((basePts + bonusPts) * this.currentComboMultiplier);
+    this.totalScore += ptsEarned;
+    this.txtScore.setText(`SCORE: ${this.totalScore}`);
+    this.txtCombo.setText(`COMBO: ${this.currentComboMultiplier.toFixed(1)}x`);
+
+    const popupX = hitX !== null ? hitX : (this.player ? this.player.x : 400);
+    const popupY = hitY !== null ? hitY : (this.player ? this.player.y - 10 : 200);
+    const comboTag = this.currentComboMultiplier > 1.0 ? `${this.currentComboMultiplier.toFixed(1)}x` : '';
+    const fullLabel = [label, comboTag].filter(Boolean).join(' ');
+    this.showScorePopup(popupX, popupY, ptsEarned, fullLabel);
+
+    if (!this.endlessMode) {
+      this.wavePendingCount = Math.max(0, this.wavePendingCount - 1);
+      this.updateWaveHud();
+      if (this.wavePendingCount === 0) {
+        this.waveCleared();
+      }
+    }
+
+    return ptsEarned;
+  }
+
+  onEnemyShattered(enemy) {
+    if (!enemy || enemy.state !== 'DEAD') return;
+    this.addKill('snail', GAME_CONFIG.MOBS.SNAIL.PTS * 1.5, 0, enemy.x, enemy.y - 12, 'SHATTER! 💥');
+  }
+
+  updateWaveHud() {
+    if (this.txtWave) {
+      const label = this.endlessMode
+        ? `RUSH ${this.endlessWave || 1}`
+        : `WAVE ${this.currentWaveIndex + 1}/${this.spec.waves.length}`;
+      this.txtWave.setText(label);
+    }
+    if (this.txtFoes) {
+      this.txtFoes.setText(this.endlessMode ? 'FOES: ∞' : `FOES: ${this.wavePendingCount}`);
+    }
+  }
+
+  spawnEnemy(type, x, y, hpMul = 1) {
     let enemy;
     if (type === 'boar') {
       enemy = new Boar(this, x, y);
@@ -268,10 +532,42 @@ export default class SurvivalScene extends Phaser.Scene {
       enemy = new Snail(this, x, y);
     } else if (type === 'bee') {
       enemy = new Bee(this, x, y);
+    } else if (type === 'mushroom') {
+      enemy = new Mushroom(this, x, y);
+    } else if (type === 'flying_eye') {
+      enemy = new FlyingEye(this, x, y);
+    } else if (type === 'goblin') {
+      enemy = new Goblin(this, x, y);
+    } else if (type === 'boss_gorgok') {
+      if (!this.bossBar) {
+        this.bossBar = new BossHealthBar(this, GAME_CONFIG.MOBS.BOSS_GORGOK.NAME, GAME_CONFIG.MOBS.BOSS_GORGOK.HP);
+        this.bossBar.y = 44;
+      }
+      enemy = new BossGorgok(this, x, y, this.bossBar);
     }
+
     if (enemy) {
       enemy.mobType = type;
+      if (hpMul !== 1) {
+        enemy.hp = Math.max(1, Math.round(enemy.hp * hpMul));
+        enemy.maxHp = enemy.hp;
+      }
+      // Progressive wave speed boost (each wave enemies move slightly faster)
+      const speedBoost = 1 + (this.currentWaveIndex || 0) * 0.05;
+      if (enemy.walkSpeed) enemy.walkSpeed *= speedBoost;
+
+      enemy.body.setCollideWorldBounds(true);
       this.enemies.add(enemy);
+
+      // Spawn puff
+      const spawnPuff = this.add.circle(x, y, 14, 0x88ee88, 0.75).setDepth(20);
+      this.tweens.add({
+        targets: spawnPuff,
+        scale: 1.6,
+        alpha: 0,
+        duration: 350,
+        onComplete: () => spawnPuff.destroy()
+      });
     }
   }
 
@@ -334,6 +630,19 @@ export default class SurvivalScene extends Phaser.Scene {
       const heart = this.add.text(w / 2 - 20 + i * 16, 8, '❤️', { fontSize: '11px' }).setScrollFactor(0).setDepth(201);
       this.heartIcons.push(heart);
     }
+
+    // Wave progress (right of hearts)
+    this.txtWave = this.add.text(w / 2 + 64, 6, 'WAVE 1/5', {
+      fontFamily: 'Press Start 2P',
+      fontSize: '6px',
+      color: '#f6c026'
+    }).setScrollFactor(0).setDepth(201);
+
+    this.txtFoes = this.add.text(w / 2 + 64, 17, 'FOES: 0', {
+      fontFamily: 'Press Start 2P',
+      fontSize: '6px',
+      color: '#d0f0c0'
+    }).setScrollFactor(0).setDepth(201);
   }
 
   updateHearts() {
@@ -351,20 +660,9 @@ export default class SurvivalScene extends Phaser.Scene {
     const res = enemy.takeDamage(dmg, this.player.x, isUpward);
 
     if (res && res.killed) {
-      this.killCount[enemy.mobType]++;
-      this.killCount.total++;
-
-      // Scoring formula: Kills * Mob Value * Combo Multiplier
-      this.comboCount++;
-      this.currentComboMultiplier = Math.min(
-        GAME_CONFIG.SURVIVAL.MAX_COMBO,
-        1.0 + this.comboCount * GAME_CONFIG.SURVIVAL.COMBO_INCREMENT
-      );
-
-      const ptsEarned = Math.round(res.pts * this.currentComboMultiplier);
-      this.totalScore += ptsEarned;
-      this.txtScore.setText(`SCORE: ${this.totalScore}`);
-      this.txtCombo.setText(`COMBO: ${this.currentComboMultiplier.toFixed(1)}x`);
+      const label = res.isBackstab ? 'CRIT!' : (res.shattered ? 'SHATTER! 💥' : (isUpward ? 'UP-SLASH!' : ''));
+      const bonus = res.isBackstab ? 25 : 0;
+      this.addKill(enemy.mobType, res.pts, bonus, enemy.x, enemy.y - 12, label);
     }
   }
 
@@ -375,6 +673,13 @@ export default class SurvivalScene extends Phaser.Scene {
       const kickDir = this.player.x < enemy.x ? 1 : -1;
       enemy.kickShell(kickDir);
       return;
+    }
+
+    if (enemy.mobType === 'snail' && enemy.state === 'SLIDING') {
+      // Only damages player if moving fast towards player
+      const dirTowardsPlayer = (enemy.body.velocity.x > 0 && this.player.x > enemy.x) ||
+                               (enemy.body.velocity.x < 0 && this.player.x < enemy.x);
+      if (!dirTowardsPlayer) return;
     }
 
     const knockDir = enemy.x < this.player.x ? 1 : -1;
@@ -410,15 +715,9 @@ export default class SurvivalScene extends Phaser.Scene {
 
       const res = victim.takeDamage(99, projectile.x);
       if (res && res.killed) {
-        this.killCount[victim.mobType]++;
-        this.killCount.total++;
+        const earned = this.addKill(victim.mobType, res.pts, GAME_CONFIG.MOBS.SNAIL.RICOCHET_BONUS_PTS);
 
-        // Ricochet bonus: +50 pts bonus!
-        const bonus = Math.round((res.pts + GAME_CONFIG.MOBS.SNAIL.RICOCHET_BONUS_PTS) * this.currentComboMultiplier);
-        this.totalScore += bonus;
-        this.txtScore.setText(`SCORE: ${this.totalScore}`);
-
-        const ricoText = this.add.text(victim.x, victim.y - 18, `+${bonus} SHELL RICOCHET! 💥`, {
+        const ricoText = this.add.text(victim.x, victim.y - 18, `+${earned} SHELL RICOCHET! 💥`, {
           fontFamily: 'Press Start 2P',
           fontSize: '7px',
           color: '#ffd700',
@@ -494,7 +793,7 @@ export default class SurvivalScene extends Phaser.Scene {
     const details = this.add.text(0, -18, [
       `Date: ${this.seedString} (UTC)`,
       `Time Survived: ${this.secondsSurvived}s (+${this.secondsSurvived * 10} pts)`,
-      `Kills: 🐗${this.killCount.boar} 🐌${this.killCount.snail} 🐝${this.killCount.bee}`,
+      `Kills: 🐗${this.killCount.boar || 0} 🐌${this.killCount.snail || 0} 🐝${this.killCount.bee || 0} 🍄${this.killCount.mushroom || 0} 👁️${this.killCount.flying_eye || 0} 👺${this.killCount.goblin || 0}`,
       `Anti-Cheat: ${proofHash}`
     ].join('\n'), {
       fontFamily: 'Press Start 2P',
@@ -549,7 +848,15 @@ export default class SurvivalScene extends Phaser.Scene {
     if (this.bgFogPines) this.bgFogPines.tilePositionX = camScrollX * 0.12;
     if (this.bgMidPines) this.bgMidPines.tilePositionX = camScrollX * 0.22;
 
-    this.enemies.getChildren().forEach(e => e.update(this.player));
+    this.enemies.getChildren().forEach(e => {
+      if (e && e.active && e.state !== 'DEAD') {
+        if (e.y > 330 && e.mobType !== 'bee' && e.mobType !== 'flying_eye') {
+          e.y = 308;
+          e.setVelocityY(0);
+        }
+        e.update(this.player);
+      }
+    });
 
     // Fall out of bounds check
     if (this.player && this.player.y > this.arenaHeight + 20) {

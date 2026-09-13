@@ -30,10 +30,27 @@ export default class Snail extends Phaser.Physics.Arcade.Sprite {
     const hitWall = this.body.blocked.left || this.body.blocked.right;
 
     if (this.state === 'WALK') {
-      if (hitWall) {
+      // Check for wall or ledge edge ahead
+      if (hitWall || this.isLedgeAhead(this.patrolDir)) {
         this.patrolDir *= -1;
       }
-      this.setVelocityX(this.patrolDir * GAME_CONFIG.MOBS.SNAIL.WALK_SPEED);
+
+      // Proximity aggro: if player is close (< 100px), aggressively crawl towards player
+      let moveSpeed = GAME_CONFIG.MOBS.SNAIL.WALK_SPEED;
+      if (this.scene.player && !this.scene.player.isDead) {
+        const player = this.scene.player;
+        const dist = Phaser.Math.Distance.Between(this.x, this.y, player.x, player.y);
+        const dy = Math.abs(this.y - player.y);
+        if (dist < 110 && dy < 40) {
+          const chaseDir = player.x < this.x ? -1 : 1;
+          if (!this.isLedgeAhead(chaseDir)) {
+            this.patrolDir = chaseDir;
+            moveSpeed *= 1.6; // Aggressive crawl lunge
+          }
+        }
+      }
+
+      this.setVelocityX(this.patrolDir * moveSpeed);
       this.setFlipX(this.patrolDir > 0);
     } else if (this.state === 'SHELLED') {
       this.setVelocityX(0);
@@ -56,26 +73,41 @@ export default class Snail extends Phaser.Physics.Arcade.Sprite {
     }
   }
 
+  isLedgeAhead(dir) {
+    if (!this.body.blocked.down || !this.scene.platforms) return false;
+    const lookX = this.x + (dir * (this.body.width / 2 + 8));
+    const footY = this.body.bottom + 6;
+
+    const hasGround = this.scene.platforms.getChildren().some(plat => {
+      const pb = plat.body;
+      if (!pb) return false;
+      return lookX >= pb.left && lookX <= pb.right && footY >= pb.top && footY <= pb.bottom + 14;
+    });
+
+    return !hasGround;
+  }
+
   takeDamage(amount, attackFromX, isUpwardSlash = false) {
     if (this.state === 'DEAD') return false;
 
     if (this.state === 'WALK') {
-      // Normal attack damages and curls into shell
       this.hp -= amount;
       sound.playHit();
 
-      if (this.hp <= 0) {
-        this.enterShelled();
-        return { killed: false, pts: 0, shelled: true };
-      } else {
-        this.enterShelled();
-        return { killed: false, pts: 0, shelled: true };
-      }
+      // Enter shelled state
+      this.enterShelled();
+      return { killed: false, pts: 0, shelled: true };
     } else if (this.state === 'SHELLED' || this.state === 'SLIDING') {
-      // Kick / Launch the shell into high speed projectile!
-      const kickDir = attackFromX < this.x ? 1 : -1;
-      this.kickShell(kickDir);
-      return { killed: false, pts: 0, kicked: true };
+      if (isUpwardSlash) {
+        // Upward slash shatters the shell directly for instant kill score!
+        this.shatter();
+        return { killed: true, pts: GAME_CONFIG.MOBS.SNAIL.PTS * 1.5, shattered: true };
+      } else {
+        // Horizontal attack kicks the shell as projectile!
+        const kickDir = attackFromX < this.x ? 1 : -1;
+        this.kickShell(kickDir);
+        return { killed: false, pts: 0, kicked: true };
+      }
     }
   }
 
@@ -132,6 +164,10 @@ export default class Snail extends Phaser.Physics.Arcade.Sprite {
     this.state = 'DEAD';
     this.body.setEnable(false);
     sound.playEnemyDeath();
+
+    if (this.scene.onEnemyShattered) {
+      this.scene.onEnemyShattered(this);
+    }
 
     // Spawn shell fragments
     for (let i = 0; i < 4; i++) {

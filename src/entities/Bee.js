@@ -46,26 +46,26 @@ export default class Bee extends Phaser.Physics.Arcade.Sprite {
         const dist = Phaser.Math.Distance.Between(this.x, this.y, player.x, player.y);
         const playerBelow = player.y > this.y + 20;
 
-        if (dist < 180 && playerBelow) {
+        if (dist < GAME_CONFIG.MOBS.BEE.SWOOP_RANGE && playerBelow) {
           this.startSwoop(player);
         }
       }
     } else if (this.state === 'SWOOP') {
-      // Steer downwards toward targeted player position
-      const angle = Phaser.Math.Angle.Between(this.x, this.y, this.swoopTargetX, this.swoopTargetY);
-      this.scene.physics.velocityFromRotation(angle, GAME_CONFIG.MOBS.BEE.SWOOP_SPEED, this.body.velocity);
-      this.setFlipX(this.body.velocity.x > 0);
-
-      // Check if reached swoop depth or ground
-      if (this.y >= this.swoopTargetY - 10 || this.body.blocked.down) {
+      // Check if reached swoop depth or ground or out of bounds
+      if (this.y >= this.swoopTargetY - 10 || this.y >= 310 || this.body.blocked.down) {
         this.recover();
+      } else {
+        const angle = Phaser.Math.Angle.Between(this.x, this.y, this.swoopTargetX, this.swoopTargetY);
+        this.scene.physics.velocityFromRotation(angle, GAME_CONFIG.MOBS.BEE.SWOOP_SPEED, this.body.velocity);
+        this.setFlipX(this.body.velocity.x > 0);
       }
     } else if (this.state === 'RECOVER') {
       // Ascend back to origin height
-      this.setVelocityY(-80);
+      this.setVelocityY(-90);
       this.setVelocityX(this.patrolDir * 40);
 
-      if (this.y <= this.originY) {
+      if (this.y <= this.originY || this.y <= 60) {
+        this.y = Math.max(60, this.originY);
         this.state = 'HOVER';
         this.swoopCooldownUntil = this.scene.time.now + 2800;
         this.play('bee_fly_anim', true);
@@ -74,9 +74,10 @@ export default class Bee extends Phaser.Physics.Arcade.Sprite {
   }
 
   startSwoop(player) {
+    if (!player || player.isDead) return;
     this.state = 'SWOOP';
     this.swoopTargetX = player.x;
-    this.swoopTargetY = player.y;
+    this.swoopTargetY = Math.min(player.y, 300);
     this.play('bee_attack_anim', true);
 
     // Visual telegraph arrow / warning

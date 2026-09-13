@@ -77,8 +77,8 @@ export default class BossGorgok extends Phaser.Physics.Arcade.Sprite {
       this.setVelocityX(this.chargeDir * chargeSpeed);
       this.setFlipX(this.chargeDir > 0);
 
-      // Arena wall impact -> Wall crash stun!
-      if (hitWall) {
+      // Arena wall impact or cliff edge -> Wall crash stun!
+      if (hitWall || this.isLedgeAhead(this.chargeDir)) {
         this.state = 'STUNNED';
         this.stunnedUntil = this.scene.time.now + (this.isEnraged ? 800 : 1300);
         this.setVelocityX(0);
@@ -92,8 +92,8 @@ export default class BossGorgok extends Phaser.Physics.Arcade.Sprite {
       return;
     }
 
-    // Default: PATROL
-    if (hitWall) {
+    // Default: PATROL with ledge check
+    if (hitWall || this.isLedgeAhead(this.patrolDir)) {
       this.patrolDir *= -1;
     }
 
@@ -115,6 +115,20 @@ export default class BossGorgok extends Phaser.Physics.Arcade.Sprite {
         }
       }
     }
+  }
+
+  isLedgeAhead(dir) {
+    if (!this.body.blocked.down || !this.scene.platforms) return false;
+    const lookX = this.x + (dir * (this.body.width / 2 + 12));
+    const footY = this.body.bottom + 8;
+
+    const hasGround = this.scene.platforms.getChildren().some(plat => {
+      const pb = plat.body;
+      if (!pb) return false;
+      return lookX >= pb.left && lookX <= pb.right && footY >= pb.top && footY <= pb.bottom + 16;
+    });
+
+    return !hasGround;
   }
 
   triggerAlert(player) {

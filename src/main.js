@@ -15,6 +15,8 @@ const phaserConfig = {
   height: GAME_CONFIG.HEIGHT,
   parent: 'game-container',
   pixelArt: true,
+  autoFocus: true,
+  pauseOnBlur: false,
   physics: {
     default: 'arcade',
     arcade: {

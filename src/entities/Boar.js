@@ -53,8 +53,8 @@ export default class Boar extends Phaser.Physics.Arcade.Sprite {
       this.setVelocityX(this.chargeDir * GAME_CONFIG.MOBS.BOAR.CHARGE_SPEED);
       this.setFlipX(this.chargeDir > 0);
 
-      if (hitWall) {
-        // Wall crash stun
+      if (hitWall || this.isLedgeAhead(this.chargeDir)) {
+        // Wall or cliff edge brake stun
         this.state = 'STUNNED';
         this.stunnedUntil = this.scene.time.now + 900;
         this.setVelocityX(0);
@@ -65,25 +65,47 @@ export default class Boar extends Phaser.Physics.Arcade.Sprite {
       return;
     }
 
-    // Default: PATROL
-    if (hitWall) {
+    // Default: PATROL with ledge edge detection
+    if (hitWall || this.isLedgeAhead(this.patrolDir)) {
       this.patrolDir *= -1;
     }
 
     this.setVelocityX(this.patrolDir * GAME_CONFIG.MOBS.BOAR.WALK_SPEED);
     this.setFlipX(this.patrolDir > 0);
 
-    // Player detection for charge
-    if (player && !player.isDead && this.scene.time.now > this.chargeCooldownUntil) {
+    // Player detection & proximity seeking
+    if (player && !player.isDead) {
       const dist = Phaser.Math.Distance.Between(this.x, this.y, player.x, player.y);
       const dy = Math.abs(this.y - player.y);
       const dx = player.x - this.x;
-      const isFacingPlayer = (this.patrolDir < 0 && dx < 0) || (this.patrolDir > 0 && dx > 0);
 
-      if (dist < 170 && dy < 40 && isFacingPlayer) {
+      // Proximity tracking: turn to face player if safe to walk
+      if (dist < 180 && dy < 60) {
+        const targetDir = dx >= 0 ? 1 : -1;
+        if (!this.isLedgeAhead(targetDir)) {
+          this.patrolDir = targetDir;
+        }
+      }
+
+      // Close attack proximity trigger (< 140px) -> charge attack!
+      if (dist < 140 && dy < 45 && this.scene.time.now > this.chargeCooldownUntil) {
         this.triggerAlert(player);
       }
     }
+  }
+
+  isLedgeAhead(dir) {
+    if (!this.body.blocked.down || !this.scene.platforms) return false;
+    const lookX = this.x + (dir * (this.body.width / 2 + 10));
+    const footY = this.body.bottom + 8;
+
+    const hasGround = this.scene.platforms.getChildren().some(plat => {
+      const pb = plat.body;
+      if (!pb) return false;
+      return lookX >= pb.left && lookX <= pb.right && footY >= pb.top && footY <= pb.bottom + 14;
+    });
+
+    return !hasGround;
   }
 
   triggerAlert(player) {

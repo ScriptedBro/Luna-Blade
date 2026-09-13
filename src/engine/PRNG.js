@@ -46,19 +46,19 @@ export function generateDailySurvivalSpec(seedStr = getTodaySeedString()) {
   // Deterministic Arena Platform Layout
   // Virtual dimensions: width 800, height 360
   const platforms = [
-    // Main solid ground
-    { x: 400, y: 340, width: 840, height: 40, type: 'ground' },
+    // Main solid ground (spans full arena -20 to 860)
+    { x: 420, y: 340, width: 880, height: 40, type: 'ground' },
     
     // Tier 1 platforms
-    { x: 180, y: 260, width: 120, height: 16, type: 'ruins' },
-    { x: 620, y: 260, width: 120, height: 16, type: 'ruins' },
+    { x: 180, y: 260, width: 130, height: 16, type: 'ruins' },
+    { x: 620, y: 260, width: 130, height: 16, type: 'ruins' },
     
     // Center floating terrace
     { x: 400, y: 200, width: 180, height: 16, type: 'ruins' },
     
     // Tier 2 high perches
-    { x: 120, y: 140, width: 90, height: 16, type: 'ruins' },
-    { x: 680, y: 140, width: 90, height: 16, type: 'ruins' },
+    { x: 120, y: 140, width: 100, height: 16, type: 'ruins' },
+    { x: 680, y: 140, width: 100, height: 16, type: 'ruins' },
   ];
 
   // Seeded crate spawns (3-4 breakables per arena)
@@ -74,55 +74,168 @@ export function generateDailySurvivalSpec(seedStr = getTodaySeedString()) {
   const shuffledSpots = prng.shuffle(crateSpots);
   const crates = shuffledSpots.slice(0, crateCount);
 
-  // Deterministic wave schedule (every 12-16 seconds a new wave triggers)
+  // Deterministic 5-wave escalating schedule
   const waves = [
     {
       waveNumber: 1,
-      title: 'Wave 1: The Shell Crawlers',
+      title: 'Wave 1: Forest Incursion (15 Foes)',
       spawns: [
-        { type: 'snail', x: 80, y: 310, delay: 0 },
-        { type: 'snail', x: 720, y: 310, delay: 1000 },
-        { type: 'snail', x: 400, y: 180, delay: 2000 },
+        // Squad 1: Shell Crawlers (t=0s, 4 foes)
+        { type: 'snail', x: 80, y: 280, delay: 0 },
+        { type: 'snail', x: 720, y: 280, delay: 0 },
+        { type: 'snail', x: 180, y: 210, delay: 500 },
+        { type: 'snail', x: 620, y: 210, delay: 500 },
+
+        // Squad 2: Tusks & Stingers (t=3.2s, 4 foes)
+        { type: 'boar', x: 70, y: 280, delay: 3200 },
+        { type: 'boar', x: 730, y: 280, delay: 3200 },
+        { type: 'bee', x: 400, y: 90, delay: 3600 },
+        { type: 'snail', x: 400, y: 150, delay: 4000 },
+
+        // Squad 3: Spore Snipers (t=7.5s, 4 foes)
+        { type: 'mushroom', x: 120, y: 90, delay: 7500 },
+        { type: 'boar', x: 200, y: 280, delay: 7800 },
+        { type: 'boar', x: 600, y: 280, delay: 7800 },
+        { type: 'bee', x: 250, y: 100, delay: 8200 },
+
+        // Squad 4: Charging Vanguard (t=12s, 3 foes)
+        { type: 'boar', x: 80, y: 280, delay: 12000 },
+        { type: 'boar', x: 720, y: 280, delay: 12000 },
+        { type: 'mushroom', x: 680, y: 90, delay: 12500 },
       ]
     },
     {
       waveNumber: 2,
-      title: 'Wave 2: Tusks & Stingers',
+      title: 'Wave 2: Airborne Ambush & Goblin Bombers (18 Foes)',
       spawns: [
-        { type: 'boar', x: 60, y: 310, delay: 0 },
-        { type: 'boar', x: 740, y: 310, delay: 1500 },
-        { type: 'bee', x: 200, y: 100, delay: 2500 },
+        // Squad 1 (t=0s, 4 foes)
+        { type: 'flying_eye', x: 150, y: 100, delay: 0 },
+        { type: 'flying_eye', x: 650, y: 100, delay: 0 },
+        { type: 'goblin', x: 120, y: 90, delay: 400 },
+        { type: 'boar', x: 100, y: 280, delay: 800 },
+
+        // Squad 2 (t=3.5s, 5 foes)
+        { type: 'snail', x: 180, y: 210, delay: 3500 },
+        { type: 'snail', x: 620, y: 210, delay: 3500 },
+        { type: 'goblin', x: 680, y: 90, delay: 3800 },
+        { type: 'bee', x: 300, y: 90, delay: 4200 },
+        { type: 'bee', x: 500, y: 90, delay: 4200 },
+
+        // Squad 3 (t=7.5s, 5 foes)
+        { type: 'mushroom', x: 400, y: 150, delay: 7500 },
+        { type: 'flying_eye', x: 200, y: 110, delay: 7800 },
+        { type: 'flying_eye', x: 600, y: 110, delay: 7800 },
+        { type: 'boar', x: 80, y: 280, delay: 8200 },
+        { type: 'boar', x: 720, y: 280, delay: 8200 },
+
+        // Squad 4 (t=12s, 4 foes)
+        { type: 'goblin', x: 400, y: 150, delay: 12000 },
+        { type: 'boar', x: 250, y: 280, delay: 12300 },
+        { type: 'boar', x: 550, y: 280, delay: 12300 },
+        { type: 'flying_eye', x: 400, y: 80, delay: 12600 },
       ]
     },
     {
       waveNumber: 3,
-      title: 'Wave 3: Snail Shield Wall',
+      title: 'Wave 3: Toxic Spores & Artillery (22 Foes)',
       spawns: [
-        { type: 'snail', x: 250, y: 310, delay: 0 },
-        { type: 'snail', x: 550, y: 310, delay: 500 },
-        { type: 'bee', x: 600, y: 120, delay: 1500 },
-        { type: 'bee', x: 200, y: 120, delay: 2500 },
+        // Squad 1 (t=0s, 5 foes)
+        { type: 'mushroom', x: 120, y: 90, delay: 0 },
+        { type: 'mushroom', x: 680, y: 90, delay: 0 },
+        { type: 'snail', x: 80, y: 280, delay: 400 },
+        { type: 'snail', x: 720, y: 280, delay: 400 },
+        { type: 'bee', x: 400, y: 90, delay: 800 },
+
+        // Squad 2 (t=3.5s, 6 foes)
+        { type: 'goblin', x: 180, y: 210, delay: 3500 },
+        { type: 'goblin', x: 620, y: 210, delay: 3500 },
+        { type: 'boar', x: 90, y: 280, delay: 3800 },
+        { type: 'boar', x: 710, y: 280, delay: 3800 },
+        { type: 'flying_eye', x: 250, y: 100, delay: 4200 },
+        { type: 'flying_eye', x: 550, y: 100, delay: 4200 },
+
+        // Squad 3 (t=7.5s, 6 foes)
+        { type: 'mushroom', x: 400, y: 150, delay: 7500 },
+        { type: 'snail', x: 180, y: 210, delay: 7800 },
+        { type: 'snail', x: 620, y: 210, delay: 7800 },
+        { type: 'boar', x: 100, y: 280, delay: 8100 },
+        { type: 'boar', x: 700, y: 280, delay: 8100 },
+        { type: 'bee', x: 400, y: 80, delay: 8400 },
+
+        // Squad 4 (t=12s, 5 foes)
+        { type: 'goblin', x: 120, y: 90, delay: 12000 },
+        { type: 'goblin', x: 680, y: 90, delay: 12000 },
+        { type: 'flying_eye', x: 300, y: 100, delay: 12400 },
+        { type: 'flying_eye', x: 500, y: 100, delay: 12400 },
+        { type: 'boar', x: 400, y: 150, delay: 12800 },
       ]
     },
     {
       waveNumber: 4,
-      title: 'Wave 4: Forest Stampede',
+      title: 'Wave 4: The Frenzied Stampede (25 Foes)',
       spawns: [
-        { type: 'boar', x: 60, y: 310, delay: 0 },
-        { type: 'boar', x: 740, y: 310, delay: 1000 },
-        { type: 'boar', x: 400, y: 180, delay: 2000 },
-        { type: 'bee', x: 400, y: 80, delay: 3000 },
+        // Squad 1 (t=0s, 6 foes)
+        { type: 'boar', x: 70, y: 280, delay: 0 },
+        { type: 'boar', x: 730, y: 280, delay: 0 },
+        { type: 'snail', x: 200, y: 280, delay: 400 },
+        { type: 'snail', x: 600, y: 280, delay: 400 },
+        { type: 'bee', x: 150, y: 90, delay: 800 },
+        { type: 'bee', x: 650, y: 90, delay: 800 },
+
+        // Squad 2 (t=3.2s, 7 foes)
+        { type: 'flying_eye', x: 200, y: 110, delay: 3200 },
+        { type: 'flying_eye', x: 600, y: 110, delay: 3200 },
+        { type: 'mushroom', x: 120, y: 90, delay: 3500 },
+        { type: 'mushroom', x: 680, y: 90, delay: 3500 },
+        { type: 'boar', x: 100, y: 280, delay: 3800 },
+        { type: 'boar', x: 700, y: 280, delay: 3800 },
+        { type: 'snail', x: 400, y: 150, delay: 4200 },
+
+        // Squad 3 (t=7s, 6 foes)
+        { type: 'goblin', x: 180, y: 210, delay: 7000 },
+        { type: 'goblin', x: 620, y: 210, delay: 7000 },
+        { type: 'boar', x: 80, y: 280, delay: 7400 },
+        { type: 'boar', x: 720, y: 280, delay: 7400 },
+        { type: 'flying_eye', x: 400, y: 80, delay: 7800 },
+        { type: 'bee', x: 300, y: 100, delay: 8100 },
+
+        // Squad 4 (t=11s, 6 foes)
+        { type: 'boar', x: 90, y: 280, delay: 11000 },
+        { type: 'boar', x: 710, y: 280, delay: 11000 },
+        { type: 'snail', x: 180, y: 210, delay: 11400 },
+        { type: 'snail', x: 620, y: 210, delay: 11400 },
+        { type: 'goblin', x: 400, y: 150, delay: 11800 },
+        { type: 'flying_eye', x: 500, y: 90, delay: 12200 },
       ]
     },
     {
       waveNumber: 5,
-      title: 'Wave 5: The Hive Swarm',
+      title: 'Wave 5: The Chieftain\'s Wrath (BOSS SHOWDOWN)',
       spawns: [
-        { type: 'bee', x: 150, y: 90, delay: 0 },
-        { type: 'bee', x: 350, y: 80, delay: 800 },
-        { type: 'bee', x: 650, y: 90, delay: 1600 },
-        { type: 'snail', x: 100, y: 310, delay: 2200 },
-        { type: 'snail', x: 700, y: 310, delay: 2600 },
+        // Squad 1: Boss & Vanguard (t=0s, 1 Boss + 4 minions)
+        { type: 'boss_gorgok', x: 620, y: 270, delay: 0 },
+        { type: 'boar', x: 100, y: 280, delay: 0 },
+        { type: 'snail', x: 180, y: 210, delay: 500 },
+        { type: 'snail', x: 620, y: 210, delay: 500 },
+        { type: 'bee', x: 400, y: 90, delay: 900 },
+
+        // Squad 2 (t=4s, 4 minions)
+        { type: 'mushroom', x: 120, y: 90, delay: 4000 },
+        { type: 'goblin', x: 680, y: 90, delay: 4000 },
+        { type: 'flying_eye', x: 250, y: 100, delay: 4500 },
+        { type: 'flying_eye', x: 550, y: 100, delay: 4500 },
+
+        // Squad 3 (t=8.5s, 4 minions)
+        { type: 'boar', x: 80, y: 280, delay: 8500 },
+        { type: 'boar', x: 720, y: 280, delay: 8500 },
+        { type: 'snail', x: 400, y: 150, delay: 8900 },
+        { type: 'bee', x: 350, y: 90, delay: 9300 },
+
+        // Squad 4 (t=13s, 4 minions)
+        { type: 'goblin', x: 180, y: 210, delay: 13000 },
+        { type: 'mushroom', x: 400, y: 150, delay: 13000 },
+        { type: 'flying_eye', x: 200, y: 100, delay: 13400 },
+        { type: 'flying_eye', x: 600, y: 100, delay: 13400 },
       ]
     }
   ];

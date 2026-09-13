@@ -44,24 +44,36 @@ export default class Goblin extends Phaser.Physics.Arcade.Sprite {
       return;
     }
 
-    if (hitWall) {
+    if (hitWall || this.isLedgeAhead(this.patrolDir)) {
       this.patrolDir *= -1;
     }
 
     this.setVelocityX(this.patrolDir * GAME_CONFIG.MOBS.GOBLIN.WALK_SPEED);
     this.setFlipX(this.patrolDir < 0);
 
-    // Check player for bomb toss
+    // Check player for bomb toss (360-degree proximity)
     if (player && !player.isDead && this.scene.time.now > this.attackCooldownUntil) {
       const dist = Phaser.Math.Distance.Between(this.x, this.y, player.x, player.y);
       const dy = Math.abs(this.y - player.y);
-      const dx = player.x - this.x;
-      const isFacing = (this.patrolDir < 0 && dx < 0) || (this.patrolDir > 0 && dx > 0);
 
-      if (dist < 240 && dy < 60 && isFacing) {
+      if (dist < 240 && dy < 70) {
         this.startAttack(player);
       }
     }
+  }
+
+  isLedgeAhead(dir) {
+    if (!this.body.blocked.down || !this.scene.platforms) return false;
+    const lookX = this.x + (dir * (this.body.width / 2 + 8));
+    const footY = this.body.bottom + 6;
+
+    const hasGround = this.scene.platforms.getChildren().some(plat => {
+      const pb = plat.body;
+      if (!pb) return false;
+      return lookX >= pb.left && lookX <= pb.right && footY >= pb.top && footY <= pb.bottom + 14;
+    });
+
+    return !hasGround;
   }
 
   startAttack(player) {

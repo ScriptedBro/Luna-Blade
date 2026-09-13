@@ -24,6 +24,8 @@ export const GAME_CONFIG = {
       PTS: 50,
       DAMAGE: 1,
       BACKSTAB_MULTIPLIER: 3.0,
+      AGGRO_RANGE: 260,
+      CHARGE_RANGE: 150,
     },
     SNAIL: {
       HP: 30,
@@ -39,6 +41,7 @@ export const GAME_CONFIG = {
       SWOOP_SPEED: 165,
       PTS: 35,
       DAMAGE: 1,
+      SWOOP_RANGE: 240,
     },
     MUSHROOM: {
       HP: 45,
@@ -166,6 +169,11 @@ export const GAME_CONFIG = {
     PTS_PER_SECOND: 10,
     COMBO_INCREMENT: 0.2,
     MAX_COMBO: 4.0,
-    DAILY_PRIZE_POOL: 1000
+    DAILY_PRIZE_POOL: 1000,
+    WAVE_FAILSAFE_SECONDS: 45,
+    WAVE_CLEAR_BONUS: 100,
+    HP_SCALE_PER_WAVE: 0.3,
+    ENDLESS_HP_MUL_BASE: 2.4,
+    ENDLESS_HP_ADD: 0.4,
   }
 };

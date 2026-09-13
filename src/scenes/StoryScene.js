@@ -861,6 +861,14 @@ export default class StoryScene extends Phaser.Scene {
     }
   }
 
+  onEnemyShattered(enemy) {
+    if (!enemy) return;
+    this.killsCount++;
+    this.registerComboHit();
+    storage.addMaterials({ bark: 1 });
+    this.updateHudMaterials();
+  }
+
   handlePlayerEnemyCollision(enemy) {
     if (this.player.isDead || enemy.state === 'DEAD') return;
 
