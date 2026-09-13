@@ -1061,17 +1061,42 @@ export default class SurvivalScene extends Phaser.Scene {
       this.checkSpawnQueue();
     }
 
-    // Indicator for off-screen or perched enemies above the player
+    // Directional indicator for truly off-screen enemies
     const cam = this.cameras.main;
-    const enemyAbove = this.enemies.getChildren().find(e => {
+    const offscreenEnemy = this.enemies.getChildren().find(e => {
       if (!e || !e.active || e.state === 'DEAD' || e._killHandled) return false;
-      return e.y < cam.worldView.y + 16 || (this.player && e.y < this.player.y - 50);
+      const isVisible = (e.x >= cam.worldView.x && e.x <= cam.worldView.right && e.y >= cam.worldView.y && e.y <= cam.worldView.bottom);
+      return !isVisible;
     });
-    if (enemyAbove && this.offscreenArrow) {
-      const screenX = Phaser.Math.Clamp(enemyAbove.x - cam.worldView.x, 60, GAME_CONFIG.WIDTH - 60);
-      this.offscreenArrow.setX(screenX);
-      this.offscreenArrow.setText(`▲ ${enemyAbove.mobType.toUpperCase()} ABOVE ▲`);
-      this.offscreenArrow.setVisible(true);
+
+    if (offscreenEnemy && this.offscreenArrow) {
+      const mobName = offscreenEnemy.mobType.toUpperCase();
+      const isLeft = offscreenEnemy.x < cam.worldView.x;
+      const isRight = offscreenEnemy.x > cam.worldView.right;
+      const isAbove = offscreenEnemy.y < cam.worldView.y;
+
+      if (isLeft) {
+        // Offscreen to the left
+        this.offscreenArrow.setX(54);
+        this.offscreenArrow.setY(36);
+        this.offscreenArrow.setText(`◄ ${mobName}`);
+        this.offscreenArrow.setVisible(true);
+      } else if (isRight) {
+        // Offscreen to the right
+        this.offscreenArrow.setX(GAME_CONFIG.WIDTH - 54);
+        this.offscreenArrow.setY(36);
+        this.offscreenArrow.setText(`${mobName} ►`);
+        this.offscreenArrow.setVisible(true);
+      } else if (isAbove) {
+        // Offscreen strictly above
+        const screenX = Phaser.Math.Clamp(offscreenEnemy.x - cam.worldView.x, 60, GAME_CONFIG.WIDTH - 60);
+        this.offscreenArrow.setX(screenX);
+        this.offscreenArrow.setY(34);
+        this.offscreenArrow.setText(`▲ ${mobName} ▲`);
+        this.offscreenArrow.setVisible(true);
+      } else {
+        this.offscreenArrow.setVisible(false);
+      }
     } else if (this.offscreenArrow) {
       this.offscreenArrow.setVisible(false);
     }

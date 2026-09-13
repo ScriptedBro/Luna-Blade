@@ -30,38 +30,44 @@ export default class Bee extends Phaser.Physics.Arcade.Sprite {
     if (this.state === 'DEAD') return;
 
     if (this.state === 'HOVER') {
-      // Sinusoidal bobbing & gentle horizontal drift
-      this.setVelocityX(this.patrolDir * GAME_CONFIG.MOBS.BEE.HOVER_SPEED);
-      this.setFlipX(this.patrolDir > 0);
-
-      const wave = Math.sin(this.scene.time.now * 0.005) * 25;
-      this.y = this.originY + wave;
-
-      // Reverse horizontal direction at boundaries or periodically
-      if (this.body.blocked.left) this.patrolDir = 1;
-      if (this.body.blocked.right) this.patrolDir = -1;
-
       // Check for swoop opportunity & player tracking
       if (player && !player.isDead) {
         const dist = Phaser.Math.Distance.Between(this.x, this.y, player.x, player.y);
-        const playerBelow = player.y > this.y + 20;
-
-        // Drift towards player X if far away
         const dx = player.x - this.x;
-        if (Math.abs(dx) > 50) {
+
+        // Actively drift horizontally toward player
+        if (Math.abs(dx) > 30) {
           this.patrolDir = dx > 0 ? 1 : -1;
         }
 
-        // Gradually descend towards active arena height if hovering too high
-        if (this.originY < 150) {
-          this.originY += 0.3;
-        }
+        // Dynamically adjust hover altitude to hover ~50-70px above player
+        const desiredHoverY = Math.max(65, player.y - 65);
+        this.originY = Phaser.Math.Linear(this.originY, desiredHoverY, 0.05);
+
+        // Sinusoidal bobbing around originY
+        const wave = Math.sin(this.scene.time.now * 0.005) * 16;
+        this.y = this.originY + wave;
+
+        // Close in faster if player is far away
+        const speed = Math.abs(dx) > 100 ? GAME_CONFIG.MOBS.BEE.HOVER_SPEED * 1.8 : GAME_CONFIG.MOBS.BEE.HOVER_SPEED;
+        this.setVelocityX(this.patrolDir * speed);
+        this.setFlipX(this.patrolDir > 0);
 
         const swoopRange = GAME_CONFIG.MOBS.BEE.SWOOP_RANGE || 320;
-        if (dist < swoopRange && playerBelow && this.scene.time.now > this.swoopCooldownUntil) {
+        const canSwoop = dist < swoopRange && (player.y > this.y + 10) && this.scene.time.now > this.swoopCooldownUntil;
+        if (canSwoop) {
           this.startSwoop(player);
         }
+      } else {
+        this.setVelocityX(this.patrolDir * GAME_CONFIG.MOBS.BEE.HOVER_SPEED);
+        this.setFlipX(this.patrolDir > 0);
+        const wave = Math.sin(this.scene.time.now * 0.005) * 20;
+        this.y = this.originY + wave;
       }
+
+      // Reverse horizontal direction at boundaries
+      if (this.body.blocked.left) this.patrolDir = 1;
+      if (this.body.blocked.right) this.patrolDir = -1;
     } else if (this.state === 'SWOOP') {
       // Check if reached swoop depth or ground or out of bounds
       if (this.y >= this.swoopTargetY - 10 || this.y >= 310 || this.body.blocked.down) {
@@ -72,14 +78,16 @@ export default class Bee extends Phaser.Physics.Arcade.Sprite {
         this.setFlipX(this.body.velocity.x > 0);
       }
     } else if (this.state === 'RECOVER') {
-      // Ascend back to origin height
-      this.setVelocityY(-90);
-      this.setVelocityX(this.patrolDir * 40);
+      // Ascend back towards origin height above player
+      this.setVelocityY(-110);
+      this.setVelocityX(this.patrolDir * 60);
 
-      if (this.y <= this.originY || this.y <= 60) {
-        this.y = Math.max(60, this.originY);
+      const targetRecoveryY = player && !player.isDead ? Math.max(65, player.y - 65) : this.originY;
+      if (this.y <= targetRecoveryY || this.y <= 60) {
+        this.originY = targetRecoveryY;
+        this.y = targetRecoveryY;
         this.state = 'HOVER';
-        this.swoopCooldownUntil = this.scene.time.now + 2800;
+        this.swoopCooldownUntil = this.scene.time.now + 2400;
         this.play('bee_fly_anim', true);
       }
     }

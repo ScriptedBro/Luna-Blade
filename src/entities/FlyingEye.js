@@ -34,26 +34,43 @@ export default class FlyingEye extends Phaser.Physics.Arcade.Sprite {
     if (this.state === 'DEAD') return;
 
     if (this.state === 'HOVER') {
-      // Floating sinusoidal oscillation
-      this.y = this.baseY + Math.sin(this.scene.time.now * 0.004) * 14;
-      this.setVelocityX(this.patrolDir * GAME_CONFIG.MOBS.FLYING_EYE.HOVER_SPEED);
-      this.setFlipX(this.patrolDir < 0);
-
-      // Rebound within patrol range
-      if (this.x < this.startX - this.patrolRange) this.patrolDir = 1;
-      if (this.x > this.startX + this.patrolRange) this.patrolDir = -1;
-
-      // Player detection
-      if (player && !player.isDead && this.scene.time.now > this.attackCooldownUntil) {
+      // Player tracking & attack engagement
+      if (player && !player.isDead) {
         const dist = Phaser.Math.Distance.Between(this.x, this.y, player.x, player.y);
-        if (dist < 180 && player.y > this.y - 30) {
-          // 50% chance dive, 50% chance shoot dart
+        const dx = player.x - this.x;
+
+        // In Survival arena, follow player rather than getting stuck in patrol range
+        if (this.scene.scene && this.scene.scene.key === 'SurvivalScene') {
+          if (Math.abs(dx) > 30) {
+            this.patrolDir = dx > 0 ? 1 : -1;
+          }
+          const desiredY = Math.max(65, player.y - 65);
+          this.baseY = Phaser.Math.Linear(this.baseY, desiredY, 0.04);
+        } else {
+          // Rebound within patrol range in story mode
+          if (this.x < this.startX - this.patrolRange) this.patrolDir = 1;
+          if (this.x > this.startX + this.patrolRange) this.patrolDir = -1;
+        }
+
+        // Floating sinusoidal oscillation
+        this.y = this.baseY + Math.sin(this.scene.time.now * 0.004) * 14;
+        const speed = (this.scene.scene && this.scene.scene.key === 'SurvivalScene' && Math.abs(dx) > 100)
+          ? GAME_CONFIG.MOBS.FLYING_EYE.HOVER_SPEED * 1.6
+          : GAME_CONFIG.MOBS.FLYING_EYE.HOVER_SPEED;
+        this.setVelocityX(this.patrolDir * speed);
+        this.setFlipX(this.patrolDir < 0);
+
+        if (this.scene.time.now > this.attackCooldownUntil && dist < 240) {
           if (Math.random() < 0.5) {
             this.startDive(player);
           } else {
             this.startShoot(player);
           }
         }
+      } else {
+        this.y = this.baseY + Math.sin(this.scene.time.now * 0.004) * 14;
+        this.setVelocityX(this.patrolDir * GAME_CONFIG.MOBS.FLYING_EYE.HOVER_SPEED);
+        this.setFlipX(this.patrolDir < 0);
       }
       return;
     }
