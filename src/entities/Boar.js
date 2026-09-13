@@ -1,6 +1,7 @@
 import Phaser from 'phaser';
 import { GAME_CONFIG } from '../config.js';
 import { sound } from '../engine/Audio.js';
+import EnemyHealthBar from '../ui/EnemyHealthBar.js';
 
 export default class Boar extends Phaser.Physics.Arcade.Sprite {
   constructor(scene, x, y) {
@@ -24,10 +25,12 @@ export default class Boar extends Phaser.Physics.Arcade.Sprite {
     this.alertTimer = 0;
     this.stunnedUntil = 0;
 
+    this.healthBar = new EnemyHealthBar(scene, this, 28, 3.5, 6);
     this.play('boar_walk_anim');
   }
 
   update(player) {
+    if (this.healthBar) this.healthBar.update(this.hp, this.maxHp);
     if (this.state === 'DEAD') return;
 
     const onGround = this.body.blocked.down;
@@ -243,6 +246,7 @@ export default class Boar extends Phaser.Physics.Arcade.Sprite {
   die() {
     this.state = 'DEAD';
     this.body.setEnable(false);
+    if (this.healthBar) this.healthBar.setVisible(false);
     sound.playEnemyDeath();
     this.play('boar_hit_anim');
 
@@ -253,5 +257,13 @@ export default class Boar extends Phaser.Physics.Arcade.Sprite {
       duration: 350,
       onComplete: () => this.destroy()
     });
+  }
+
+  destroy(fromScene) {
+    if (this.healthBar) {
+      this.healthBar.destroy();
+      this.healthBar = null;
+    }
+    super.destroy(fromScene);
   }
 }

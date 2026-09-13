@@ -1,6 +1,7 @@
 import Phaser from 'phaser';
 import { GAME_CONFIG } from '../config.js';
 import { sound } from '../engine/Audio.js';
+import EnemyHealthBar from '../ui/EnemyHealthBar.js';
 
 export default class FlyingEye extends Phaser.Physics.Arcade.Sprite {
   constructor(scene, x, y) {
@@ -27,10 +28,12 @@ export default class FlyingEye extends Phaser.Physics.Arcade.Sprite {
     this.diveTarget = null;
     this.attackCooldownUntil = 0;
 
+    this.healthBar = new EnemyHealthBar(scene, this, 28, 3.5, 6);
     this.play('eye_flight_anim');
   }
 
   update(player) {
+    if (this.healthBar) this.healthBar.update(this.hp, this.maxHp);
     if (this.state === 'DEAD') return;
 
     if (this.state === 'HOVER') {
@@ -209,6 +212,7 @@ export default class FlyingEye extends Phaser.Physics.Arcade.Sprite {
 
   die() {
     this.state = 'DEAD';
+    if (this.healthBar) this.healthBar.setVisible(false);
     if (this.body) {
       this.body.setEnable(false);
     }
@@ -224,5 +228,13 @@ export default class FlyingEye extends Phaser.Physics.Arcade.Sprite {
       delay: 200,
       onComplete: () => this.destroy()
     });
+  }
+
+  destroy(fromScene) {
+    if (this.healthBar) {
+      this.healthBar.destroy();
+      this.healthBar = null;
+    }
+    super.destroy(fromScene);
   }
 }

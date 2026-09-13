@@ -1,6 +1,7 @@
 import Phaser from 'phaser';
 import { GAME_CONFIG } from '../config.js';
 import { sound } from '../engine/Audio.js';
+import EnemyHealthBar from '../ui/EnemyHealthBar.js';
 
 export default class Goblin extends Phaser.Physics.Arcade.Sprite {
   constructor(scene, x, y) {
@@ -23,10 +24,12 @@ export default class Goblin extends Phaser.Physics.Arcade.Sprite {
     this.attackCooldownUntil = 0;
     this.stunnedUntil = 0;
 
+    this.healthBar = new EnemyHealthBar(scene, this, 26, 3.5, 6);
     this.play('goblin_run_anim');
   }
 
   update(player) {
+    if (this.healthBar) this.healthBar.update(this.hp, this.maxHp);
     if (this.state === 'DEAD') return;
 
     const hitWall = this.body.blocked.left || this.body.blocked.right;
@@ -166,6 +169,7 @@ export default class Goblin extends Phaser.Physics.Arcade.Sprite {
 
   die() {
     this.state = 'DEAD';
+    if (this.healthBar) this.healthBar.setVisible(false);
     this.body.setEnable(false);
     sound.playEnemyDeath();
     this.play('goblin_dead_anim', true);
@@ -177,5 +181,13 @@ export default class Goblin extends Phaser.Physics.Arcade.Sprite {
       duration: 450,
       onComplete: () => this.destroy()
     });
+  }
+
+  destroy(fromScene) {
+    if (this.healthBar) {
+      this.healthBar.destroy();
+      this.healthBar = null;
+    }
+    super.destroy(fromScene);
   }
 }

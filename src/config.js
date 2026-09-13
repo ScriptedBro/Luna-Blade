@@ -4,7 +4,7 @@ export const GAME_CONFIG = {
   GRAVITY: 650,
   
   PLAYER: {
-    MAX_HEALTH: 3,
+    MAX_HEALTH: 100,
     RUN_SPEED: 155,
     JUMP_FORCE: -310,
     DOUBLE_JUMP_FORCE: -270,
@@ -22,7 +22,7 @@ export const GAME_CONFIG = {
       WALK_SPEED: 50,
       CHARGE_SPEED: 210,
       PTS: 50,
-      DAMAGE: 1,
+      DAMAGE: 20,
       BACKSTAB_MULTIPLIER: 3.0,
       COUNTER_MULTIPLIER: 3.0,
       AGGRO_RANGE: 260,
@@ -34,14 +34,14 @@ export const GAME_CONFIG = {
       SHELL_SPEED: 240,
       PTS: 25,
       RICOCHET_BONUS_PTS: 50,
-      DAMAGE: 1,
+      DAMAGE: 20,
     },
     BEE: {
       HP: 20,
       HOVER_SPEED: 55,
       SWOOP_SPEED: 165,
       PTS: 35,
-      DAMAGE: 1,
+      DAMAGE: 15,
       SWOOP_RANGE: 320,
     },
     MUSHROOM: {
@@ -49,21 +49,21 @@ export const GAME_CONFIG = {
       WALK_SPEED: 35,
       SPORE_SPEED: 180,
       PTS: 45,
-      DAMAGE: 1,
+      DAMAGE: 15,
     },
     FLYING_EYE: {
       HP: 35,
       HOVER_SPEED: 60,
       DIVE_SPEED: 140,
       PTS: 40,
-      DAMAGE: 1,
+      DAMAGE: 15,
     },
     GOBLIN: {
       HP: 40,
       WALK_SPEED: 70,
       BOMB_SPEED: 130,
       PTS: 45,
-      DAMAGE: 1,
+      DAMAGE: 20,
     },
     BOSS_GORGOK: {
       HP: 240,
@@ -71,13 +71,13 @@ export const GAME_CONFIG = {
       WALK_SPEED: 55,
       CHARGE_SPEED: 220,
       PTS: 500,
-      DAMAGE: 1,
+      DAMAGE: 30,
     },
     BOSS_WIZARD: {
       HP: 300,
       NAME: 'MALAKOR, CORRUPTED ARCHMAGE',
       PTS: 750,
-      DAMAGE: 1,
+      DAMAGE: 30,
     }
   },
 

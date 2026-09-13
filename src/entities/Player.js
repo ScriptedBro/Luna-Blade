@@ -348,7 +348,7 @@ export default class Player extends Phaser.Physics.Arcade.Sprite {
     return Math.round(baseDamage * multiplier);
   }
 
-  takeDamage(amount = 1, knockbackDir = 0) {
+  takeDamage(amount = 20, knockbackDir = 0) {
     if (this.isDead || this.scene.time.now < this.invulnerableUntil) return false;
 
     this.health = Math.max(0, this.health - amount);
@@ -362,16 +362,27 @@ export default class Player extends Phaser.Physics.Arcade.Sprite {
     // Screen shake
     this.scene.cameras.main.shake(120, 0.015);
 
+    if (this.scene && this.scene.heroHealthBar) {
+      this.scene.heroHealthBar.updateHealth(this.health, this.maxHealth);
+    }
+    if (this.scene && this.scene.updateHearts) {
+      this.scene.updateHearts();
+    }
+
     if (this.health <= 0) {
       this.die();
     }
     return true;
   }
 
-  heal(amount = 1) {
+  heal(amount = 35) {
     if (this.health >= this.maxHealth) return false;
     this.health = Math.min(this.maxHealth, this.health + amount);
     sound.playCoin();
+    if (this.scene && this.scene.heroHealthBar) {
+      this.scene.heroHealthBar.updateHealth(this.health, this.maxHealth);
+      this.scene.heroHealthBar.flashHeal();
+    }
     if (this.scene && this.scene.updateHearts) {
       this.scene.updateHearts();
     }

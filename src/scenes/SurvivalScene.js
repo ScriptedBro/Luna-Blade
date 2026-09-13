@@ -9,6 +9,7 @@ import Goblin from '../entities/Goblin.js';
 import BossGorgok from '../entities/BossGorgok.js';
 import Projectile from '../entities/Projectile.js';
 import BossHealthBar from '../ui/BossHealthBar.js';
+import HeroHealthBar from '../ui/HeroHealthBar.js';
 import Crate from '../entities/Crate.js';
 import { GAME_CONFIG } from '../config.js';
 import { sound } from '../engine/Audio.js';
@@ -108,7 +109,7 @@ export default class SurvivalScene extends Phaser.Scene {
     this.physics.add.overlap(this.player, this.projectiles, (player, proj) => {
       if (this.player.isDead || !proj || proj.isDead || proj.isDeflected) return;
       const knockDir = proj.x < this.player.x ? 1 : -1;
-      const damaged = this.player.takeDamage(proj.damage || 1, knockDir);
+      const damaged = this.player.takeDamage(proj.damage || 15, knockDir);
       if (damaged) {
         this.comboCount = 0;
         this.currentComboMultiplier = 1.0;
@@ -907,14 +908,10 @@ export default class SurvivalScene extends Phaser.Scene {
       color: '#ffd700'
     }).setOrigin(1, 0).setScrollFactor(0).setDepth(201);
 
-    // 3 Hearts display
-    this.heartIcons = [];
-    for (let i = 0; i < 3; i++) {
-      const heart = this.add.text(w / 2 - 20 + i * 16, 8, '❤️', { fontSize: '11px' }).setScrollFactor(0).setDepth(201);
-      this.heartIcons.push(heart);
-    }
+    // Hero Health Bar
+    this.heroHealthBar = new HeroHealthBar(this, w / 2 - 25, 14, this.player ? this.player.maxHealth : GAME_CONFIG.PLAYER.MAX_HEALTH);
 
-    // Wave progress (right of hearts)
+    // Wave progress (right of health bar)
     this.txtWave = this.add.text(w / 2 + 64, 6, 'WAVE 1/5', {
       fontFamily: 'Press Start 2P',
       fontSize: '6px',
@@ -938,8 +935,8 @@ export default class SurvivalScene extends Phaser.Scene {
 
   updateHearts() {
     if (!this.player) return;
-    for (let i = 0; i < 3; i++) {
-      this.heartIcons[i].setText(i < this.player.health ? '❤️' : '🖤');
+    if (this.heroHealthBar) {
+      this.heroHealthBar.updateHealth(this.player.health, this.player.maxHealth);
     }
   }
 
@@ -1006,7 +1003,8 @@ export default class SurvivalScene extends Phaser.Scene {
     }
 
     const knockDir = enemy.x < this.player.x ? 1 : -1;
-    const damaged = this.player.takeDamage(1, knockDir);
+    const enemyDmg = enemy.damage || (enemy.mobType && GAME_CONFIG.MOBS[enemy.mobType.toUpperCase()]?.DAMAGE) || 20;
+    const damaged = this.player.takeDamage(enemyDmg, knockDir);
     if (damaged) {
       // Reset combo on hit
       this.comboCount = 0;

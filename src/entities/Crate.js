@@ -44,22 +44,22 @@ export default class Crate extends Phaser.Physics.Arcade.Sprite {
   }
 
   spawnDrop(player) {
-    let color = '#ff3333';
-    let label = '+1 Life ❤️';
+    let color = '#2ecc71';
+    let label = '+35 HP 💚';
 
     if (player && player.health < player.maxHealth) {
-      player.heal(1);
-      color = '#ff3333';
-      label = '+1 Life ❤️';
+      player.heal(35);
+      color = '#2ecc71';
+      label = '+35 HP 💚';
     } else {
-      // Full health bonus (capped at max 3 lives)
+      // Full health bonus
       if (this.scene.totalScore !== undefined) {
         // Daily Luna Trial / Survival Scene
         const bonusPts = 100;
         this.scene.totalScore += bonusPts;
         if (this.scene.txtScore) this.scene.txtScore.setText(`SCORE: ${this.scene.totalScore}`);
         color = '#ffd700';
-        label = `FULL LIFE! +${bonusPts} PTS ✨`;
+        label = `FULL HP! +${bonusPts} PTS ✨`;
       } else {
         // Story Scene
         storage.addMaterials({ bark: 1, amber: 1 });

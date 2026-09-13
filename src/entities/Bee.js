@@ -1,6 +1,7 @@
 import Phaser from 'phaser';
 import { GAME_CONFIG } from '../config.js';
 import { sound } from '../engine/Audio.js';
+import EnemyHealthBar from '../ui/EnemyHealthBar.js';
 
 export default class Bee extends Phaser.Physics.Arcade.Sprite {
   constructor(scene, x, y) {
@@ -16,6 +17,7 @@ export default class Bee extends Phaser.Physics.Arcade.Sprite {
 
     this.mobType = 'bee';
     this.hp = GAME_CONFIG.MOBS.BEE.HP;
+    this.maxHp = GAME_CONFIG.MOBS.BEE.HP;
     this.state = 'HOVER'; // HOVER, SWOOP, RECOVER, DEAD
     this.baseY = y;
     this.patrolDir = -1;
@@ -23,10 +25,12 @@ export default class Bee extends Phaser.Physics.Arcade.Sprite {
     this.swoopTargetX = 0;
     this.swoopTargetY = 0;
 
+    this.healthBar = new EnemyHealthBar(scene, this, 22, 3.5, 6);
     this.play('bee_fly_anim');
   }
 
   update(player) {
+    if (this.healthBar) this.healthBar.update(this.hp, this.maxHp);
     if (this.state === 'DEAD') return;
 
     const isSurvival = this.scene.scene && this.scene.scene.key === 'SurvivalScene';
@@ -213,6 +217,7 @@ export default class Bee extends Phaser.Physics.Arcade.Sprite {
   die() {
     this.state = 'DEAD';
     this.body.setEnable(false);
+    if (this.healthBar) this.healthBar.setVisible(false);
     sound.playEnemyDeath();
     this.play('bee_hit_anim');
 
@@ -223,5 +228,13 @@ export default class Bee extends Phaser.Physics.Arcade.Sprite {
       duration: 350,
       onComplete: () => this.destroy()
     });
+  }
+
+  destroy(fromScene) {
+    if (this.healthBar) {
+      this.healthBar.destroy();
+      this.healthBar = null;
+    }
+    super.destroy(fromScene);
   }
 }

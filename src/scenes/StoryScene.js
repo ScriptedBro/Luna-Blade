@@ -12,6 +12,7 @@ import Projectile from '../entities/Projectile.js';
 import Crate from '../entities/Crate.js';
 import Obelisk from '../entities/Obelisk.js';
 import BossHealthBar from '../ui/BossHealthBar.js';
+import HeroHealthBar from '../ui/HeroHealthBar.js';
 import { GAME_CONFIG } from '../config.js';
 import { sound } from '../engine/Audio.js';
 import { storage } from '../engine/Storage.js';
@@ -113,7 +114,7 @@ export default class StoryScene extends Phaser.Scene {
       if (proj.isDead || proj.isDeflected || player.isDead) return;
       proj.explode();
       const knockDir = proj.x < player.x ? 1 : -1;
-      const damaged = player.takeDamage(1, knockDir);
+      const damaged = player.takeDamage(proj.damage || 15, knockDir);
       if (damaged) {
         this.comboCount = 0;
         this.updateHearts();
@@ -738,13 +739,9 @@ export default class StoryScene extends Phaser.Scene {
     });
     this.hudContainer.add(this.txtObjective);
 
-    // Hearts HUD
-    this.heartIcons = [];
-    for (let i = 0; i < 3; i++) {
-      const heart = this.add.text(210 + i * 14, 8, '❤️', { fontSize: '10px' });
-      this.heartIcons.push(heart);
-      this.hudContainer.add(heart);
-    }
+    // Hero Health Bar
+    this.heroHealthBar = new HeroHealthBar(this, 240, 14, this.player ? this.player.maxHealth : GAME_CONFIG.PLAYER.MAX_HEALTH);
+    this.hudContainer.add(this.heroHealthBar);
 
     // Materials Counter
     this.txtMaterials = this.add.text(w - 12, 10, '', {
@@ -772,12 +769,8 @@ export default class StoryScene extends Phaser.Scene {
 
   updateHearts() {
     if (!this.player) return;
-    for (let i = 0; i < 3; i++) {
-      if (i < this.player.health) {
-        this.heartIcons[i].setText('❤️');
-      } else {
-        this.heartIcons[i].setText('🖤');
-      }
+    if (this.heroHealthBar) {
+      this.heroHealthBar.updateHealth(this.player.health, this.player.maxHealth);
     }
   }
 
@@ -920,7 +913,8 @@ export default class StoryScene extends Phaser.Scene {
 
     // Normal damage
     const knockDir = enemy.x < this.player.x ? 1 : -1;
-    const damaged = this.player.takeDamage(1, knockDir);
+    const enemyDmg = enemy.damage || (enemy.mobType && GAME_CONFIG.MOBS[enemy.mobType.toUpperCase()]?.DAMAGE) || 20;
+    const damaged = this.player.takeDamage(enemyDmg, knockDir);
     if (damaged) {
       this.comboCount = 0;
       this.updateHearts();
@@ -932,7 +926,7 @@ export default class StoryScene extends Phaser.Scene {
 
   handleHazardHit(player, hazard) {
     if (player.isDead) return;
-    player.takeDamage(1, player.flipX ? 1 : -1);
+    player.takeDamage(20, player.flipX ? 1 : -1);
     this.updateHearts();
 
     // Respawn slightly back on platform

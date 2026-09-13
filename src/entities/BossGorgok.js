@@ -2,6 +2,7 @@ import Phaser from 'phaser';
 import { GAME_CONFIG } from '../config.js';
 import { sound } from '../engine/Audio.js';
 import { storage } from '../engine/Storage.js';
+import EnemyHealthBar from '../ui/EnemyHealthBar.js';
 
 export default class BossGorgok extends Phaser.Physics.Arcade.Sprite {
   constructor(scene, x, y, healthBar = null) {
@@ -10,6 +11,7 @@ export default class BossGorgok extends Phaser.Physics.Arcade.Sprite {
     scene.physics.add.existing(this);
 
     this.healthBar = healthBar;
+    this.overheadBar = new EnemyHealthBar(scene, this, 48, 5, 12);
     this.mobType = 'boss_gorgok';
     this.bossName = GAME_CONFIG.MOBS.BOSS_GORGOK.NAME;
 
@@ -39,6 +41,7 @@ export default class BossGorgok extends Phaser.Physics.Arcade.Sprite {
   }
 
   update(player) {
+    if (this.overheadBar) this.overheadBar.update(this.hp, this.maxHp);
     if (this.state === 'DEAD') return;
 
     const hitWall = this.body.blocked.left || this.body.blocked.right;
@@ -305,6 +308,9 @@ export default class BossGorgok extends Phaser.Physics.Arcade.Sprite {
 
   die() {
     this.state = 'DEAD';
+    if (this.overheadBar) {
+      this.overheadBar.setVisible(false);
+    }
     this.body.setEnable(false);
     this.setVelocity(0, 0);
     sound.playEnemyDeath();
@@ -340,5 +346,13 @@ export default class BossGorgok extends Phaser.Physics.Arcade.Sprite {
       delay: 500,
       onComplete: () => this.destroy()
     });
+  }
+
+  destroy(fromScene) {
+    if (this.overheadBar) {
+      this.overheadBar.destroy();
+      this.overheadBar = null;
+    }
+    super.destroy(fromScene);
   }
 }

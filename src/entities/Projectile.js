@@ -17,7 +17,7 @@ export default class Projectile extends Phaser.Physics.Arcade.Sprite {
     this.projType = type;
     this.isDeflected = false;
     this.isDeflectable = isDeflectable;
-    this.damage = 1;
+    this.damage = (type === 'spore' || type === 'eye_dart') ? 15 : ((type === 'arcane_orb' || type === 'arcane_meteor') ? 30 : 25);
     this.isDead = false;
     this.setDepth(22);
 
