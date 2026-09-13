@@ -34,6 +34,9 @@ export default class Boar extends Phaser.Physics.Arcade.Sprite {
     const hitWall = this.body.blocked.left || this.body.blocked.right;
 
     if (this.state === 'STUNNED') {
+      if (onGround && Math.abs(this.body.velocity.x) > 10) {
+        this.setVelocityX(this.body.velocity.x * 0.88);
+      }
       if (this.scene.time.now > this.stunnedUntil) {
         this.state = 'PATROL';
         this.play('boar_walk_anim', true);
@@ -150,21 +153,37 @@ export default class Boar extends Phaser.Physics.Arcade.Sprite {
 
     let finalDamage = amount;
     let isBackstab = false;
+    let isCounter = false;
+
+    const wasCharging = this.state === 'CHARGE' || this.state === 'ALERT';
 
     if (attackerBehind) {
-      finalDamage = Math.round(amount * GAME_CONFIG.MOBS.BOAR.BACKSTAB_MULTIPLIER);
+      finalDamage = Math.round(amount * (GAME_CONFIG.MOBS.BOAR.BACKSTAB_MULTIPLIER || 3.0));
       isBackstab = true;
+    } else if (wasCharging) {
+      // Slashing a charging or winding-up boar counters and staggers it!
+      const counterMultiplier = isUpwardSlash ? 3.5 : (GAME_CONFIG.MOBS.BOAR.COUNTER_MULTIPLIER || 3.0);
+      finalDamage = Math.round(amount * counterMultiplier);
+      isCounter = true;
+    } else if (isUpwardSlash) {
+      finalDamage = Math.round(amount * (GAME_CONFIG.PLAYER.UPWARD_SLASH_BONUS || 1.5));
     }
 
     this.hp -= finalDamage;
     sound.playHit();
 
     // Damage popup text
-    const color = isBackstab ? '#ffd700' : '#ffffff';
-    const textMsg = isBackstab ? `CRIT -${finalDamage}!` : `-${finalDamage}`;
-    const dmgText = this.scene.add.text(this.x, this.y - 14, textMsg, {
+    const color = isBackstab ? '#ffd700' : (isCounter ? '#ff9900' : '#ffffff');
+    let textMsg = `-${finalDamage}`;
+    if (isBackstab) {
+      textMsg = `CRIT -${finalDamage}! 🗡️`;
+    } else if (isCounter) {
+      textMsg = isUpwardSlash ? `UP-COUNTER -${finalDamage}! ⚔️` : `COUNTER -${finalDamage}! 💥`;
+    }
+
+    const dmgText = this.scene.add.text(this.x, this.y - 16, textMsg, {
       fontFamily: 'Press Start 2P',
-      fontSize: isBackstab ? '9px' : '7px',
+      fontSize: (isBackstab || isCounter) ? '8px' : '7px',
       color: color,
       stroke: '#000',
       strokeThickness: 2
@@ -172,25 +191,39 @@ export default class Boar extends Phaser.Physics.Arcade.Sprite {
 
     this.scene.tweens.add({
       targets: dmgText,
-      y: this.y - 28,
+      y: this.y - 32,
       alpha: 0,
-      duration: 500,
+      duration: 600,
       onComplete: () => dmgText.destroy()
     });
 
+    // Stagger / Stun the boar and interrupt charge immediately
+    const stunDuration = wasCharging ? 950 : 350;
+    this.state = 'STUNNED';
+    this.stunnedUntil = this.scene.time.now + stunDuration;
+    this.chargeCooldownUntil = this.scene.time.now + 3000;
+    this.play('boar_hit_anim', true);
+
+    if (isCounter) {
+      sound.playSlash(2);
+      this.scene.cameras.main.shake(90, 0.01);
+    }
+
     // Knockback
     const knockDir = attackFromX < this.x ? 1 : -1;
-    this.setVelocityX(knockDir * 120);
-    this.setVelocityY(-100);
+    const knockForceX = wasCharging ? 180 : 120;
+    const knockForceY = isUpwardSlash ? -240 : (wasCharging ? -130 : -90);
+    this.setVelocityX(knockDir * knockForceX);
+    this.setVelocityY(knockForceY);
 
     if (this.hp <= 0) {
       this.die();
-      return { killed: true, pts: GAME_CONFIG.MOBS.BOAR.PTS, isBackstab };
+      return { killed: true, pts: GAME_CONFIG.MOBS.BOAR.PTS, isBackstab, isCounter };
     } else {
       // Flash red
       this.setTint(0xff3333);
-      this.scene.time.delayedCall(120, () => this.clearTint());
-      return { killed: false, pts: 0, isBackstab };
+      this.scene.time.delayedCall(140, () => this.clearTint());
+      return { killed: false, pts: 0, isBackstab, isCounter };
     }
   }
 

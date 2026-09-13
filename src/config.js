@@ -24,6 +24,7 @@ export const GAME_CONFIG = {
       PTS: 50,
       DAMAGE: 1,
       BACKSTAB_MULTIPLIER: 3.0,
+      COUNTER_MULTIPLIER: 3.0,
       AGGRO_RANGE: 260,
       CHARGE_RANGE: 150,
     },

@@ -196,14 +196,14 @@ export default class Player extends Phaser.Physics.Arcade.Sprite {
   getAttackBounds() {
     const rangeMul = this.weaponConfig.rangeMul || 1.0;
     if (this.attackType === 'upward') {
-      const w = 40 * rangeMul;
-      const h = 50 * rangeMul;
-      return new Phaser.Geom.Rectangle(this.x - w / 2, this.y - 36 * rangeMul, w, h);
+      const w = 44 * rangeMul;
+      const h = 54 * rangeMul;
+      return new Phaser.Geom.Rectangle(this.x - w / 2, this.y - 38 * rangeMul, w, h);
     } else {
-      const w = (this.attackType === 'combo2' ? 52 : 44) * rangeMul;
-      const h = 38 * rangeMul;
-      const x = this.flipX ? (this.x - w + 4) : (this.x - 4);
-      const y = this.y - 6;
+      const w = (this.attackType === 'combo2' ? 56 : 48) * rangeMul;
+      const h = 44 * rangeMul;
+      const x = this.flipX ? (this.x - w + 6) : (this.x - 6);
+      const y = this.y - 8;
       return new Phaser.Geom.Rectangle(x, y, w, h);
     }
   }

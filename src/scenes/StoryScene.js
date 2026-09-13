@@ -870,7 +870,7 @@ export default class StoryScene extends Phaser.Scene {
   }
 
   handlePlayerEnemyCollision(enemy) {
-    if (this.player.isDead || enemy.state === 'DEAD') return;
+    if (this.player.isDead || enemy.state === 'DEAD' || enemy.state === 'STUNNED') return;
 
     // Snail in SHELLED or SLIDING state behaves differently
     if (enemy.mobType === 'snail' && enemy.state === 'SHELLED') {
@@ -899,6 +899,35 @@ export default class StoryScene extends Phaser.Scene {
       const dirTowardsPlayer = (enemy.body.velocity.x > 0 && this.player.x > enemy.x) ||
                                (enemy.body.velocity.x < 0 && this.player.x < enemy.x);
       if (!dirTowardsPlayer) return;
+    }
+
+    // Boar collision mechanics
+    if (enemy.mobType === 'boar') {
+      // 1. If player is actively swinging sword, attack has priority and counters/staggers the boar!
+      if (this.player.isAttacking) {
+        if (!this.player.currentSwingHits.has(enemy)) {
+          this.player.currentSwingHits.add(enemy);
+          this.handlePlayerAttackEnemy(enemy);
+        }
+        return;
+      }
+
+      // 2. If player is jumping downward onto the boar, bounce off it Mario-style!
+      if (this.player.body && this.player.body.velocity.y > 0 && this.player.y < enemy.y - 2) {
+        this.player.setVelocityY(-250);
+        sound.playRicochet();
+        enemy.takeDamage(40, this.player.x);
+        return;
+      }
+    }
+
+    // General attack priority for all regular mobs (excluding bosses)
+    if (this.player.isAttacking && enemy.mobType !== 'boss_gorgok' && enemy.mobType !== 'boss_malakor') {
+      if (!this.player.currentSwingHits.has(enemy)) {
+        this.player.currentSwingHits.add(enemy);
+        this.handlePlayerAttackEnemy(enemy);
+      }
+      return;
     }
 
     // Normal damage
