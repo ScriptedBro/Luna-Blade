@@ -42,7 +42,7 @@ export const GAME_CONFIG = {
       SWOOP_SPEED: 165,
       PTS: 35,
       DAMAGE: 1,
-      SWOOP_RANGE: 240,
+      SWOOP_RANGE: 320,
     },
     MUSHROOM: {
       HP: 45,

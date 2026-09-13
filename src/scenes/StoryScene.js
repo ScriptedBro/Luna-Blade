@@ -891,7 +891,10 @@ export default class StoryScene extends Phaser.Scene {
       if (this.player.body && this.player.body.velocity.y > 0 && this.player.y < enemy.y - 2) {
         this.player.setVelocityY(-250);
         sound.playRicochet();
-        enemy.takeDamage(99, this.player.x);
+        const res = enemy.takeDamage(99, this.player.x);
+        if (res && res.killed) {
+          this.onEnemyShattered(enemy);
+        }
         return;
       }
 
@@ -916,7 +919,13 @@ export default class StoryScene extends Phaser.Scene {
       if (this.player.body && this.player.body.velocity.y > 0 && this.player.y < enemy.y - 2) {
         this.player.setVelocityY(-250);
         sound.playRicochet();
-        enemy.takeDamage(40, this.player.x);
+        const res = enemy.takeDamage(40, this.player.x);
+        if (res && res.killed) {
+          this.killsCount++;
+          this.registerComboHit();
+          storage.addMaterials({ bark: 1, iron: 1 });
+          this.updateHudMaterials();
+        }
         return;
       }
     }

@@ -83,25 +83,25 @@ export function generateDailySurvivalSpec(seedStr = getTodaySeedString()) {
         // Squad 1: Shell Crawlers (t=0s, 4 foes)
         { type: 'snail', x: 80, y: 280, delay: 0 },
         { type: 'snail', x: 720, y: 280, delay: 0 },
-        { type: 'snail', x: 180, y: 210, delay: 500 },
-        { type: 'snail', x: 620, y: 210, delay: 500 },
+        { type: 'snail', x: 180, y: 240, delay: 500 },
+        { type: 'snail', x: 620, y: 240, delay: 500 },
 
         // Squad 2: Tusks & Stingers (t=3.2s, 4 foes)
         { type: 'boar', x: 70, y: 280, delay: 3200 },
         { type: 'boar', x: 730, y: 280, delay: 3200 },
-        { type: 'bee', x: 400, y: 90, delay: 3600 },
-        { type: 'snail', x: 400, y: 150, delay: 4000 },
+        { type: 'bee', x: 400, y: 160, delay: 3600 },
+        { type: 'snail', x: 400, y: 175, delay: 4000 },
 
         // Squad 3: Spore Snipers (t=7.5s, 4 foes)
-        { type: 'mushroom', x: 120, y: 90, delay: 7500 },
+        { type: 'mushroom', x: 180, y: 240, delay: 7500 },
         { type: 'boar', x: 200, y: 280, delay: 7800 },
         { type: 'boar', x: 600, y: 280, delay: 7800 },
-        { type: 'bee', x: 250, y: 100, delay: 8200 },
+        { type: 'bee', x: 250, y: 160, delay: 8200 },
 
         // Squad 4: Charging Vanguard (t=12s, 3 foes)
         { type: 'boar', x: 80, y: 280, delay: 12000 },
         { type: 'boar', x: 720, y: 280, delay: 12000 },
-        { type: 'mushroom', x: 680, y: 90, delay: 12500 },
+        { type: 'mushroom', x: 620, y: 240, delay: 12500 },
       ]
     },
     {
@@ -109,30 +109,30 @@ export function generateDailySurvivalSpec(seedStr = getTodaySeedString()) {
       title: 'Wave 2: Airborne Ambush & Goblin Bombers (18 Foes)',
       spawns: [
         // Squad 1 (t=0s, 4 foes)
-        { type: 'flying_eye', x: 150, y: 100, delay: 0 },
-        { type: 'flying_eye', x: 650, y: 100, delay: 0 },
-        { type: 'goblin', x: 120, y: 90, delay: 400 },
+        { type: 'flying_eye', x: 150, y: 160, delay: 0 },
+        { type: 'flying_eye', x: 650, y: 160, delay: 0 },
+        { type: 'goblin', x: 180, y: 240, delay: 400 },
         { type: 'boar', x: 100, y: 280, delay: 800 },
 
         // Squad 2 (t=3.5s, 5 foes)
-        { type: 'snail', x: 180, y: 210, delay: 3500 },
-        { type: 'snail', x: 620, y: 210, delay: 3500 },
-        { type: 'goblin', x: 680, y: 90, delay: 3800 },
-        { type: 'bee', x: 300, y: 90, delay: 4200 },
-        { type: 'bee', x: 500, y: 90, delay: 4200 },
+        { type: 'snail', x: 180, y: 240, delay: 3500 },
+        { type: 'snail', x: 620, y: 240, delay: 3500 },
+        { type: 'goblin', x: 620, y: 240, delay: 3800 },
+        { type: 'bee', x: 300, y: 160, delay: 4200 },
+        { type: 'bee', x: 500, y: 160, delay: 4200 },
 
         // Squad 3 (t=7.5s, 5 foes)
-        { type: 'mushroom', x: 400, y: 150, delay: 7500 },
-        { type: 'flying_eye', x: 200, y: 110, delay: 7800 },
-        { type: 'flying_eye', x: 600, y: 110, delay: 7800 },
+        { type: 'mushroom', x: 400, y: 175, delay: 7500 },
+        { type: 'flying_eye', x: 200, y: 160, delay: 7800 },
+        { type: 'flying_eye', x: 600, y: 160, delay: 7800 },
         { type: 'boar', x: 80, y: 280, delay: 8200 },
         { type: 'boar', x: 720, y: 280, delay: 8200 },
 
         // Squad 4 (t=12s, 4 foes)
-        { type: 'goblin', x: 400, y: 150, delay: 12000 },
+        { type: 'goblin', x: 400, y: 175, delay: 12000 },
         { type: 'boar', x: 250, y: 280, delay: 12300 },
         { type: 'boar', x: 550, y: 280, delay: 12300 },
-        { type: 'flying_eye', x: 400, y: 80, delay: 12600 },
+        { type: 'flying_eye', x: 400, y: 150, delay: 12600 },
       ]
     },
     {
@@ -140,34 +140,34 @@ export function generateDailySurvivalSpec(seedStr = getTodaySeedString()) {
       title: 'Wave 3: Toxic Spores & Artillery (22 Foes)',
       spawns: [
         // Squad 1 (t=0s, 5 foes)
-        { type: 'mushroom', x: 120, y: 90, delay: 0 },
-        { type: 'mushroom', x: 680, y: 90, delay: 0 },
+        { type: 'mushroom', x: 180, y: 240, delay: 0 },
+        { type: 'mushroom', x: 620, y: 240, delay: 0 },
         { type: 'snail', x: 80, y: 280, delay: 400 },
         { type: 'snail', x: 720, y: 280, delay: 400 },
-        { type: 'bee', x: 400, y: 90, delay: 800 },
+        { type: 'bee', x: 400, y: 160, delay: 800 },
 
         // Squad 2 (t=3.5s, 6 foes)
-        { type: 'goblin', x: 180, y: 210, delay: 3500 },
-        { type: 'goblin', x: 620, y: 210, delay: 3500 },
+        { type: 'goblin', x: 180, y: 240, delay: 3500 },
+        { type: 'goblin', x: 620, y: 240, delay: 3500 },
         { type: 'boar', x: 90, y: 280, delay: 3800 },
         { type: 'boar', x: 710, y: 280, delay: 3800 },
-        { type: 'flying_eye', x: 250, y: 100, delay: 4200 },
-        { type: 'flying_eye', x: 550, y: 100, delay: 4200 },
+        { type: 'flying_eye', x: 250, y: 160, delay: 4200 },
+        { type: 'flying_eye', x: 550, y: 160, delay: 4200 },
 
         // Squad 3 (t=7.5s, 6 foes)
-        { type: 'mushroom', x: 400, y: 150, delay: 7500 },
-        { type: 'snail', x: 180, y: 210, delay: 7800 },
-        { type: 'snail', x: 620, y: 210, delay: 7800 },
+        { type: 'mushroom', x: 400, y: 175, delay: 7500 },
+        { type: 'snail', x: 180, y: 240, delay: 7800 },
+        { type: 'snail', x: 620, y: 240, delay: 7800 },
         { type: 'boar', x: 100, y: 280, delay: 8100 },
         { type: 'boar', x: 700, y: 280, delay: 8100 },
-        { type: 'bee', x: 400, y: 80, delay: 8400 },
+        { type: 'bee', x: 400, y: 160, delay: 8400 },
 
         // Squad 4 (t=12s, 5 foes)
-        { type: 'goblin', x: 120, y: 90, delay: 12000 },
-        { type: 'goblin', x: 680, y: 90, delay: 12000 },
-        { type: 'flying_eye', x: 300, y: 100, delay: 12400 },
-        { type: 'flying_eye', x: 500, y: 100, delay: 12400 },
-        { type: 'boar', x: 400, y: 150, delay: 12800 },
+        { type: 'goblin', x: 180, y: 240, delay: 12000 },
+        { type: 'goblin', x: 620, y: 240, delay: 12000 },
+        { type: 'flying_eye', x: 300, y: 160, delay: 12400 },
+        { type: 'flying_eye', x: 500, y: 160, delay: 12400 },
+        { type: 'boar', x: 400, y: 175, delay: 12800 },
       ]
     },
     {
@@ -179,33 +179,33 @@ export function generateDailySurvivalSpec(seedStr = getTodaySeedString()) {
         { type: 'boar', x: 730, y: 280, delay: 0 },
         { type: 'snail', x: 200, y: 280, delay: 400 },
         { type: 'snail', x: 600, y: 280, delay: 400 },
-        { type: 'bee', x: 150, y: 90, delay: 800 },
-        { type: 'bee', x: 650, y: 90, delay: 800 },
+        { type: 'bee', x: 150, y: 160, delay: 800 },
+        { type: 'bee', x: 650, y: 160, delay: 800 },
 
         // Squad 2 (t=3.2s, 7 foes)
-        { type: 'flying_eye', x: 200, y: 110, delay: 3200 },
-        { type: 'flying_eye', x: 600, y: 110, delay: 3200 },
-        { type: 'mushroom', x: 120, y: 90, delay: 3500 },
-        { type: 'mushroom', x: 680, y: 90, delay: 3500 },
+        { type: 'flying_eye', x: 200, y: 160, delay: 3200 },
+        { type: 'flying_eye', x: 600, y: 160, delay: 3200 },
+        { type: 'mushroom', x: 180, y: 240, delay: 3500 },
+        { type: 'mushroom', x: 620, y: 240, delay: 3500 },
         { type: 'boar', x: 100, y: 280, delay: 3800 },
         { type: 'boar', x: 700, y: 280, delay: 3800 },
-        { type: 'snail', x: 400, y: 150, delay: 4200 },
+        { type: 'snail', x: 400, y: 175, delay: 4200 },
 
         // Squad 3 (t=7s, 6 foes)
-        { type: 'goblin', x: 180, y: 210, delay: 7000 },
-        { type: 'goblin', x: 620, y: 210, delay: 7000 },
+        { type: 'goblin', x: 180, y: 240, delay: 7000 },
+        { type: 'goblin', x: 620, y: 240, delay: 7000 },
         { type: 'boar', x: 80, y: 280, delay: 7400 },
         { type: 'boar', x: 720, y: 280, delay: 7400 },
-        { type: 'flying_eye', x: 400, y: 80, delay: 7800 },
-        { type: 'bee', x: 300, y: 100, delay: 8100 },
+        { type: 'flying_eye', x: 400, y: 150, delay: 7800 },
+        { type: 'bee', x: 300, y: 160, delay: 8100 },
 
         // Squad 4 (t=11s, 6 foes)
         { type: 'boar', x: 90, y: 280, delay: 11000 },
         { type: 'boar', x: 710, y: 280, delay: 11000 },
-        { type: 'snail', x: 180, y: 210, delay: 11400 },
-        { type: 'snail', x: 620, y: 210, delay: 11400 },
-        { type: 'goblin', x: 400, y: 150, delay: 11800 },
-        { type: 'flying_eye', x: 500, y: 90, delay: 12200 },
+        { type: 'snail', x: 180, y: 240, delay: 11400 },
+        { type: 'snail', x: 620, y: 240, delay: 11400 },
+        { type: 'goblin', x: 400, y: 175, delay: 11800 },
+        { type: 'flying_eye', x: 500, y: 160, delay: 12200 },
       ]
     },
     {
@@ -215,27 +215,27 @@ export function generateDailySurvivalSpec(seedStr = getTodaySeedString()) {
         // Squad 1: Boss & Vanguard (t=0s, 1 Boss + 4 minions)
         { type: 'boss_gorgok', x: 620, y: 270, delay: 0 },
         { type: 'boar', x: 100, y: 280, delay: 0 },
-        { type: 'snail', x: 180, y: 210, delay: 500 },
-        { type: 'snail', x: 620, y: 210, delay: 500 },
-        { type: 'bee', x: 400, y: 90, delay: 900 },
+        { type: 'snail', x: 180, y: 240, delay: 500 },
+        { type: 'snail', x: 620, y: 240, delay: 500 },
+        { type: 'bee', x: 400, y: 160, delay: 900 },
 
         // Squad 2 (t=4s, 4 minions)
-        { type: 'mushroom', x: 120, y: 90, delay: 4000 },
-        { type: 'goblin', x: 680, y: 90, delay: 4000 },
-        { type: 'flying_eye', x: 250, y: 100, delay: 4500 },
-        { type: 'flying_eye', x: 550, y: 100, delay: 4500 },
+        { type: 'mushroom', x: 180, y: 240, delay: 4000 },
+        { type: 'goblin', x: 620, y: 240, delay: 4000 },
+        { type: 'flying_eye', x: 250, y: 160, delay: 4500 },
+        { type: 'flying_eye', x: 550, y: 160, delay: 4500 },
 
         // Squad 3 (t=8.5s, 4 minions)
         { type: 'boar', x: 80, y: 280, delay: 8500 },
         { type: 'boar', x: 720, y: 280, delay: 8500 },
-        { type: 'snail', x: 400, y: 150, delay: 8900 },
-        { type: 'bee', x: 350, y: 90, delay: 9300 },
+        { type: 'snail', x: 400, y: 175, delay: 8900 },
+        { type: 'bee', x: 350, y: 160, delay: 9300 },
 
         // Squad 4 (t=13s, 4 minions)
-        { type: 'goblin', x: 180, y: 210, delay: 13000 },
-        { type: 'mushroom', x: 400, y: 150, delay: 13000 },
-        { type: 'flying_eye', x: 200, y: 100, delay: 13400 },
-        { type: 'flying_eye', x: 600, y: 100, delay: 13400 },
+        { type: 'goblin', x: 180, y: 240, delay: 13000 },
+        { type: 'mushroom', x: 400, y: 175, delay: 13000 },
+        { type: 'flying_eye', x: 200, y: 160, delay: 13400 },
+        { type: 'flying_eye', x: 600, y: 160, delay: 13400 },
       ]
     }
   ];

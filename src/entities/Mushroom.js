@@ -52,12 +52,12 @@ export default class Mushroom extends Phaser.Physics.Arcade.Sprite {
     this.setVelocityX(this.patrolDir * GAME_CONFIG.MOBS.MUSHROOM.WALK_SPEED);
     this.setFlipX(this.patrolDir < 0);
 
-    // Check player for ranged toxic spore attack (360-degree proximity)
+    // Check player for ranged toxic spore attack (expanded vertical reach)
     if (player && !player.isDead && this.scene.time.now > this.attackCooldownUntil) {
       const dist = Phaser.Math.Distance.Between(this.x, this.y, player.x, player.y);
       const dy = Math.abs(this.y - player.y);
 
-      if (dist < 220 && dy < 80) {
+      if (dist < 280 && dy < 180) {
         this.startAttack(player);
       }
     }
@@ -99,6 +99,14 @@ export default class Mushroom extends Phaser.Physics.Arcade.Sprite {
         this.play('mushroom_run_anim', true);
       }
     });
+
+    // Failsafe timer to return to PATROL if animation complete doesn't trigger
+    this.scene.time.delayedCall(900, () => {
+      if (this.state === 'ATTACK') {
+        this.state = 'PATROL';
+        this.play('mushroom_run_anim', true);
+      }
+    });
   }
 
   fireSpore(dir) {
@@ -107,7 +115,16 @@ export default class Mushroom extends Phaser.Physics.Arcade.Sprite {
     const spawnY = this.y - 4;
 
     if (this.scene && typeof this.scene.spawnProjectile === 'function') {
-      this.scene.spawnProjectile('spore', spawnX, spawnY, dir * GAME_CONFIG.MOBS.MUSHROOM.SPORE_SPEED, 0);
+      const player = this.scene.player;
+      let vx = dir * GAME_CONFIG.MOBS.MUSHROOM.SPORE_SPEED;
+      let vy = 0;
+      if (player && !player.isDead && player.y > this.y + 30) {
+        // Angle spore downward toward player
+        const angle = Phaser.Math.Angle.Between(spawnX, spawnY, player.x, player.y);
+        vx = Math.cos(angle) * GAME_CONFIG.MOBS.MUSHROOM.SPORE_SPEED;
+        vy = Math.sin(angle) * GAME_CONFIG.MOBS.MUSHROOM.SPORE_SPEED;
+      }
+      this.scene.spawnProjectile('spore', spawnX, spawnY, vx, vy);
     }
   }
 

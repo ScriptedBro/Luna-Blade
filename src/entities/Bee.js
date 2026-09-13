@@ -41,12 +41,24 @@ export default class Bee extends Phaser.Physics.Arcade.Sprite {
       if (this.body.blocked.left) this.patrolDir = 1;
       if (this.body.blocked.right) this.patrolDir = -1;
 
-      // Check for swoop opportunity
-      if (player && !player.isDead && this.scene.time.now > this.swoopCooldownUntil) {
+      // Check for swoop opportunity & player tracking
+      if (player && !player.isDead) {
         const dist = Phaser.Math.Distance.Between(this.x, this.y, player.x, player.y);
         const playerBelow = player.y > this.y + 20;
 
-        if (dist < GAME_CONFIG.MOBS.BEE.SWOOP_RANGE && playerBelow) {
+        // Drift towards player X if far away
+        const dx = player.x - this.x;
+        if (Math.abs(dx) > 50) {
+          this.patrolDir = dx > 0 ? 1 : -1;
+        }
+
+        // Gradually descend towards active arena height if hovering too high
+        if (this.originY < 150) {
+          this.originY += 0.3;
+        }
+
+        const swoopRange = GAME_CONFIG.MOBS.BEE.SWOOP_RANGE || 320;
+        if (dist < swoopRange && playerBelow && this.scene.time.now > this.swoopCooldownUntil) {
           this.startSwoop(player);
         }
       }

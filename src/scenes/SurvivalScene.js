@@ -324,6 +324,7 @@ export default class SurvivalScene extends Phaser.Scene {
 
   startWave(index) {
     if (this.isGameOver) return;
+    this.isWaveTransitioning = false;
 
     const waves = this.spec.waves;
     if (index >= waves.length) {
@@ -355,6 +356,14 @@ export default class SurvivalScene extends Phaser.Scene {
 
   checkSpawnQueue() {
     if (this.isGameOver || this.endlessMode) return;
+
+    // Clean up dispatched/finished timers
+    this.waveSpawnTimers = this.waveSpawnTimers.filter(t => t && !t.hasDispatched);
+
+    // Sanitize inFlightSpawns: if no timers are pending, reset inFlightSpawns
+    if (this.inFlightSpawns > 0 && this.waveSpawnTimers.length === 0) {
+      this.inFlightSpawns = 0;
+    }
 
     // Count living active enemies currently in the arena
     const activeEnemies = this.enemies.getChildren().filter(e => e && e.active && e.state !== 'DEAD' && !e._killHandled);
@@ -408,7 +417,8 @@ export default class SurvivalScene extends Phaser.Scene {
   }
 
   waveCleared() {
-    if (this.isGameOver) return;
+    if (this.isGameOver || this.isWaveTransitioning) return;
+    this.isWaveTransitioning = true;
 
     this.waveSpawnTimers.forEach(t => t.remove(false));
     this.waveSpawnTimers = [];
@@ -637,7 +647,10 @@ export default class SurvivalScene extends Phaser.Scene {
         duration: 350,
         onComplete: () => spawnPuff.destroy()
       });
+
+      return enemy;
     }
+    return null;
   }
 
   announceWave(title) {
@@ -712,6 +725,14 @@ export default class SurvivalScene extends Phaser.Scene {
       fontSize: '6px',
       color: '#d0f0c0'
     }).setScrollFactor(0).setDepth(201);
+
+    this.offscreenArrow = this.add.text(w / 2, 34, '▲ ENEMY ABOVE ▲', {
+      fontFamily: 'Press Start 2P',
+      fontSize: '6px',
+      color: '#ffdd55',
+      stroke: '#000000',
+      strokeThickness: 2
+    }).setOrigin(0.5).setScrollFactor(0).setDepth(201).setVisible(false);
   }
 
   updateHearts() {
@@ -755,7 +776,10 @@ export default class SurvivalScene extends Phaser.Scene {
       if (this.player.body && this.player.body.velocity.y > 0 && this.player.y < enemy.y - 2) {
         this.player.setVelocityY(-250);
         sound.playRicochet();
-        enemy.takeDamage(99, this.player.x);
+        const res = enemy.takeDamage(99, this.player.x);
+        if (res && res.killed) {
+          this.addKill(enemy.mobType, res.pts, 25, enemy.x, enemy.y - 12, 'STOMP KILL! 👢', enemy);
+        }
         return;
       }
 
@@ -780,7 +804,10 @@ export default class SurvivalScene extends Phaser.Scene {
       if (this.player.body && this.player.body.velocity.y > 0 && this.player.y < enemy.y - 2) {
         this.player.setVelocityY(-250);
         sound.playRicochet();
-        enemy.takeDamage(40, this.player.x);
+        const res = enemy.takeDamage(40, this.player.x);
+        if (res && res.killed) {
+          this.addKill(enemy.mobType, res.pts, 25, enemy.x, enemy.y - 12, 'STOMP KILL! 👢', enemy);
+        }
         return;
       }
     }
@@ -1027,6 +1054,24 @@ export default class SurvivalScene extends Phaser.Scene {
     if (this.bgMountains) this.bgMountains.tilePositionX = camScrollX * 0.05;
     if (this.bgFogPines) this.bgFogPines.tilePositionX = camScrollX * 0.12;
     if (this.bgMidPines) this.bgMidPines.tilePositionX = camScrollX * 0.22;
+
+    // Heartbeat check for spawn queue every 800ms
+    if (!this.nextSpawnQueueCheck || this.time.now > this.nextSpawnQueueCheck) {
+      this.nextSpawnQueueCheck = this.time.now + 800;
+      this.checkSpawnQueue();
+    }
+
+    // Indicator for off-screen/airborne enemies above the viewport
+    const cam = this.cameras.main;
+    const enemyAbove = this.enemies.getChildren().find(e => e && e.active && e.state !== 'DEAD' && !e._killHandled && e.y < cam.worldView.y + 12);
+    if (enemyAbove && this.offscreenArrow) {
+      const screenX = Phaser.Math.Clamp(enemyAbove.x - cam.worldView.x, 60, GAME_CONFIG.WIDTH - 60);
+      this.offscreenArrow.setX(screenX);
+      this.offscreenArrow.setText(`▲ ${enemyAbove.mobType.toUpperCase()} ABOVE ▲`);
+      this.offscreenArrow.setVisible(true);
+    } else if (this.offscreenArrow) {
+      this.offscreenArrow.setVisible(false);
+    }
 
     this.enemies.getChildren().forEach(e => {
       if (e && e.active && e.state !== 'DEAD') {
