@@ -80,20 +80,20 @@ export function generateDailySurvivalSpec(seedStr = getTodaySeedString()) {
       waveNumber: 1,
       title: 'Wave 1: Forest Incursion (15 Foes)',
       spawns: [
-        // Squad 1: Shell Crawlers (t=0s, 4 foes)
+        // Squad 1: Shell Crawlers (t=0s, 4 foes) - ground floor flanks
         { type: 'snail', x: 80, y: 280, delay: 0 },
         { type: 'snail', x: 720, y: 280, delay: 0 },
-        { type: 'snail', x: 180, y: 240, delay: 500 },
-        { type: 'snail', x: 620, y: 240, delay: 500 },
+        { type: 'snail', x: 140, y: 280, delay: 500 },
+        { type: 'snail', x: 660, y: 280, delay: 500 },
 
         // Squad 2: Tusks & Stingers (t=3.2s, 4 foes)
         { type: 'boar', x: 70, y: 280, delay: 3200 },
         { type: 'boar', x: 730, y: 280, delay: 3200 },
         { type: 'bee', x: 400, y: 160, delay: 3600 },
-        { type: 'snail', x: 400, y: 175, delay: 4000 },
+        { type: 'snail', x: 220, y: 280, delay: 4000 },
 
-        // Squad 3: Spore Snipers (t=7.5s, 4 foes)
-        { type: 'mushroom', x: 180, y: 240, delay: 7500 },
+        // Squad 3: Spore Snipers & Tusks (t=7.5s, 4 foes)
+        { type: 'mushroom', x: 120, y: 280, delay: 7500 },
         { type: 'boar', x: 200, y: 280, delay: 7800 },
         { type: 'boar', x: 600, y: 280, delay: 7800 },
         { type: 'bee', x: 250, y: 160, delay: 8200 },
@@ -101,7 +101,7 @@ export function generateDailySurvivalSpec(seedStr = getTodaySeedString()) {
         // Squad 4: Charging Vanguard (t=12s, 3 foes)
         { type: 'boar', x: 80, y: 280, delay: 12000 },
         { type: 'boar', x: 720, y: 280, delay: 12000 },
-        { type: 'mushroom', x: 620, y: 240, delay: 12500 },
+        { type: 'mushroom', x: 680, y: 280, delay: 12500 },
       ]
     },
     {

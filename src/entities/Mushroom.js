@@ -65,6 +65,15 @@ export default class Mushroom extends Phaser.Physics.Arcade.Sprite {
 
   isLedgeAhead(dir) {
     if (!this.body.blocked.down || !this.scene.platforms) return false;
+
+    // In Survival arena, allow walking off upper platforms if player is below
+    if (this.scene.scene && this.scene.scene.key === 'SurvivalScene') {
+      const player = this.scene.player;
+      if (player && !player.isDead && player.y > this.y + 35) {
+        return false;
+      }
+    }
+
     const lookX = this.x + (dir * (this.body.width / 2 + 8));
     const footY = this.body.bottom + 6;
 

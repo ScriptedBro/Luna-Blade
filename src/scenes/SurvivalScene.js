@@ -1061,9 +1061,12 @@ export default class SurvivalScene extends Phaser.Scene {
       this.checkSpawnQueue();
     }
 
-    // Indicator for off-screen/airborne enemies above the viewport
+    // Indicator for off-screen or perched enemies above the player
     const cam = this.cameras.main;
-    const enemyAbove = this.enemies.getChildren().find(e => e && e.active && e.state !== 'DEAD' && !e._killHandled && e.y < cam.worldView.y + 12);
+    const enemyAbove = this.enemies.getChildren().find(e => {
+      if (!e || !e.active || e.state === 'DEAD' || e._killHandled) return false;
+      return e.y < cam.worldView.y + 16 || (this.player && e.y < this.player.y - 50);
+    });
     if (enemyAbove && this.offscreenArrow) {
       const screenX = Phaser.Math.Clamp(enemyAbove.x - cam.worldView.x, 60, GAME_CONFIG.WIDTH - 60);
       this.offscreenArrow.setX(screenX);
@@ -1078,6 +1081,13 @@ export default class SurvivalScene extends Phaser.Scene {
         if (e.y > 330 && e.mobType !== 'bee' && e.mobType !== 'flying_eye') {
           e.y = 308;
           e.setVelocityY(0);
+        }
+        // Active pursuit descend: If player is on the ground floor, steer perched enemies towards player X so they drop down
+        if (this.player && this.player.y > 280 && e.y < 260 && e.mobType !== 'bee' && e.mobType !== 'flying_eye') {
+          const dxToPlayer = this.player.x - e.x;
+          if (Math.abs(dxToPlayer) > 20) {
+            e.patrolDir = dxToPlayer > 0 ? 1 : -1;
+          }
         }
         e.update(this.player);
       }
