@@ -14,12 +14,12 @@ const SPEAKER_CONFIGS = {
     soundPitch: true
   },
   COMPANION: {
-    name: 'SPARKY (SPIRIT BEE)',
-    color: '#ffd166',
-    bgColor: 0x302400,
-    borderColor: 0xf4a261,
-    spriteKey: 'bee_fly',
-    scale: 0.65,
+    name: 'SYLVA (MOON SPRITE)',
+    color: '#64dfdf',
+    bgColor: 0x032226,
+    borderColor: 0x48cae4,
+    spriteKey: 'fairy_portrait',
+    scale: 0.95,
     frame: 0,
     soundPitch: true
   },

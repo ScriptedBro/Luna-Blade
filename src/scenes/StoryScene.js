@@ -90,6 +90,7 @@ export default class StoryScene extends Phaser.Scene {
 
     // Hazards (Water in ch1, honeycomb traps in ch2, spikes in ch3)
     this.physics.add.overlap(this.player, this.hazards, (player, hazard) => {
+      if (this.inDialogue) return;
       this.handleHazardHit(player, hazard);
     });
 
@@ -113,7 +114,7 @@ export default class StoryScene extends Phaser.Scene {
 
     // Player body vs projectile
     this.physics.add.overlap(this.player, this.projectiles, (player, proj) => {
-      if (proj.isDead || proj.isDeflected || player.isDead) return;
+      if (this.inDialogue || proj.isDead || proj.isDeflected || player.isDead) return;
       proj.explode();
       const knockDir = proj.x < player.x ? 1 : -1;
       const damaged = player.takeDamage(proj.damage || 15, knockDir);
@@ -833,6 +834,8 @@ export default class StoryScene extends Phaser.Scene {
   }
 
   showChapterIntroCard() {
+    this.inDialogue = true;
+    this.physics.pause();
     const w = GAME_CONFIG.WIDTH;
     const h = GAME_CONFIG.HEIGHT;
 
@@ -909,13 +912,23 @@ export default class StoryScene extends Phaser.Scene {
       this.chapterIntroCard = null;
     }
     this.inDialogue = true;
+    this.physics.pause();
     if (this.player && this.player.body) {
       this.player.setVelocity(0, 0);
       this.player.play('player_idle', true);
     }
+    if (this.enemies) {
+      this.enemies.getChildren().forEach(e => {
+        if (e.body) {
+          e.body.velocity.x = 0;
+          e.body.velocity.y = 0;
+        }
+      });
+    }
     const box = new StoryDialogueBox(this);
     box.startDialogue(lines, () => {
       this.inDialogue = false;
+      this.physics.resume();
       if (onComplete) onComplete();
     });
     return box;
@@ -966,7 +979,7 @@ export default class StoryScene extends Phaser.Scene {
   }
 
   handlePlayerEnemyCollision(enemy) {
-    if (this.player.isDead || enemy.state === 'DEAD' || enemy.state === 'STUNNED') return;
+    if (this.inDialogue || this.player.isDead || enemy.state === 'DEAD' || enemy.state === 'STUNNED') return;
 
     // Snail in SHELLED or SLIDING state behaves differently
     if (enemy.mobType === 'snail' && enemy.state === 'SHELLED') {

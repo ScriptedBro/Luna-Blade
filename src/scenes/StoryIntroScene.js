@@ -114,8 +114,8 @@ const PROLOGUE_SLIDES = [
       });
 
       // Companion hovering
-      const pet = scene.add.sprite(205, 85, 'bee_fly').setScale(0.5);
-      pet.play('bee_fly_anim');
+      const pet = scene.add.sprite(205, 85, 'fairy_fly').setScale(0.8);
+      pet.play('fairy_fly_anim');
       container.add(pet);
     }
   }

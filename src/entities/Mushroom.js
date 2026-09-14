@@ -31,6 +31,10 @@ export default class Mushroom extends Phaser.Physics.Arcade.Sprite {
   update(player) {
     if (this.healthBar) this.healthBar.update(this.hp, this.maxHp);
     if (this.state === 'DEAD') return;
+    if (this.scene && this.scene.inDialogue) {
+      this.setVelocityX(0);
+      return;
+    }
 
     const hitWall = this.body.blocked.left || this.body.blocked.right;
 

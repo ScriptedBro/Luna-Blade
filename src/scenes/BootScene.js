@@ -131,6 +131,10 @@ export default class BootScene extends Phaser.Scene {
     this.load.image('spark', 'assets/env/spark.png');
     this.load.image('hud_base', 'assets/hud/hud_base.png');
     this.load.image('env_hive', 'assets/env/hive.png');
+
+    // Companion Sprite & Portrait (Sylva, the Moon Sprite)
+    this.load.image('fairy_portrait', 'assets/companion/fairy_portrait.png');
+    this.load.spritesheet('fairy_fly', 'assets/companion/fairy_fly.png', { frameWidth: 36, frameHeight: 38 });
   }
 
   create() {
@@ -470,6 +474,14 @@ export default class BootScene extends Phaser.Scene {
       frames: this.anims.generateFrameNumbers('wizard_dead', { start: 0, end: 4 }),
       frameRate: 7,
       repeat: 0
+    });
+
+    // Companion Fairy Animation
+    this.anims.create({
+      key: 'fairy_fly_anim',
+      frames: this.anims.generateFrameNumbers('fairy_fly', { start: 0, end: 5 }),
+      frameRate: 8,
+      repeat: -1
     });
   }
 }

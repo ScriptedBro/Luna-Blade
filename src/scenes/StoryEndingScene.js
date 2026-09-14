@@ -68,8 +68,8 @@ export default class StoryEndingScene extends Phaser.Scene {
     const hero = this.add.sprite(w / 2 - 12, 195, 'char_idle').setScale(1.1);
     hero.play('player_idle');
 
-    const pet = this.add.sprite(w / 2 + 18, 185, 'bee_fly').setScale(0.45);
-    pet.play('bee_fly_anim');
+    const pet = this.add.sprite(w / 2 + 18, 185, 'fairy_fly').setScale(0.75);
+    pet.play('fairy_fly_anim');
 
     // Peaceful boar grazing
     const boar = this.add.sprite(w / 2 + 120, 205, 'boar_idle').setFlipX(true);

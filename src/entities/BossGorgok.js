@@ -43,6 +43,10 @@ export default class BossGorgok extends Phaser.Physics.Arcade.Sprite {
   update(player) {
     if (this.overheadBar) this.overheadBar.update(this.hp, this.maxHp);
     if (this.state === 'DEAD') return;
+    if (this.scene && this.scene.inDialogue) {
+      this.setVelocityX(0);
+      return;
+    }
 
     const hitWall = this.body.blocked.left || this.body.blocked.right;
 

@@ -113,8 +113,8 @@ export default class MenuScene extends Phaser.Scene {
 
     // Tiny companion pet hovering if active
     if (storage.isCompanionActive()) {
-      const pet = this.add.sprite(hero.x - 14, hero.y - 20, 'bee_fly').setScale(0.4);
-      pet.play('bee_fly_anim');
+      const pet = this.add.sprite(hero.x - 14, hero.y - 20, 'fairy_fly').setScale(0.7);
+      pet.play('fairy_fly_anim');
     }
 
     // Peaceful boar grazing on right

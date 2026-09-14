@@ -32,6 +32,10 @@ export default class Bee extends Phaser.Physics.Arcade.Sprite {
   update(player) {
     if (this.healthBar) this.healthBar.update(this.hp, this.maxHp);
     if (this.state === 'DEAD') return;
+    if (this.scene && this.scene.inDialogue) {
+      this.setVelocity(0, 0);
+      return;
+    }
 
     const isSurvival = this.scene.scene && this.scene.scene.key === 'SurvivalScene';
     const livingEnemies = isSurvival && typeof this.scene.getLivingWaveEnemies === 'function'

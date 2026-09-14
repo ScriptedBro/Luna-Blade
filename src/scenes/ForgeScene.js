@@ -206,8 +206,8 @@ export default class ForgeScene extends Phaser.Scene {
         },
         {
           id: 'satchel_pet',
-          name: "Alchemist's Satchel (Bee Pet)",
-          desc: 'Cosmetic companion Bee hovering by shoulder in trials.',
+          name: 'Moon Sprite Satchel (Sylva)',
+          desc: 'Cosmetic Moon Sprite fairy hovering by your shoulder in trials.',
           cost: { bark: 8, amber: 6 },
           costLabel: '8 Bark, 6 Amber',
           type: 'satchel'

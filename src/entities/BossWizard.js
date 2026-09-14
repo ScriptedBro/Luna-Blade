@@ -49,6 +49,10 @@ export default class BossWizard extends Phaser.Physics.Arcade.Sprite {
   update(player) {
     if (this.overheadBar) this.overheadBar.update(this.hp, this.maxHp);
     if (this.state === 'DEAD' || this.state === 'TELEPORTING') return;
+    if (this.scene && this.scene.inDialogue) {
+      this.setVelocity(0, 0);
+      return;
+    }
 
     // Phase 2 transition check (< 35% HP)
     if (!this.isPhase2 && this.hp <= this.maxHp * 0.35) {

@@ -32,11 +32,11 @@ export default class Player extends Phaser.Physics.Arcade.Sprite {
     this.weaponConfig = Object.values(GAME_CONFIG.WEAPONS).find(w => w.id === this.equippedWeaponId) || GAME_CONFIG.WEAPONS.STARTER;
     this.companionActive = storage.isCompanionActive();
 
-    // Pet companion sprite
+    // Pet companion sprite (Sylva, Moon Sprite)
     if (this.companionActive) {
-      this.pet = scene.add.sprite(x - 14, y - 20, 'bee_fly');
-      this.pet.setScale(0.4);
-      this.pet.play('bee_fly_anim');
+      this.pet = scene.add.sprite(x - 14, y - 20, 'fairy_fly');
+      this.pet.setScale(0.7);
+      this.pet.play('fairy_fly_anim');
       this.pet.setDepth(this.depth + 1);
     }
 

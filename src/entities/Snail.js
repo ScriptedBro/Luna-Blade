@@ -30,6 +30,10 @@ export default class Snail extends Phaser.Physics.Arcade.Sprite {
   update() {
     if (this.healthBar) this.healthBar.update(this.hp, this.maxHp);
     if (this.state === 'DEAD') return;
+    if (this.scene && this.scene.inDialogue) {
+      if (this.state !== 'SLIDING') this.setVelocityX(0);
+      return;
+    }
 
     const hitWall = this.body.blocked.left || this.body.blocked.right;
 

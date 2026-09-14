@@ -35,6 +35,10 @@ export default class FlyingEye extends Phaser.Physics.Arcade.Sprite {
   update(player) {
     if (this.healthBar) this.healthBar.update(this.hp, this.maxHp);
     if (this.state === 'DEAD') return;
+    if (this.scene && this.scene.inDialogue) {
+      this.setVelocity(0, 0);
+      return;
+    }
 
     if (this.state === 'HOVER') {
       // Player tracking & attack engagement
