@@ -512,7 +512,7 @@ export default class StoryIntroScene extends Phaser.Scene {
       this.skipPill.setStrokeStyle(1, 0x244254);
       this.txtSkip.setColor("#8aa4b8");
     });
-    this.skipPill.on("pointerdown", () => this.startGame());
+    this.skipPill.on("pointerdown", () => this.skipPrologue());
 
     // 2. Pagination Dots
     this.dots = [];
@@ -545,10 +545,29 @@ export default class StoryIntroScene extends Phaser.Scene {
     });
 
     // Input handlers
-    this.input.keyboard.on("keydown-SPACE", () => this.advanceSlide());
-    this.input.keyboard.on("keydown-ENTER", () => this.advanceSlide());
-    this.input.keyboard.on("keydown-ESCAPE", () => this.startGame());
+    this.input.keyboard.on("keydown-SPACE", () => {
+      if (this.tutorialPromptOpen) {
+        if (this.onChoosePlayTutorial) this.onChoosePlayTutorial();
+        return;
+      }
+      this.advanceSlide();
+    });
+    this.input.keyboard.on("keydown-ENTER", () => {
+      if (this.tutorialPromptOpen) {
+        if (this.onChoosePlayTutorial) this.onChoosePlayTutorial();
+        return;
+      }
+      this.advanceSlide();
+    });
+    this.input.keyboard.on("keydown-ESCAPE", () => {
+      if (this.tutorialPromptOpen) {
+        if (this.onChooseSkipTutorial) this.onChooseSkipTutorial();
+        return;
+      }
+      this.skipPrologue();
+    });
     this.input.on("pointerdown", (pointer) => {
+      if (this.tutorialPromptOpen) return;
       // Avoid conflict if tapping skip pill
       if (pointer.x < 130 && pointer.y > 190) return;
       this.advanceSlide();
@@ -632,24 +651,146 @@ export default class StoryIntroScene extends Phaser.Scene {
   }
 
   advanceSlide() {
-    if (this.isTransitioning) return;
+    if (this.isTransitioning || this.tutorialPromptOpen) return;
 
     if (this.currentSlide < PROLOGUE_SLIDES.length - 1) {
       this.currentSlide++;
       this.renderSlide(this.currentSlide);
     } else {
-      this.startGame();
+      this.promptTutorialChoice();
     }
   }
 
-  startGame() {
-    if (this.isTransitioning) return;
-    this.isTransitioning = true;
+  skipPrologue() {
+    if (this.isTransitioning || this.tutorialPromptOpen) return;
+    this.promptTutorialChoice();
+  }
+
+  promptTutorialChoice() {
+    if (this.isTransitioning || this.tutorialPromptOpen) return;
+    this.tutorialPromptOpen = true;
     sound.playVictory();
 
-    this.cameras.main.fade(500, 0, 0, 0);
-    this.time.delayedCall(500, () => {
-      this.scene.start("StoryScene", { chapter: 1 });
+    const w = GAME_CONFIG.WIDTH;
+    const h = GAME_CONFIG.HEIGHT;
+
+    // Dark blocking backdrop overlay
+    this.add.rectangle(w / 2, h / 2, w, h, 0x000000, 0.85)
+      .setDepth(500)
+      .setInteractive();
+
+    const card = this.add.container(w / 2, h / 2).setDepth(501);
+
+    // Modal background card
+    const cardBg = this.add.rectangle(0, 0, 360, 168, 0x06181e, 0.97);
+    cardBg.setStrokeStyle(1.5, 0x00ffcc);
+    card.add(cardBg);
+
+    // Inner subtle glow panel
+    const innerPanel = this.add.rectangle(0, -20, 336, 88, 0x0c252f, 0.9);
+    innerPanel.setStrokeStyle(1, 0x1a4656);
+    card.add(innerPanel);
+
+    // Sylva Avatar frame
+    const avatarRing = this.add.circle(-128, -28, 20, 0x082e38);
+    avatarRing.setStrokeStyle(1.5, 0x00ffcc);
+    const sylvaAvatar = this.add.image(-128, -28, 'fairy_portrait').setScale(0.65);
+    card.add([avatarRing, sylvaAvatar]);
+
+    // Title
+    const title = this.add.text(-96, -42, 'PLAY COMBAT TUTORIAL?', {
+      fontFamily: 'Press Start 2P',
+      fontSize: '8px',
+      color: '#ffd166',
+      stroke: '#000000',
+      strokeThickness: 2
+    });
+    card.add(title);
+
+    // Subtitle / Dialogue from Sylva
+    const sylvaText = this.add.text(-96, -26, 'Sylva: "Before entering Whispering\nWoods, would you like to practice\nsword slashes, combos & jumps?"', {
+      fontFamily: 'Press Start 2P',
+      fontSize: '5px',
+      color: '#c8f0ea',
+      lineSpacing: 4
+    });
+    card.add(sylvaText);
+
+    // Feature bullet checklist
+    const bulletText = this.add.text(0, 9, '• Mobile Touch Controls     • Ground Cleaves & Combos\n• Upward Air Slashes        • Stomp Bounce on Shells', {
+      fontFamily: 'Press Start 2P',
+      fontSize: '4.5px',
+      color: '#80e2d5',
+      align: 'center',
+      lineSpacing: 3
+    }).setOrigin(0.5);
+    card.add(bulletText);
+
+    const createBtn = (bx, by, bw, bh, bgCol, borderCol, textCol, label, action) => {
+      const rect = this.add.rectangle(bx, by, bw, bh, bgCol)
+        .setStrokeStyle(1.5, borderCol)
+        .setInteractive({ useHandCursor: true });
+      const txt = this.add.text(bx, by, label, {
+        fontFamily: 'Press Start 2P',
+        fontSize: '6px',
+        color: textCol
+      }).setOrigin(0.5).setInteractive({ useHandCursor: true });
+
+      const setHover = (hover) => {
+        const s = hover ? 1.03 : 1.0;
+        rect.setScale(s);
+        txt.setScale(s);
+      };
+
+      rect.on('pointerover', () => setHover(true));
+      txt.on('pointerover', () => setHover(true));
+      rect.on('pointerout', () => setHover(false));
+      txt.on('pointerout', () => setHover(false));
+      rect.on('pointerdown', action);
+      txt.on('pointerdown', action);
+
+      card.add([rect, txt]);
+      return { rect, txt };
+    };
+
+    const choosePlayTutorial = () => {
+      if (this.isTransitioning) return;
+      this.isTransitioning = true;
+      sound.playCoin();
+      this.cameras.main.fade(400, 0, 0, 0);
+      this.time.delayedCall(400, () => {
+        this.scene.start('TutorialScene', { fromPrologue: true });
+      });
+    };
+
+    const chooseSkipTutorial = () => {
+      if (this.isTransitioning) return;
+      this.isTransitioning = true;
+      sound.playCoin();
+      this.cameras.main.fade(400, 0, 0, 0);
+      this.time.delayedCall(400, () => {
+        this.scene.start('StoryScene', { chapter: 1 });
+      });
+    };
+
+    this.onChoosePlayTutorial = choosePlayTutorial;
+    this.onChooseSkipTutorial = chooseSkipTutorial;
+
+    // Button 1: PLAY TUTORIAL (Recommended)
+    createBtn(0, 38, 336, 24, 0x164e22, 0x4ade80, '#ffffff', '⚔️ PLAY TUTORIAL (RECOMMENDED)', choosePlayTutorial);
+
+    // Button 2: SKIP TO CHAPTER 1
+    createBtn(0, 64, 336, 20, 0x1e293b, 0x64748b, '#cbd5e1', '⏩ SKIP TO CHAPTER 1', chooseSkipTutorial);
+
+    // Card entrance animation
+    card.setScale(0.85);
+    card.setAlpha(0);
+    this.tweens.add({
+      targets: card,
+      scale: 1,
+      alpha: 1,
+      duration: 250,
+      ease: 'Back.easeOut'
     });
   }
 }

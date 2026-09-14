@@ -15,6 +15,10 @@ export default class TutorialScene extends Phaser.Scene {
     super({ key: 'TutorialScene' });
   }
 
+  init(data) {
+    this.fromPrologue = Boolean(data && data.fromPrologue);
+  }
+
   create() {
     const w = GAME_CONFIG.WIDTH;
     const h = GAME_CONFIG.HEIGHT;
@@ -866,10 +870,20 @@ export default class TutorialScene extends Phaser.Scene {
       card.add([rect, txt]);
     };
 
-    createBtn(0, 12, 280, 24, 0x164e22, 0x4ade80, '#ffffff', '⚔️ START STORY MODE', () => {
-      sound.playCoin();
-      this.scene.start('StoryIntroScene');
-    });
+    const storyBtnLabel = this.fromPrologue ? '⚔️ BEGIN CHAPTER 1 ➔' : '⚔️ START STORY MODE';
+    const proceedToStory = () => {
+      sound.playVictory();
+      if (this.fromPrologue) {
+        this.scene.start('StoryScene', { chapter: 1 });
+      } else {
+        this.scene.start('StoryIntroScene');
+      }
+    };
+
+    createBtn(0, 12, 280, 24, 0x164e22, 0x4ade80, '#ffffff', storyBtnLabel, proceedToStory);
+
+    this.input.keyboard.once('keydown-SPACE', proceedToStory);
+    this.input.keyboard.once('keydown-ENTER', proceedToStory);
 
     createBtn(-74, 44, 134, 24, 0x1a3848, 0x38bdf8, '#38bdf8', '🏆 DAILY TRIAL', () => {
       sound.playCoin();
