@@ -218,11 +218,9 @@ export default class Player extends Phaser.Physics.Arcade.Sprite {
     if (isUpward) {
       this.attackType = 'upward';
       sound.playUpwardSlash();
-      // Upward anti-air leap/lift
+      // Grounded anti-air leap only (prevent infinite aerial flight exploit)
       if (this.body.blocked.down) {
         this.setVelocityY(-140);
-      } else {
-        this.setVelocityY(-165);
       }
     } else if (isCombo) {
       this.attackType = 'combo2';
