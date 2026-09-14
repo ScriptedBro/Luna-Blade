@@ -28,6 +28,10 @@ export default class SurvivalScene extends Phaser.Scene {
     this.arenaWidth = 840;
     this.arenaHeight = 380;
 
+    if (typeof window !== 'undefined' && window.touchController) {
+      window.touchController.show();
+    }
+
     this.physics.world.setBounds(0, 0, this.arenaWidth, this.arenaHeight);
 
     // Load today's deterministic seed & spec
@@ -1022,6 +1026,10 @@ export default class SurvivalScene extends Phaser.Scene {
     if (this.isGameOver) return;
     this.isGameOver = true;
     sound.playGameOver();
+
+    if (typeof window !== 'undefined' && window.touchController) {
+      window.touchController.hide();
+    }
 
     // Final score formula: (Kills * Mob Value) + (Seconds Survived * 10) + Hit Combo Multiplier
     const timeBonus = this.secondsSurvived * GAME_CONFIG.SURVIVAL.PTS_PER_SECOND;

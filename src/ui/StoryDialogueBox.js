@@ -130,17 +130,17 @@ export default class StoryDialogueBox extends Phaser.GameObjects.Container {
     });
     this.add(this.dialogueText);
 
-    // Prompt to advance [▼]
-    this.promptArrow = scene.add.text(boxW / 2 - 18, boxH / 2 - 12, '▼', {
+    // Prompt to advance [TAP TO CONTINUE ▼]
+    this.promptArrow = scene.add.text(boxW / 2 - 12, boxH / 2 - 10, 'TAP TO CONTINUE ▼', {
       fontFamily: 'Press Start 2P',
-      fontSize: '6px',
+      fontSize: '5px',
       color: '#ffd166'
-    }).setOrigin(0.5);
+    }).setOrigin(1, 0.5);
     this.add(this.promptArrow);
 
     this.arrowTween = scene.tweens.add({
       targets: this.promptArrow,
-      y: boxH / 2 - 8,
+      y: boxH / 2 - 7,
       duration: 400,
       yoyo: true,
       loop: -1
@@ -185,6 +185,9 @@ export default class StoryDialogueBox extends Phaser.GameObjects.Container {
   }
 
   startDialogue(lines, onComplete) {
+    if (typeof window !== 'undefined' && window.touchController) {
+      window.touchController.hide();
+    }
     this.lines = lines;
     this.currentLineIdx = 0;
     this.onCompleteCallback = onComplete;

@@ -132,6 +132,10 @@ export default class StoryIntroScene extends Phaser.Scene {
     this.currentSlide = 0;
     this.isTransitioning = false;
 
+    if (typeof window !== 'undefined' && window.touchController) {
+      window.touchController.hide();
+    }
+
     // Outer Background
     this.bgRect = this.add.rectangle(w / 2, h / 2, w, h, 0x05131d);
 

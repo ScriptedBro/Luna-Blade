@@ -17,16 +17,32 @@ export class TouchController {
     };
 
     this.touchContainer = document.getElementById('touch-controls');
+    this.isVisible = false;
+    this.hide();
     this.initTouchButtons();
     this.initHeaderButtons();
     this.initNimiqIntegration();
-    this.autoDetectTouch();
     this.initViewportListener();
   }
 
-  autoDetectTouch() {
+  show() {
+    this.isVisible = true;
     if (this.touchContainer) {
       this.touchContainer.classList.remove('hidden');
+    }
+  }
+
+  hide() {
+    this.isVisible = false;
+    if (this.touchContainer) {
+      this.touchContainer.classList.add('hidden');
+    }
+    // Clear any held directional / action states so inputs do not stick
+    for (const k of Object.keys(this.state)) {
+      this.state[k] = false;
+    }
+    if (this.touchContainer) {
+      this.touchContainer.querySelectorAll('.touch-btn').forEach((btn) => btn.classList.remove('pressed'));
     }
   }
 
@@ -286,7 +302,11 @@ export class TouchController {
     const btnTouch = document.getElementById('btn-touch');
     if (btnTouch && this.touchContainer) {
       btnTouch.addEventListener('click', () => {
-        this.touchContainer.classList.toggle('hidden');
+        if (this.touchContainer.classList.contains('hidden')) {
+          this.show();
+        } else {
+          this.hide();
+        }
       });
     }
 

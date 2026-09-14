@@ -18,6 +18,10 @@ export default class MenuScene extends Phaser.Scene {
     this.cameras.main.resetFX();
     sound.startBGM();
 
+    if (typeof window !== 'undefined' && window.touchController) {
+      window.touchController.hide();
+    }
+
     if (typeof window !== 'undefined' && typeof window.__dismissGameLoader === 'function') {
       window.__dismissGameLoader();
     }

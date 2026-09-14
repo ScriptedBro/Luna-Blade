@@ -49,6 +49,10 @@ export default class StoryScene extends Phaser.Scene {
     const w = GAME_CONFIG.WIDTH;
     const h = GAME_CONFIG.HEIGHT;
 
+    if (typeof window !== 'undefined' && window.touchController) {
+      window.touchController.hide();
+    }
+
     // Physics bounds
     this.physics.world.setBounds(0, 0, this.levelWidth, this.levelHeight);
 
@@ -835,6 +839,9 @@ export default class StoryScene extends Phaser.Scene {
 
   showChapterIntroCard() {
     this.inDialogue = true;
+    if (typeof window !== 'undefined' && window.touchController) {
+      window.touchController.hide();
+    }
     this.physics.pause();
     const w = GAME_CONFIG.WIDTH;
     const h = GAME_CONFIG.HEIGHT;
@@ -868,7 +875,16 @@ export default class StoryScene extends Phaser.Scene {
     }).setOrigin(0.5);
     card.add(desc);
 
+    const advanceIntro = () => {
+      if (!this.chapterIntroCard) return;
+      this.chapterIntroCard.destroy();
+      this.chapterIntroCard = null;
+      this.triggerChapterOpeningDialogue();
+    };
+    box.setInteractive({ useHandCursor: true }).on('pointerdown', advanceIntro);
+
     this.time.delayedCall(2400, () => {
+      if (!this.chapterIntroCard) return;
       this.tweens.add({
         targets: card,
         alpha: 0,
@@ -912,6 +928,9 @@ export default class StoryScene extends Phaser.Scene {
       this.chapterIntroCard = null;
     }
     this.inDialogue = true;
+    if (typeof window !== 'undefined' && window.touchController) {
+      window.touchController.hide();
+    }
     this.physics.pause();
     if (this.player && this.player.body) {
       this.player.setVelocity(0, 0);
@@ -929,6 +948,11 @@ export default class StoryScene extends Phaser.Scene {
     box.startDialogue(lines, () => {
       this.inDialogue = false;
       this.physics.resume();
+      if (!this.isVictory && (!this.player || !this.player.isDead)) {
+        if (typeof window !== 'undefined' && window.touchController) {
+          window.touchController.show();
+        }
+      }
       if (onComplete) onComplete();
     });
     return box;
@@ -1070,6 +1094,10 @@ export default class StoryScene extends Phaser.Scene {
     this.isVictory = true;
     sound.playVictory();
 
+    if (typeof window !== 'undefined' && window.touchController) {
+      window.touchController.hide();
+    }
+
     // Mark progression in Storage
     storage.markChapterComplete(this.chapterId, this.killsCount);
 
@@ -1205,6 +1233,10 @@ export default class StoryScene extends Phaser.Scene {
   handlePlayerGameOver() {
     sound.playGameOver();
     this.gameOverInputReadyTime = this.time.now + 700;
+
+    if (typeof window !== 'undefined' && window.touchController) {
+      window.touchController.hide();
+    }
 
     if (this.chapterIntroCard) {
       this.chapterIntroCard.destroy();

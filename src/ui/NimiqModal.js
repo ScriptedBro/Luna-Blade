@@ -42,6 +42,10 @@ export class NimiqModal {
 
   open() {
     this.isOpen = true;
+    this.wasControlsVisible = Boolean(typeof window !== 'undefined' && window.touchController && window.touchController.isVisible);
+    if (this.wasControlsVisible && window.touchController) {
+      window.touchController.hide();
+    }
     this.overlay.classList.remove('hidden');
     sound.playSelect();
     this.render();
@@ -50,6 +54,10 @@ export class NimiqModal {
   close() {
     this.isOpen = false;
     this.overlay.classList.add('hidden');
+    if (this.wasControlsVisible && typeof window !== 'undefined' && window.touchController) {
+      window.touchController.show();
+      this.wasControlsVisible = false;
+    }
     sound.playBack();
   }
 

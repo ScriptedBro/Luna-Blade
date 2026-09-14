@@ -13,6 +13,10 @@ export default class StoryEndingScene extends Phaser.Scene {
     const w = GAME_CONFIG.WIDTH;
     const h = GAME_CONFIG.HEIGHT;
 
+    if (typeof window !== 'undefined' && window.touchController) {
+      window.touchController.hide();
+    }
+
     // Peaceful Night Sky Background
     this.add.rectangle(w / 2, h / 2, w, h, 0x051622);
 

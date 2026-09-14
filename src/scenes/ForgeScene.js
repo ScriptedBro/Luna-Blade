@@ -14,6 +14,10 @@ export default class ForgeScene extends Phaser.Scene {
     const w = GAME_CONFIG.WIDTH;
     const h = GAME_CONFIG.HEIGHT;
 
+    if (typeof window !== 'undefined' && window.touchController) {
+      window.touchController.hide();
+    }
+
     // Background
     this.add.tileSprite(0, 0, w, h, 'env_bg').setOrigin(0, 0).setTint(0x445544);
 

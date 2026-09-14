@@ -18,6 +18,10 @@ export default class LeaderboardScene extends Phaser.Scene {
     this.todaySeed = getTodaySeedString();
     this.lastScore = data?.lastScore || 0;
 
+    if (typeof window !== 'undefined' && window.touchController) {
+      window.touchController.hide();
+    }
+
     // Background
     this.add.tileSprite(0, 0, w, h, 'env_bg').setOrigin(0, 0).setTint(0x334433);
 
