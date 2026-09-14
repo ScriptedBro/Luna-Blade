@@ -24,9 +24,14 @@
       </div>
       
       <div class="header-status">
+        <!-- In-Battle Timer (Header / Portrait) -->
+        <div id="header-timer-badge" class="header-timer-badge hidden" title="Battle Elapsed Time">
+          <span id="header-timer-text">TIME: 0s</span>
+        </div>
+
         <!-- Pause Button (Header / Portrait) -->
         <button id="btn-pause-header" class="pixel-wallet-btn pause-header-btn hidden" title="Pause Game (Esc / P)" aria-label="Pause">
-          <span>⏸ PAUSE</span>
+          <span class="pause-icon">⏸</span>
         </button>
 
         <!-- Nimiq Wallet Connect Status Button -->
@@ -38,10 +43,15 @@
       </div>
     </header>
 
-    <!-- Floating Landscape Pause Button (only visible in landscape mode during battle) -->
-    <button id="btn-pause-landscape" class="landscape-pause-btn hidden" title="Pause Game (Esc / P)" aria-label="Pause">
-      <span>⏸ PAUSE</span>
-    </button>
+    <!-- Floating Landscape Timer & Pause Icon Group (very close to timer) -->
+    <div id="landscape-pause-group" class="landscape-pause-group hidden">
+      <div id="landscape-timer-badge" class="landscape-timer-badge" title="Battle Elapsed Time">
+        <span id="landscape-timer-text">TIME: 0s</span>
+      </div>
+      <button id="btn-pause-landscape" class="landscape-pause-btn" title="Pause Game (Esc / P)" aria-label="Pause">
+        <span class="pause-icon">⏸</span>
+      </button>
+    </div>
 
     <!-- Floating Landscape Nimiq Status/Wallet Button (only visible in landscape mode) -->
     <button id="btn-nimiq-landscape" class="landscape-nimiq-btn" title="Nimiq Altar & Wallet" aria-label="Nimiq Wallet">

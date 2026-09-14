@@ -45,6 +45,8 @@ export default class StoryScene extends Phaser.Scene {
     this.arenaGateWall = null;
     this.arenaGateVisual = null;
     this.skipIntroCard = Boolean(data && data.skipIntroCard);
+    this.startTime = performance.now();
+    this.secondsElapsed = 0;
   }
 
   create() {
@@ -57,6 +59,7 @@ export default class StoryScene extends Phaser.Scene {
 
     pauseService.attachScene(this, `CHAPTER ${this.chapterId}: ${this.chapterConfig.title}`);
     pauseService.hideButtons();
+    pauseService.updateTimer(0);
     this.events.once('shutdown', () => {
       pauseService.detachScene();
     });
@@ -1531,6 +1534,14 @@ export default class StoryScene extends Phaser.Scene {
         this.player.setVelocityX(0);
       }
       return;
+    }
+
+    if (!this.isVictory && !this.isGameOver && this.player && !this.player.isDead) {
+      const sec = Math.floor((performance.now() - this.startTime) / 1000);
+      if (sec !== this.secondsElapsed) {
+        this.secondsElapsed = sec;
+        pauseService.updateTimer(this.secondsElapsed);
+      }
     }
 
     const touchInputs = window.touchController ? {

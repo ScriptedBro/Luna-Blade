@@ -25,6 +25,11 @@ export class PauseService {
 
     this.btnHeader = document.getElementById('btn-pause-header');
     this.btnLandscape = document.getElementById('btn-pause-landscape');
+    this.landscapeGroup = document.getElementById('landscape-pause-group');
+    this.landscapeTimerBadge = document.getElementById('landscape-timer-badge');
+    this.landscapeTimerText = document.getElementById('landscape-timer-text');
+    this.headerTimerBadge = document.getElementById('header-timer-badge');
+    this.headerTimerText = document.getElementById('header-timer-text');
     this.modal = document.getElementById('pause-modal');
     this.txtMode = document.getElementById('pause-mode-desc');
 
@@ -42,6 +47,20 @@ export class PauseService {
 
     if (this.btnLandscape) {
       this.btnLandscape.addEventListener('click', (e) => {
+        e.preventDefault();
+        this.toggle();
+      });
+    }
+
+    if (this.landscapeTimerBadge) {
+      this.landscapeTimerBadge.addEventListener('click', (e) => {
+        e.preventDefault();
+        this.toggle();
+      });
+    }
+
+    if (this.headerTimerBadge) {
+      this.headerTimerBadge.addEventListener('click', (e) => {
         e.preventDefault();
         this.toggle();
       });
@@ -112,16 +131,24 @@ export class PauseService {
     this.hideButtons();
   }
 
+  updateTimer(seconds) {
+    const text = `TIME: ${seconds}s`;
+    if (this.landscapeTimerText) this.landscapeTimerText.textContent = text;
+    if (this.headerTimerText) this.headerTimerText.textContent = text;
+  }
+
   showButtons() {
     this.buttonsVisible = true;
+    if (this.landscapeGroup) this.landscapeGroup.classList.remove('hidden');
     if (this.btnHeader) this.btnHeader.classList.remove('hidden');
-    if (this.btnLandscape) this.btnLandscape.classList.remove('hidden');
+    if (this.headerTimerBadge) this.headerTimerBadge.classList.remove('hidden');
   }
 
   hideButtons() {
     this.buttonsVisible = false;
+    if (this.landscapeGroup) this.landscapeGroup.classList.add('hidden');
     if (this.btnHeader) this.btnHeader.classList.add('hidden');
-    if (this.btnLandscape) this.btnLandscape.classList.add('hidden');
+    if (this.headerTimerBadge) this.headerTimerBadge.classList.add('hidden');
   }
 
   toggle() {

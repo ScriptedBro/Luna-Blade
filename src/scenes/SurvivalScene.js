@@ -35,6 +35,7 @@ export default class SurvivalScene extends Phaser.Scene {
 
     pauseService.attachScene(this, 'DAILY SURVIVAL TRIAL');
     pauseService.showButtons();
+    pauseService.updateTimer(0);
     this.events.once('shutdown', () => {
       pauseService.detachScene();
     });
@@ -907,17 +908,13 @@ export default class SurvivalScene extends Phaser.Scene {
       color: '#ffffff'
     }).setScrollFactor(0).setDepth(201);
 
-    this.txtTimer = this.add.text(w - 12, 6, 'TIME: 0s', {
+    this.txtCombo = this.add.text(w / 2, 40, '', {
       fontFamily: 'Press Start 2P',
-      fontSize: '6px',
-      color: '#d0f0c0'
-    }).setOrigin(1, 0).setScrollFactor(0).setDepth(201);
-
-    this.txtCombo = this.add.text(w - 12, 17, 'COMBO: 1.0x', {
-      fontFamily: 'Press Start 2P',
-      fontSize: '6px',
-      color: '#ffd700'
-    }).setOrigin(1, 0).setScrollFactor(0).setDepth(201);
+      fontSize: '8px',
+      color: '#ffd700',
+      stroke: '#000000',
+      strokeThickness: 3
+    }).setOrigin(0.5).setScrollFactor(0).setDepth(201);
 
     // Hero Health Bar
     this.heroHealthBar = new HeroHealthBar(this, w / 2 - 25, 14, this.player ? this.player.maxHealth : GAME_CONFIG.PLAYER.MAX_HEALTH);
@@ -1235,7 +1232,7 @@ export default class SurvivalScene extends Phaser.Scene {
     const elapsedSec = Math.floor((performance.now() - this.startTime) / 1000);
     if (elapsedSec !== this.secondsSurvived) {
       this.secondsSurvived = elapsedSec;
-      this.txtTimer.setText(`TIME: ${this.secondsSurvived}s`);
+      pauseService.updateTimer(this.secondsSurvived);
     }
 
     const touchInputs = window.touchController ? {
