@@ -1,8 +1,8 @@
 import Phaser from 'phaser';
 
 export default class BossHealthBar extends Phaser.GameObjects.Container {
-  constructor(scene, bossName = 'BOSS', maxHp = 100) {
-    super(scene, 240, 24);
+  constructor(scene, bossName = 'BOSS', maxHp = 100, x = 240, y = 48) {
+    super(scene, x, y);
     scene.add.existing(this);
 
     this.maxHp = maxHp;
@@ -58,14 +58,15 @@ export default class BossHealthBar extends Phaser.GameObjects.Container {
 
     this.barWidth = barWidth;
     this.barHeight = barHeight;
+    this.targetY = y;
 
     // Intro entrance animation
     this.setAlpha(0);
-    this.y = 10;
+    this.y = this.targetY - 16;
     scene.tweens.add({
       targets: this,
       alpha: 1,
-      y: 24,
+      y: this.targetY,
       duration: 500,
       ease: 'Back.easeOut'
     });
@@ -103,7 +104,7 @@ export default class BossHealthBar extends Phaser.GameObjects.Container {
     this.scene.tweens.add({
       targets: this,
       alpha: 0,
-      y: 8,
+      y: this.targetY - 16,
       delay: 1500,
       duration: 800,
       onComplete: () => this.destroy()

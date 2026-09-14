@@ -29,6 +29,7 @@ export default class StoryScene extends Phaser.Scene {
     this.chapterId = data.chapter || 1;
     this.chapterConfig = GAME_CONFIG.CHAPTERS.find(c => c.id === this.chapterId) || GAME_CONFIG.CHAPTERS[0];
     this.killsCount = 0;
+    this.isGameOver = false;
     this.isVictory = false;
     this.inDialogue = false;
     this.comboCount = 0;
@@ -37,6 +38,8 @@ export default class StoryScene extends Phaser.Scene {
     this.levelHeight = 420;
     this.victoryAdvanceCallback = null;
     this.gameOverRetryCallback = null;
+    this.activeGameOverCleanup = null;
+    this.activeVictoryCleanup = null;
 
     // Boss & Arena state
     this.boss = null;
@@ -53,6 +56,9 @@ export default class StoryScene extends Phaser.Scene {
     const w = GAME_CONFIG.WIDTH;
     const h = GAME_CONFIG.HEIGHT;
 
+    this.isGameOver = false;
+    this.isVictory = false;
+
     if (typeof window !== 'undefined' && window.touchController) {
       window.touchController.hide();
     }
@@ -62,6 +68,14 @@ export default class StoryScene extends Phaser.Scene {
     pauseService.updateTimer(0);
     sound.playBGM(this.chapterId === 3 ? 'boss' : 'forest');
     this.events.once('shutdown', () => {
+      if (this.activeGameOverCleanup) {
+        this.activeGameOverCleanup();
+        this.activeGameOverCleanup = null;
+      }
+      if (this.activeVictoryCleanup) {
+        this.activeVictoryCleanup();
+        this.activeVictoryCleanup = null;
+      }
       pauseService.detachScene();
       sound.stopBGM();
     });
@@ -733,7 +747,7 @@ export default class StoryScene extends Phaser.Scene {
   showBossWarningBanner(name, subtitle) {
     sound.playBGM('boss');
     const w = GAME_CONFIG.WIDTH;
-    const banner = this.add.container(w / 2, 70).setScrollFactor(0).setDepth(480);
+    const banner = this.add.container(w / 2, 84).setScrollFactor(0).setDepth(480);
 
     const bg = this.add.rectangle(0, 0, 360, 36, 0x1f0606, 0.9);
     bg.setStrokeStyle(1.5, 0xff2222);
@@ -756,7 +770,7 @@ export default class StoryScene extends Phaser.Scene {
     this.tweens.add({
       targets: banner,
       alpha: 0,
-      y: 50,
+      y: 64,
       delay: 2400,
       duration: 600,
       onComplete: () => banner.destroy()
@@ -833,8 +847,8 @@ export default class StoryScene extends Phaser.Scene {
     this.hudContainer.add(this.txtMaterials);
     this.updateHudMaterials();
 
-    // Combo Counter (Center Screen)
-    this.txtCombo = this.add.text(w / 2, 40, '', {
+    // Combo Counter (Center Screen, below Boss Health Bar)
+    this.txtCombo = this.add.text(w / 2, 70, '', {
       fontFamily: 'Press Start 2P',
       fontSize: '9px',
       color: '#ffd700',
@@ -1270,7 +1284,9 @@ export default class StoryScene extends Phaser.Scene {
       if (this.game && this.game.canvas) {
         this.game.canvas.removeEventListener('pointerdown', onCanvasPointerDown);
       }
+      this.activeVictoryCleanup = null;
     };
+    this.activeVictoryCleanup = cleanup;
 
     const doAdvance = () => {
       if (actionTaken || this.time.now < this.victoryInputReadyTime) return;
@@ -1463,7 +1479,9 @@ export default class StoryScene extends Phaser.Scene {
         if (this.game && this.game.canvas) {
           this.game.canvas.removeEventListener('pointerdown', onCanvasPointerDown);
         }
+        this.activeGameOverCleanup = null;
       };
+      this.activeGameOverCleanup = cleanup;
 
       const doRetry = () => {
         if (actionTaken || this.time.now < this.gameOverInputReadyTime) return;
