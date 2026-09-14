@@ -24,6 +24,10 @@ export default class Crate extends Phaser.Physics.Arcade.Sprite {
     this.body.setEnable(false);
     sound.playHit();
 
+    if (this.scene && typeof this.scene.onCrateBroken === 'function') {
+      this.scene.onCrateBroken(this);
+    }
+
     // Spawn material drop
     this.spawnDrop(player);
 

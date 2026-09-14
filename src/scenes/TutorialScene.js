@@ -189,11 +189,11 @@ export default class TutorialScene extends Phaser.Scene {
     this.hudContainer.add(this.hudBg);
 
     // Step tag pill
-    this.stepPill = this.add.rectangle(-150, -18, 110, 14, 0x16381e, 0.9);
+    this.stepPill = this.add.rectangle(-132, -18, 86, 14, 0x16381e, 0.9);
     this.stepPill.setStrokeStyle(1, 0x4ade80);
     this.hudContainer.add(this.stepPill);
 
-    this.txtStep = this.add.text(-150, -18, 'LESSON 1 / 6', {
+    this.txtStep = this.add.text(-132, -18, 'LESSON 1 / 6', {
       fontFamily: 'Press Start 2P',
       fontSize: '5.5px',
       color: '#4ade80'
@@ -201,7 +201,7 @@ export default class TutorialScene extends Phaser.Scene {
     this.hudContainer.add(this.txtStep);
 
     // Title / Action instruction
-    this.txtTitle = this.add.text(0, -18, '1. RUNNING & TRAVERSAL', {
+    this.txtTitle = this.add.text(18, -18, '1. RUNNING & TRAVERSAL', {
       fontFamily: 'Press Start 2P',
       fontSize: '7px',
       color: '#ffd166',
@@ -210,14 +210,22 @@ export default class TutorialScene extends Phaser.Scene {
     }).setOrigin(0.5);
     this.hudContainer.add(this.txtTitle);
 
+    // Sylva Avatar Frame with fairy_portrait
+    this.avatarBg = this.add.rectangle(-196, -1, 24, 24, 0x102818, 0.95);
+    this.avatarBg.setStrokeStyle(1.5, 0x4ade80);
+    this.hudContainer.add(this.avatarBg);
+
+    this.avatarSylva = this.add.image(-196, -1, 'fairy_portrait').setScale(0.5);
+    this.hudContainer.add(this.avatarSylva);
+
     // Sylva dialogue quote
-    this.txtDialogue = this.add.text(0, -1, '✨ Sylva: "Tap the ◀ and ▶ buttons on the left D-Pad to run."', {
+    this.txtDialogue = this.add.text(-178, -1, 'Sylva: "Tap the ◀ and ▶ buttons on the left D-Pad to run."', {
       fontFamily: 'Press Start 2P',
       fontSize: '5px',
       color: '#c8eed4',
-      wordWrap: { width: 420 },
-      align: 'center'
-    }).setOrigin(0.5);
+      wordWrap: { width: 385 },
+      align: 'left'
+    }).setOrigin(0, 0.5);
     this.hudContainer.add(this.txtDialogue);
 
     // Task checklist badge
@@ -227,6 +235,13 @@ export default class TutorialScene extends Phaser.Scene {
       color: '#a0c4a0'
     }).setOrigin(0.5);
     this.hudContainer.add(this.txtProgress);
+  }
+
+  onCrateBroken(crate) {
+    if (this.currentLesson === 3 && !this.lessonCompleted) {
+      this.txtProgress.setText('[ SHATTER THE CRATE: 1 / 1 ✔ ]');
+      this.completeCurrentLesson();
+    }
   }
 
   startLesson(lessonNum) {
@@ -251,7 +266,7 @@ export default class TutorialScene extends Phaser.Scene {
         // LESSON 1: MOVEMENT
         this.txtStep.setText('LESSON 1 / 6');
         this.txtTitle.setText('1. RUNNING & TRAVERSAL');
-        this.txtDialogue.setText('✨ Sylva: "Welcome, Moonwarden! Tap ◀ and ▶ on the left D-Pad to run."');
+        this.txtDialogue.setText('Sylva: "Welcome, Moonwarden! Tap ◀ and ▶ on the left D-Pad to run."');
         this.txtProgress.setText('[ ◀ RUN LEFT: ⭕ ]   [ ▶ RUN RIGHT: ⭕ ]');
         if (window.touchController) {
           window.touchController.setTutorialHighlight(['touch-left', 'touch-right']);
@@ -263,7 +278,7 @@ export default class TutorialScene extends Phaser.Scene {
         // LESSON 2: JUMP & DOUBLE JUMP
         this.txtStep.setText('LESSON 2 / 6');
         this.txtTitle.setText('2. JUMP & DOUBLE JUMP');
-        this.txtDialogue.setText('✨ Sylva: "Tap JUMP on the right to leap. Tap again in mid-air for a Double Jump!"');
+        this.txtDialogue.setText('Sylva: "Tap JUMP on the right to leap. Tap again in mid-air for a Double Jump!"');
         this.txtProgress.setText('[ JUMP: ⭕ ]   [ MID-AIR DOUBLE JUMP: ⭕ ]');
         if (window.touchController) {
           window.touchController.setTutorialHighlight(['touch-jump']);
@@ -275,7 +290,7 @@ export default class TutorialScene extends Phaser.Scene {
         // LESSON 3: GROUND SLASH
         this.txtStep.setText('LESSON 3 / 6');
         this.txtTitle.setText('3. GROUND SWORD SLASH');
-        this.txtDialogue.setText('✨ Sylva: "Draw the Luna Blade! Tap SLASH to strike and shatter the practice crate."');
+        this.txtDialogue.setText('Sylva: "Draw the Luna Blade! Tap SLASH to strike and shatter the practice crate."');
         this.txtProgress.setText('[ SHATTER THE CRATE: 0 / 1 ]');
         if (window.touchController) {
           window.touchController.setTutorialHighlight(['touch-attack']);
@@ -288,7 +303,7 @@ export default class TutorialScene extends Phaser.Scene {
         // LESSON 4: UPWARD AIR ATTACK
         this.txtStep.setText('LESSON 4 / 6');
         this.txtTitle.setText('4. UPWARD AERIAL ATTACK');
-        this.txtDialogue.setText('✨ Sylva: "Foes like bees strike from above! Tap UP ATTK to slice skyward!"');
+        this.txtDialogue.setText('Sylva: "Foes like bees strike from above! Tap UP ATTK to slice skyward!"');
         this.txtProgress.setText('[ DESTROY AERIAL TARGET: 0 / 1 ]');
         if (window.touchController) {
           window.touchController.setTutorialHighlight(['touch-upslash']);
@@ -301,7 +316,7 @@ export default class TutorialScene extends Phaser.Scene {
         // LESSON 5: AERIAL STOMP BOUNCE
         this.txtStep.setText('LESSON 5 / 6');
         this.txtTitle.setText('5. AERIAL STOMP BOUNCE');
-        this.txtDialogue.setText('✨ Sylva: "Jump above armored foes and fall onto them to Stomp Bounce safely!"');
+        this.txtDialogue.setText('Sylva: "Jump above armored foes and fall onto them to Stomp Bounce safely!"');
         this.txtProgress.setText('[ STOMP BOUNCE ON SHELL: 0 / 1 ]');
         if (window.touchController) {
           window.touchController.setTutorialHighlight(['touch-jump']);
@@ -314,7 +329,7 @@ export default class TutorialScene extends Phaser.Scene {
         // LESSON 6: LIVE SPARRING
         this.txtStep.setText('LESSON 6 / 6');
         this.txtTitle.setText('6. LIVE COMBAT SPARRING');
-        this.txtDialogue.setText('✨ Sylva: "Splendid! Combine all attacks to defeat this corrupted training dummy!"');
+        this.txtDialogue.setText('Sylva: "Splendid! Combine all attacks to defeat this corrupted training dummy!"');
         this.txtProgress.setText('[ DEFEAT SPARRING DUMMY: 0 / 1 ]');
         if (window.touchController) {
           window.touchController.clearTutorialHighlights();
@@ -429,7 +444,12 @@ export default class TutorialScene extends Phaser.Scene {
     const bounds = this.player.getAttackBounds();
 
     // 1. Hit training crate in Lesson 3
-    if (this.currentLesson === 3 && this.trainingCrate && this.trainingCrate.active && !this.lessonCompleted) {
+    if (this.currentLesson === 3 && this.trainingCrate && !this.lessonCompleted) {
+      if (!this.trainingCrate.active || this.trainingCrate.isBroken) {
+        this.txtProgress.setText('[ SHATTER THE CRATE: 1 / 1 ✔ ]');
+        this.completeCurrentLesson();
+        return;
+      }
       const cb = this.trainingCrate.getBounds();
       if (Phaser.Geom.Intersects.RectangleToRectangle(bounds, cb)) {
         this.trainingCrate.breakCrate(this.player);
@@ -553,7 +573,7 @@ export default class TutorialScene extends Phaser.Scene {
       const targetSylvaY = this.player.y - 28;
       this.sylva.x += (targetSylvaX - this.sylva.x) * 0.08;
       this.sylva.y += (targetSylvaY - this.sylva.y) * 0.08;
-      this.sylva.setFlipX(this.player.flipX);
+      this.sylva.setFlipX(!this.player.flipX);
     }
 
     this.checkCombatHits();
@@ -584,6 +604,11 @@ export default class TutorialScene extends Phaser.Scene {
         this.txtProgress.setText(`[ JUMP: ${jumpIcon} ]   [ MID-AIR DOUBLE JUMP: ${djumpIcon} ]`);
 
         if (this.lessonState.jumped && this.lessonState.doubleJumped) {
+          this.completeCurrentLesson();
+        }
+      } else if (this.currentLesson === 3) {
+        if ((!this.trainingCrate || !this.trainingCrate.active || this.trainingCrate.isBroken) && !this.lessonCompleted) {
+          this.txtProgress.setText('[ SHATTER THE CRATE: 1 / 1 ✔ ]');
           this.completeCurrentLesson();
         }
       }

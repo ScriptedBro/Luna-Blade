@@ -182,7 +182,7 @@ export default class Player extends Phaser.Physics.Arcade.Sprite {
       const targetPetY = this.y - 18 + Math.sin(this.scene.time.now * 0.006) * 4;
       this.pet.x += (targetPetX - this.pet.x) * 0.12;
       this.pet.y += (targetPetY - this.pet.y) * 0.12;
-      this.pet.setFlipX(this.flipX);
+      this.pet.setFlipX(!this.flipX);
     }
 
     // Invulnerability blinking
