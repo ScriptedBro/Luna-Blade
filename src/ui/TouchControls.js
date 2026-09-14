@@ -46,6 +46,25 @@ export class TouchController {
     }
   }
 
+  setTutorialHighlight(btnIds = []) {
+    this.clearTutorialHighlights();
+    const ids = Array.isArray(btnIds) ? btnIds : [btnIds];
+    ids.forEach((id) => {
+      const el = document.getElementById(id);
+      if (el) {
+        el.classList.add('tutorial-highlight');
+      }
+    });
+  }
+
+  clearTutorialHighlights() {
+    if (this.touchContainer) {
+      this.touchContainer.querySelectorAll('.touch-btn.tutorial-highlight').forEach((btn) => {
+        btn.classList.remove('tutorial-highlight');
+      });
+    }
+  }
+
   initViewportListener() {
     const handleResize = () => {
       if (this.game && this.game.scale) {

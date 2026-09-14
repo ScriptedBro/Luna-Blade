@@ -6,6 +6,7 @@ import StoryIntroScene from './scenes/StoryIntroScene.js';
 import StoryScene from './scenes/StoryScene.js';
 import StoryEndingScene from './scenes/StoryEndingScene.js';
 import SurvivalScene from './scenes/SurvivalScene.js';
+import TutorialScene from './scenes/TutorialScene.js';
 import ForgeScene from './scenes/ForgeScene.js';
 import LeaderboardScene from './scenes/LeaderboardScene.js';
 import { TouchController } from './ui/TouchControls.js';
@@ -37,6 +38,7 @@ const phaserConfig = {
   scene: [
     BootScene,
     MenuScene,
+    TutorialScene,
     StoryIntroScene,
     StoryScene,
     StoryEndingScene,

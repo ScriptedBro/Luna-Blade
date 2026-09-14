@@ -30,26 +30,38 @@
   - **Chapter II: The Hollow Canopy** — Scale ancient boughs guarded by aerial eyes and **Malakor the Blighted Sorcerer**.
   - **Chapter III: The Elder Roots** — Descend into the subterranean heart to sever the root of the celestial contagion.
 
-### 2. ⏳ Daily Luna Trial (Arcade Survival)
+### 2. 🎓 Guided Mobile Combat Tutorial
+- **Professional Step-by-Step Training**: 6 progressive lessons guided by Sylva the Moon Sprite.
+- **Interactive Button Guidance**: Dynamic glowing button highlights (`tutorial-highlight`) directly illuminate the exact touch control required for each maneuver.
+- **Master Core Mechanics**:
+  - *Lesson 1*: Running and traversal with D-Pad controls.
+  - *Lesson 2*: Ground jump and mid-air double jump onto canopy platforms.
+  - *Lesson 3*: Ground cleave attacks and breaking training crates.
+  - *Lesson 4*: Upward aerial slash (`UP ATTK`) against airborne target orbs.
+  - *Lesson 5*: Aerial stomp bounce mechanics dealing crushing `-25 HP` damage on enemy shells.
+  - *Lesson 6*: Live sparring against combat dummies with active health gauges.
+
+### 3. ⏳ Daily Luna Trial (Arcade Survival)
 - **Deterministic Seeded Spawns**: A fresh daily seed powered by PRNG ensures an identical, fair challenge for all players worldwide each calendar day.
 - **Progressive Wave Escalation**: Battle through escalating hordes of snails, explosive spore mushrooms, swooping stinger bees, charging wild boars, and aerial watchers.
 - **Dynamic Combo System**: String attacks together without taking hits to rack up combo multipliers and speed-clear point bonuses.
 - **Crate Drops**: Bash wooden crates to recover hearts (capped at 3 lives) and replenish stamina.
 
-### 3. 🛡️ Fluid Combat & Traversal
+### 4. 🛡️ Fluid Combat & Traversal
 - **Slash Combos**: Ground attack chains that cleave through charging enemies and deflect incoming projectile spores.
 - **Upward Aerial Slash (`UP ATTK`)**: Launch into the sky to slice down diving bees and floating flyers.
 - **Aerial Stomp Bounce**: Drop onto charging foes or sliding snail shells from above to deal crushing stomp damage (`-25 HP`) and bounce harmlessly into the air.
 - **Shell Kick Mechanic**: Knock armored snails into their shells and send them ricocheting across the glade to bowl over other enemies.
 - **Counter-Stagger Priority**: Strike charging boars or the Boss before impact to interrupt charges and deliver decisive counter-blows.
 
-### 4. 📱 Mobile-First & Nimiq Pay Mini App Ready
+### 5. 📱 Mobile-First & Nimiq Pay Mini App Ready
+- **Clean Touch-First UI**: Zero confusing desktop key hints (`[ESC]`, `[P]`, `[R]`, `J/K/Enter`) — clean mobile prompt labels (`TAP RESUME OR ⏸ TO CONTINUE`, `TAP RETRY`).
 - **Adaptive Touch Controls**: Virtual D-Pad (Left/Right) and dedicated action buttons (`JUMP`, `SLASH`, `UP ATTK`) that elevate above bottom bezels and safe areas.
 - **Smart Context Visibility**: Controls automatically hide during dialogue scenes and story intros, reappearing instantly when combat begins.
 - **Full Landscape Canvas**: Stretches edge-to-edge with letterboxed pixel scaling, hiding intrusive browser headers on mobile.
 - **Nimiq Wallet Integration**: Native integration with `@nimiq/mini-app-sdk` for instant wallet detection and seamless in-app tipping and rewards.
 
-### 5. 🎶 16-Bit Retro Orchestral Soundtrack
+### 6. 🎶 16-Bit Retro Orchestral Soundtrack
 - Bespoke retro fantasy soundtrack with distinct themes for **Title**, **The High Forest**, **Battle Waves**, **Boss Encounters**, and **Victory Epilogue**.
 - Fallback Web Audio synth engine for sound effects (blade swooshes, impacts, crystal chimes, explosions).
 
@@ -57,7 +69,18 @@
 
 ## 🎮 Controls
 
-### Desktop (Keyboard)
+### 📱 Mobile (Primary Touch Controls)
+| On-Screen Button | Action |
+| :--- | :--- |
+| **◀ / ▶ (Left D-Pad)** | Run Left / Right |
+| **JUMP** | Jump / Mid-Air Double Jump |
+| **SLASH** | Cleave Sword Attack (Combos) |
+| **UP ATTK** | Upward Aerial Slash (Anti-Air) |
+| **JUMP (in air onto foe)** | Aerial Stomp Bounce (`-25 HP`) |
+| **⏸ (Top Right)** | Pause / Resume / Main Menu |
+| **Screen Tap / SKIP** | Advance Dialogue Crawl |
+
+### 💻 Desktop (Keyboard Fallback)
 | Key / Input | Action |
 | :--- | :--- |
 | <kbd>A</kbd> / <kbd>D</kbd> or <kbd>←</kbd> / <kbd>→</kbd> | Run Left / Right |
@@ -66,16 +89,6 @@
 | <kbd>K</kbd> or <kbd>X</kbd> or <kbd>Up Arrow + Slash</kbd> | Upward Air Slash (`UP ATTK`) |
 | <kbd>S</kbd> or <kbd>↓</kbd> (in air) | Fast Fall / Stomp |
 | <kbd>P</kbd> or <kbd>Esc</kbd> | Pause Game Menu |
-
-### Mobile (Touch Controls)
-| On-Screen Button | Action |
-| :--- | :--- |
-| **◀ / ▶ (Left D-Pad)** | Run Left / Right |
-| **JUMP** | Jump / Wall Hop |
-| **SLASH** | Cleave Sword Attack |
-| **UP ATTK** | Upward Aerial Slash |
-| **⏸ (Top Right)** | Pause / Resume / Main Menu |
-| **Screen Tap / SKIP** | Advance Dialogue Crawl |
 
 ---
 
@@ -168,6 +181,7 @@ Luna-Blade/
     ├── scenes/
     │   ├── BootScene.js     # Asset preloading & animation builders
     │   ├── MenuScene.js     # Main menu, chapter select, trial launcher
+    │   ├── TutorialScene.js # Guided mobile combat tutorial glade
     │   ├── StoryIntroScene.js # Prologue animated cutscenes & lore crawl
     │   ├── StoryScene.js    # 3-Chapter campaign mode
     │   ├── SurvivalScene.js # Endless/Daily Luna Trial mode

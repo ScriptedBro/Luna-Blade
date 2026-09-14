@@ -35,41 +35,35 @@ export default class MenuScene extends Phaser.Scene {
     this.createAmbientLeaves(w, h);
 
     // Title banner container
-    const titleBox = this.add.rectangle(w / 2, 52, 340, 62, 0x0a140a, 0.75);
+    const titleBox = this.add.rectangle(w / 2, 33, 310, 42, 0x0a140a, 0.85);
     titleBox.setStrokeStyle(1, 0x2e4e2e);
 
-    const titleText = this.add.text(w / 2, 34, 'LUNA BLADE', {
+    const titleText = this.add.text(w / 2, 21, 'LUNA BLADE', {
       fontFamily: 'Press Start 2P',
-      fontSize: '17px',
+      fontSize: '13px',
       color: '#f6c026',
       stroke: '#000000',
-      strokeThickness: 4
+      strokeThickness: 3
     }).setOrigin(0.5);
 
-    const subText = this.add.text(w / 2, 52, 'THE HIGH FOREST', {
+    const subText = this.add.text(w / 2, 34, 'THE HIGH FOREST', {
       fontFamily: 'Press Start 2P',
-      fontSize: '7.5px',
+      fontSize: '6.5px',
       color: '#98ff20',
       stroke: '#000000',
-      strokeThickness: 3,
+      strokeThickness: 2,
       letterSpacing: 2
     }).setOrigin(0.5);
 
-    // Date & Seed Banner
+    // Date & Seed & Status Combined Banner Line
     const todaySeed = getTodaySeedString();
-    this.add.text(w / 2, 64, `TODAY'S SEED: ${todaySeed}`, {
-      fontFamily: 'Press Start 2P',
-      fontSize: '5px',
-      color: '#a0c4a0'
-    }).setOrigin(0.5);
-
     const status = nimiqService.getStatus();
     const blessingActive = storage.hasMoonBlessing();
-    const statusStr = blessingActive ? '🌙 CELESTIAL BLESSING ACTIVE (+10% PTS)' : (status.connected ? `⚡ NIMIQ: ${status.shortAddress}` : '⚡ NIMIQ PAY READY');
-    this.add.text(w / 2, 75, statusStr, {
+    const statusBadge = blessingActive ? '🌙 BLESSING ACTIVE' : (status.connected ? `⚡ ${status.shortAddress}` : '⚡ NIMIQ READY');
+    this.add.text(w / 2, 45, `SEED: ${todaySeed} • ${statusBadge}`, {
       fontFamily: 'Press Start 2P',
-      fontSize: '5px',
-      color: blessingActive ? '#64dfdf' : '#ffd166',
+      fontSize: '4.5px',
+      color: blessingActive ? '#64dfdf' : '#a0c4a0',
       stroke: '#000000',
       strokeThickness: 2
     }).setOrigin(0.5);
@@ -85,8 +79,8 @@ export default class MenuScene extends Phaser.Scene {
     });
 
     // Menu Buttons Container
-    const startY = 96;
-    const spacing = 28;
+    const startY = 66;
+    const spacing = 22;
 
     const options = [
       {
@@ -96,25 +90,31 @@ export default class MenuScene extends Phaser.Scene {
         shouldFade: false
       },
       {
-        text: '🏆 2. DAILY LUNA TRIAL',
+        text: '🎓 2. COMBAT TUTORIAL',
+        desc: 'Learn Touch Moves, Jumps, Slashes & Combos',
+        action: () => this.scene.start('TutorialScene'),
+        shouldFade: true
+      },
+      {
+        text: '🏆 3. DAILY LUNA TRIAL',
         desc: 'Seeded Survival • 3 Lives • Daily Tournament',
         action: () => this.scene.start('SurvivalScene'),
         shouldFade: true
       },
       {
-        text: '⚒️ 3. FORGE & SATCHEL',
+        text: '⚒️ 4. FORGE & SATCHEL',
         desc: 'Craft Blades & Companion Relics',
         action: () => this.scene.start('ForgeScene'),
         shouldFade: true
       },
       {
-        text: '💰 4. DAILY LEADERBOARD',
+        text: '💰 5. DAILY LEADERBOARD',
         desc: 'Top Scores & Champion Rankings',
         action: () => this.scene.start('LeaderboardScene'),
         shouldFade: true
       },
       {
-        text: '⚡ 5. NIMIQ MOON SHRINE',
+        text: '⚡ 6. NIMIQ MOON SHRINE',
         desc: 'NIM Offerings, Wallet & Run Blessings',
         action: () => nimiqModal.open(),
         shouldFade: false
@@ -126,16 +126,9 @@ export default class MenuScene extends Phaser.Scene {
     });
 
     // Footer Info
-    const footBox = this.add.rectangle(w / 2, h - 12, 420, 16, 0x091409, 0.85);
+    const footBox = this.add.rectangle(w / 2, h - 12, 430, 16, 0x091409, 0.85);
     footBox.setStrokeStyle(1, 0x1d3d1d);
-    const isTouch = typeof window !== 'undefined' && (
-      'ontouchstart' in window ||
-      navigator.maxTouchPoints > 0 ||
-      Boolean(document.getElementById('touch-controls'))
-    );
-    const controlsHint = isTouch
-      ? 'TOUCH CONTROLS: D-PAD = MOVE • JUMP • SLASH • UP ATTK'
-      : 'CONTROLS: D-PAD / ARROWS = MOVE • SPACE = JUMP • J = SLASH • K = UP ATTK';
+    const controlsHint = 'CONTROLS: ◀ ▶ MOVE • JUMP • SLASH • UP ATTK • ⏸ PAUSE';
 
     this.add.text(w / 2, h - 12, controlsHint, {
       fontFamily: 'Press Start 2P',
@@ -162,19 +155,19 @@ export default class MenuScene extends Phaser.Scene {
   }
 
   createMenuButton(x, y, label, subtitle, callback, shouldFade = false) {
-    const btnBg = this.add.rectangle(x, y, 320, 24, 0x142814, 0.85);
+    const btnBg = this.add.rectangle(x, y, 310, 20, 0x142814, 0.85);
     btnBg.setStrokeStyle(1, 0x3c6e3c);
     btnBg.setInteractive({ useHandCursor: true });
 
     const txt = this.add.text(x, y - 3, label, {
       fontFamily: 'Press Start 2P',
-      fontSize: '8px',
+      fontSize: '7px',
       color: '#ffffff'
     }).setOrigin(0.5);
 
-    const sub = this.add.text(x, y + 7, subtitle, {
+    const sub = this.add.text(x, y + 5, subtitle, {
       fontFamily: 'Press Start 2P',
-      fontSize: '5px',
+      fontSize: '4.5px',
       color: '#7da57d'
     }).setOrigin(0.5);
 

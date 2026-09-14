@@ -1,0 +1,687 @@
+import Phaser from 'phaser';
+import { GAME_CONFIG } from '../config.js';
+import { sound } from '../engine/Audio.js';
+import Player from '../entities/Player.js';
+import Crate from '../entities/Crate.js';
+import Snail from '../entities/Snail.js';
+import Goblin from '../entities/Goblin.js';
+import EnemyHealthBar from '../ui/EnemyHealthBar.js';
+import { pauseService } from '../engine/PauseService.js';
+import confetti from 'canvas-confetti';
+
+export default class TutorialScene extends Phaser.Scene {
+  constructor() {
+    super({ key: 'TutorialScene' });
+  }
+
+  create() {
+    const w = GAME_CONFIG.WIDTH;
+    const h = GAME_CONFIG.HEIGHT;
+
+    this.cameras.main.resetFX();
+    this.cameras.main.setBackgroundColor('#050e08');
+
+    // Attach pause service with clean mode label
+    pauseService.attachScene(this, '🎓 COMBAT TUTORIAL: PRACTICE GLADE');
+    sound.playBGM('forest');
+
+    // Enable touch controls
+    if (typeof window !== 'undefined' && window.touchController) {
+      window.touchController.show();
+      window.touchController.clearTutorialHighlights();
+    }
+
+    // Parallax High Forest Background Layers
+    this.bgSky = this.add.tileSprite(0, 0, w, h, 'sky_backdrop').setOrigin(0, 0).setScrollFactor(0).setDepth(0);
+    this.bgMountains = this.add.tileSprite(0, 20, w, 200, 'sky_mountains').setOrigin(0, 0).setScrollFactor(0).setDepth(1);
+    this.bgFogPines = this.add.tileSprite(0, 50, w, 220, 'forest_bg_p0').setOrigin(0, 0).setScrollFactor(0).setDepth(2);
+    this.bgMidPines = this.add.tileSprite(0, 80, w, 220, 'forest_bg_p1').setOrigin(0, 0).setScrollFactor(0).setDepth(3);
+
+    // Decorative background pine trees
+    for (let i = 0; i < 4; i++) {
+      const tx = 60 + i * 110;
+      const treeKey = (i % 2 === 0) ? 'pine_green' : 'pine_dark';
+      const tree = this.add.image(tx, 234, treeKey).setOrigin(0.5, 1.0).setScale(0.8).setDepth(4);
+      this.tweens.add({
+        targets: tree,
+        angle: { from: -0.8, to: 0.8 },
+        duration: 2500 + i * 200,
+        yoyo: true,
+        repeat: -1,
+        ease: 'Sine.easeInOut'
+      });
+    }
+
+    // Bushes along the glade
+    for (let bx = 40; bx < w; bx += 100) {
+      this.add.image(bx, 234, 'bush_green').setOrigin(0.5, 1.0).setDepth(5).setScale(0.8);
+    }
+
+    // Static physics platforms group
+    this.platforms = this.physics.add.staticGroup();
+
+    // Solid cliff grass ground across the glade
+    this.createGround(0, 234, w);
+
+    // Elevated practice wooden platform (for jump training)
+    this.createPlatform(190, 165, 100);
+
+    // Ambient floating spores/pollen
+    this.add.particles(0, 0, 'spark', {
+      x: { min: 0, max: w },
+      y: { min: 40, max: 220 },
+      quantity: 1,
+      frequency: 300,
+      lifespan: 3500,
+      gravityY: -6,
+      speedX: { min: -10, max: 10 },
+      speedY: { min: -6, max: 6 },
+      scale: { start: 0.8, end: 0 },
+      alpha: { start: 0.5, end: 0 },
+      tint: 0x88ee88,
+      blendMode: 'ADD'
+    }).setDepth(15);
+
+    // Player instance
+    this.player = new Player(this, 90, 200);
+    this.physics.add.collider(this.player, this.platforms);
+
+    // Fallback cursors for desktop development
+    this.cursors = this.input.keyboard.createCursorKeys();
+    this.cursors.keys = this.input.keyboard.addKeys('W,A,S,D,J,K,Z,X,E,R,ENTER,ESC');
+
+    // Animated Sylva the Moon Sprite trainer hovering beside player
+    this.sylva = this.add.sprite(130, 170, 'fairy_fly').setScale(0.95).setDepth(30);
+    this.sylva.play('fairy_fly_anim');
+    this.tweens.add({
+      targets: this.sylva,
+      y: 162,
+      duration: 1200,
+      yoyo: true,
+      loop: -1,
+      ease: 'Sine.easeInOut'
+    });
+
+    // Tutorial HUD & Guidance Card (top center)
+    this.createTutorialHUD(w);
+
+    // Groups for interactive targets
+    this.crates = this.physics.add.group();
+    this.physics.add.collider(this.crates, this.platforms);
+
+    this.enemies = this.physics.add.group();
+    this.physics.add.collider(this.enemies, this.platforms);
+
+    // Combat overlap for sword attacks
+    this.time.addEvent({
+      delay: 50,
+      loop: true,
+      callback: () => this.checkCombatHits()
+    });
+
+    // Stomp bounce collision check
+    this.physics.add.overlap(this.player, this.enemies, (p, e) => this.handlePlayerEnemyOverlap(e));
+
+    // State machine tracking
+    this.currentLesson = 1;
+    this.lessonCompleted = false;
+    this.lessonState = {};
+
+    // Start Lesson 1
+    this.startLesson(1);
+
+    // Ensure cleanup on shutdown
+    this.events.once('shutdown', () => {
+      pauseService.detachScene();
+      if (typeof window !== 'undefined' && window.touchController) {
+        window.touchController.clearTutorialHighlights();
+      }
+    });
+  }
+
+  createGround(x, y, width) {
+    const depth = 10;
+    const body = this.add.rectangle(x + width / 2, y + 20, width, 40, 0x000000, 0);
+    this.physics.add.existing(body, true);
+    this.platforms.add(body);
+
+    const numTiles = Math.ceil(width / 16);
+    for (let i = 0; i < numTiles; i++) {
+      const tileX = x + i * 16;
+      let topKey = (i % 2 === 0) ? 'tile_cliff_top_mid1' : 'tile_cliff_top_mid2';
+      this.add.image(tileX, y - 10, topKey).setOrigin(0, 0).setDepth(depth);
+
+      for (let cy = y + 6; cy <= y + 38; cy += 16) {
+        this.add.image(tileX, cy, 'tile_cliff_body_mid').setOrigin(0, 0).setDepth(depth - 1);
+      }
+    }
+
+    for (let px = x + 24; px < x + width - 24; px += 56) {
+      const roll = Math.floor(px % 4);
+      if (roll === 0) this.add.image(px, y, 'prop_shroom_small').setOrigin(0.5, 1.0).setDepth(depth + 1);
+      else if (roll === 1) this.add.image(px, y, 'prop_flower_blue').setOrigin(0.5, 1.0).setDepth(depth + 1);
+      else if (roll === 2) this.add.image(px, y, 'prop_fern').setOrigin(0.5, 1.0).setDepth(depth + 1);
+    }
+  }
+
+  createPlatform(x, y, width) {
+    const depth = 10;
+    const body = this.add.rectangle(x + width / 2, y + 6, width, 12, 0x000000, 0);
+    this.physics.add.existing(body, true);
+    this.platforms.add(body);
+
+    const count = Math.ceil(width / 48);
+    for (let i = 0; i < count; i++) {
+      this.add.image(x + i * 48, y, 'plat_wood').setOrigin(0, 0).setDepth(depth);
+    }
+  }
+
+  createTutorialHUD(w) {
+    this.hudContainer = this.add.container(w / 2, 38).setDepth(400);
+
+    // Card background
+    this.hudBg = this.add.rectangle(0, 0, 440, 56, 0x07150c, 0.92);
+    this.hudBg.setStrokeStyle(1.5, 0x225530);
+    this.hudContainer.add(this.hudBg);
+
+    // Step tag pill
+    this.stepPill = this.add.rectangle(-150, -18, 110, 14, 0x16381e, 0.9);
+    this.stepPill.setStrokeStyle(1, 0x4ade80);
+    this.hudContainer.add(this.stepPill);
+
+    this.txtStep = this.add.text(-150, -18, 'LESSON 1 / 6', {
+      fontFamily: 'Press Start 2P',
+      fontSize: '5.5px',
+      color: '#4ade80'
+    }).setOrigin(0.5);
+    this.hudContainer.add(this.txtStep);
+
+    // Title / Action instruction
+    this.txtTitle = this.add.text(0, -18, '1. RUNNING & TRAVERSAL', {
+      fontFamily: 'Press Start 2P',
+      fontSize: '7px',
+      color: '#ffd166',
+      stroke: '#000000',
+      strokeThickness: 2
+    }).setOrigin(0.5);
+    this.hudContainer.add(this.txtTitle);
+
+    // Sylva dialogue quote
+    this.txtDialogue = this.add.text(0, -1, '✨ Sylva: "Tap the ◀ and ▶ buttons on the left D-Pad to run."', {
+      fontFamily: 'Press Start 2P',
+      fontSize: '5px',
+      color: '#c8eed4',
+      wordWrap: { width: 420 },
+      align: 'center'
+    }).setOrigin(0.5);
+    this.hudContainer.add(this.txtDialogue);
+
+    // Task checklist badge
+    this.txtProgress = this.add.text(0, 17, '[ ◀ RUN LEFT: ⭕ ]   [ ▶ RUN RIGHT: ⭕ ]', {
+      fontFamily: 'Press Start 2P',
+      fontSize: '5px',
+      color: '#a0c4a0'
+    }).setOrigin(0.5);
+    this.hudContainer.add(this.txtProgress);
+  }
+
+  startLesson(lessonNum) {
+    this.currentLesson = lessonNum;
+    this.lessonCompleted = false;
+    this.lessonState = {};
+
+    // Clear previous interactive entities
+    this.crates.clear(true, true);
+    this.enemies.clear(true, true);
+    if (this.aerialTarget) {
+      this.aerialTarget.destroy();
+      this.aerialTarget = null;
+    }
+
+    if (typeof window !== 'undefined' && window.touchController) {
+      window.touchController.clearTutorialHighlights();
+    }
+
+    switch (lessonNum) {
+      case 1:
+        // LESSON 1: MOVEMENT
+        this.txtStep.setText('LESSON 1 / 6');
+        this.txtTitle.setText('1. RUNNING & TRAVERSAL');
+        this.txtDialogue.setText('✨ Sylva: "Welcome, Moonwarden! Tap ◀ and ▶ on the left D-Pad to run."');
+        this.txtProgress.setText('[ ◀ RUN LEFT: ⭕ ]   [ ▶ RUN RIGHT: ⭕ ]');
+        if (window.touchController) {
+          window.touchController.setTutorialHighlight(['touch-left', 'touch-right']);
+        }
+        this.lessonState = { movedLeft: false, movedRight: false };
+        break;
+
+      case 2:
+        // LESSON 2: JUMP & DOUBLE JUMP
+        this.txtStep.setText('LESSON 2 / 6');
+        this.txtTitle.setText('2. JUMP & DOUBLE JUMP');
+        this.txtDialogue.setText('✨ Sylva: "Tap JUMP on the right to leap. Tap again in mid-air for a Double Jump!"');
+        this.txtProgress.setText('[ JUMP: ⭕ ]   [ MID-AIR DOUBLE JUMP: ⭕ ]');
+        if (window.touchController) {
+          window.touchController.setTutorialHighlight(['touch-jump']);
+        }
+        this.lessonState = { jumped: false, doubleJumped: false };
+        break;
+
+      case 3:
+        // LESSON 3: GROUND SLASH
+        this.txtStep.setText('LESSON 3 / 6');
+        this.txtTitle.setText('3. GROUND SWORD SLASH');
+        this.txtDialogue.setText('✨ Sylva: "Draw the Luna Blade! Tap SLASH to strike and shatter the practice crate."');
+        this.txtProgress.setText('[ SHATTER THE CRATE: 0 / 1 ]');
+        if (window.touchController) {
+          window.touchController.setTutorialHighlight(['touch-attack']);
+        }
+        this.spawnTrainingCrate(250, 220);
+        this.lessonState = { crateShattered: false };
+        break;
+
+      case 4:
+        // LESSON 4: UPWARD AIR ATTACK
+        this.txtStep.setText('LESSON 4 / 6');
+        this.txtTitle.setText('4. UPWARD AERIAL ATTACK');
+        this.txtDialogue.setText('✨ Sylva: "Foes like bees strike from above! Tap UP ATTK to slice skyward!"');
+        this.txtProgress.setText('[ DESTROY AERIAL TARGET: 0 / 1 ]');
+        if (window.touchController) {
+          window.touchController.setTutorialHighlight(['touch-upslash']);
+        }
+        this.spawnAerialTarget(240, 110);
+        this.lessonState = { aerialDestroyed: false };
+        break;
+
+      case 5:
+        // LESSON 5: AERIAL STOMP BOUNCE
+        this.txtStep.setText('LESSON 5 / 6');
+        this.txtTitle.setText('5. AERIAL STOMP BOUNCE');
+        this.txtDialogue.setText('✨ Sylva: "Jump above armored foes and fall onto them to Stomp Bounce safely!"');
+        this.txtProgress.setText('[ STOMP BOUNCE ON SHELL: 0 / 1 ]');
+        if (window.touchController) {
+          window.touchController.setTutorialHighlight(['touch-jump']);
+        }
+        this.spawnTrainingShell(260, 220);
+        this.lessonState = { stomped: false };
+        break;
+
+      case 6:
+        // LESSON 6: LIVE SPARRING
+        this.txtStep.setText('LESSON 6 / 6');
+        this.txtTitle.setText('6. LIVE COMBAT SPARRING');
+        this.txtDialogue.setText('✨ Sylva: "Splendid! Combine all attacks to defeat this corrupted training dummy!"');
+        this.txtProgress.setText('[ DEFEAT SPARRING DUMMY: 0 / 1 ]');
+        if (window.touchController) {
+          window.touchController.clearTutorialHighlights();
+        }
+        this.spawnSparringDummy(320, 220);
+        this.lessonState = { dummyDefeated: false };
+        break;
+
+      default:
+        this.showTutorialVictory();
+        break;
+    }
+
+    // Pop animation on HUD card
+    this.tweens.add({
+      targets: this.hudContainer,
+      scale: { from: 0.95, to: 1.0 },
+      duration: 300,
+      ease: 'Back.easeOut'
+    });
+  }
+
+  completeCurrentLesson() {
+    if (this.lessonCompleted) return;
+    this.lessonCompleted = true;
+
+    sound.playCoin();
+    sound.playSparkle();
+
+    // Floating checkmark banner
+    const checkText = this.add.text(this.player.x, this.player.y - 42, '✔ LESSON COMPLETE!', {
+      fontFamily: 'Press Start 2P',
+      fontSize: '7px',
+      color: '#4ade80',
+      stroke: '#000000',
+      strokeThickness: 3
+    }).setOrigin(0.5).setDepth(500);
+
+    this.tweens.add({
+      targets: checkText,
+      y: checkText.y - 24,
+      alpha: { from: 1, to: 0 },
+      duration: 800,
+      onComplete: () => checkText.destroy()
+    });
+
+    this.time.delayedCall(950, () => {
+      this.startLesson(this.currentLesson + 1);
+    });
+  }
+
+  spawnTrainingCrate(x, y) {
+    const crate = new Crate(this, x, y);
+    this.crates.add(crate);
+    this.trainingCrate = crate;
+  }
+
+  spawnAerialTarget(x, y) {
+    const container = this.add.container(x, y).setDepth(200);
+
+    const halo = this.add.circle(0, 0, 18, 0x9333ea, 0.4);
+    const core = this.add.circle(0, 0, 11, 0xc084fc, 0.85);
+    const icon = this.add.text(0, 0, '🎯', { fontSize: '14px' }).setOrigin(0.5);
+
+    container.add([halo, core, icon]);
+
+    this.physics.add.existing(container);
+    container.body.setAllowGravity(false);
+    container.body.setImmovable(true);
+    container.body.setSize(26, 26);
+    container.body.setOffset(-13, -13);
+
+    this.tweens.add({
+      targets: container,
+      y: y - 10,
+      duration: 1000,
+      yoyo: true,
+      loop: -1,
+      ease: 'Sine.easeInOut'
+    });
+
+    container.isAerialTarget = true;
+    this.aerialTarget = container;
+  }
+
+  spawnTrainingShell(x, y) {
+    const snail = new Snail(this, x, y);
+    this.enemies.add(snail);
+    this.trainingSnail = snail;
+
+    snail.enterShelled();
+    if (snail.body) {
+      snail.body.setVelocityX(0);
+    }
+  }
+
+  spawnSparringDummy(x, y) {
+    const dummy = new Goblin(this, x, y);
+    dummy.hp = 35;
+    dummy.maxHp = 35;
+    dummy.healthBar = new EnemyHealthBar(this, dummy, 35);
+    this.enemies.add(dummy);
+    this.sparringDummy = dummy;
+  }
+
+  checkCombatHits() {
+    if (!this.player || !this.player.isAttacking) return;
+    const bounds = this.player.getAttackBounds();
+
+    // 1. Hit training crate in Lesson 3
+    if (this.currentLesson === 3 && this.trainingCrate && this.trainingCrate.active && !this.lessonCompleted) {
+      const cb = this.trainingCrate.getBounds();
+      if (Phaser.Geom.Intersects.RectangleToRectangle(bounds, cb)) {
+        this.trainingCrate.breakCrate(this.player);
+        this.txtProgress.setText('[ SHATTER THE CRATE: 1 / 1 ✔ ]');
+        this.completeCurrentLesson();
+        return;
+      }
+    }
+
+    // 2. Hit aerial target in Lesson 4
+    if (this.currentLesson === 4 && this.aerialTarget && this.aerialTarget.active && !this.lessonCompleted) {
+      const tb = this.aerialTarget.getBounds();
+      if (Phaser.Geom.Intersects.RectangleToRectangle(bounds, tb)) {
+        sound.playImpact();
+        sound.playUpwardSlash();
+
+        for (let i = 0; i < 8; i++) {
+          const sp = this.add.circle(this.aerialTarget.x, this.aerialTarget.y, 3, 0xffd166, 0.9);
+          this.tweens.add({
+            targets: sp,
+            x: sp.x + Phaser.Math.Between(-30, 30),
+            y: sp.y + Phaser.Math.Between(-30, 30),
+            alpha: 0,
+            scale: 0,
+            duration: 400,
+            onComplete: () => sp.destroy()
+          });
+        }
+
+        this.aerialTarget.destroy();
+        this.aerialTarget = null;
+        this.txtProgress.setText('[ DESTROY AERIAL TARGET: 1 / 1 ✔ ]');
+        this.completeCurrentLesson();
+        return;
+      }
+    }
+
+    // 3. Hit sparring dummy in Lesson 6
+    if (this.currentLesson === 6 && this.sparringDummy && this.sparringDummy.active && !this.lessonCompleted) {
+      const db = this.sparringDummy.getBounds();
+      if (Phaser.Geom.Intersects.RectangleToRectangle(bounds, db)) {
+        if (!this.player.currentSwingHits.has(this.sparringDummy)) {
+          this.player.currentSwingHits.add(this.sparringDummy);
+          const dmg = this.player.attackType === 'upward' ? 22 : 16;
+          this.sparringDummy.hp -= dmg;
+          sound.playSwordSlash();
+          sound.playImpact();
+
+          const dmgTxt = this.add.text(this.sparringDummy.x, this.sparringDummy.y - 14, `-${dmg}`, {
+            fontFamily: 'Press Start 2P',
+            fontSize: '6px',
+            color: '#ffdd55'
+          }).setOrigin(0.5);
+          this.tweens.add({
+            targets: dmgTxt,
+            y: dmgTxt.y - 18,
+            alpha: 0,
+            duration: 600,
+            onComplete: () => dmgTxt.destroy()
+          });
+
+          if (this.sparringDummy.healthBar) {
+            this.sparringDummy.healthBar.update();
+          }
+
+          if (this.sparringDummy.hp <= 0) {
+            this.sparringDummy.die();
+            this.txtProgress.setText('[ DEFEAT SPARRING DUMMY: 1 / 1 ✔ ]');
+            this.completeCurrentLesson();
+          }
+        }
+      }
+    }
+  }
+
+  handlePlayerEnemyOverlap(enemy) {
+    if (!this.player || this.player.isDead) return;
+
+    const isFalling = this.player.body && this.player.body.velocity.y > 40;
+    const isAbove = (this.player.y + 16) < enemy.y;
+
+    if (isFalling && isAbove) {
+      this.player.body.setVelocityY(-270);
+      sound.playBoarChargeHit();
+
+      const txt = this.add.text(enemy.x, enemy.y - 18, '💥 STOMP BOUNCE! -25', {
+        fontFamily: 'Press Start 2P',
+        fontSize: '6px',
+        color: '#ffd166',
+        stroke: '#000000',
+        strokeThickness: 3
+      }).setOrigin(0.5).setDepth(500);
+
+      this.tweens.add({
+        targets: txt,
+        y: txt.y - 20,
+        alpha: 0,
+        duration: 750,
+        onComplete: () => txt.destroy()
+      });
+
+      if (this.currentLesson === 5 && !this.lessonCompleted) {
+        this.txtProgress.setText('[ STOMP BOUNCE ON SHELL: 1 / 1 ✔ ]');
+        this.completeCurrentLesson();
+      }
+    }
+  }
+
+  update() {
+    if (!this.player) return;
+
+    const touchInputs = window.touchController ? {
+      ...window.touchController.state,
+      ...window.touchController.consumeTriggers()
+    } : {};
+
+    this.player.update(this.cursors, touchInputs);
+
+    if (this.sylva) {
+      const targetSylvaX = this.player.flipX ? this.player.x + 24 : this.player.x - 24;
+      const targetSylvaY = this.player.y - 28;
+      this.sylva.x += (targetSylvaX - this.sylva.x) * 0.08;
+      this.sylva.y += (targetSylvaY - this.sylva.y) * 0.08;
+      this.sylva.setFlipX(this.player.flipX);
+    }
+
+    if (!this.lessonCompleted) {
+      if (this.currentLesson === 1) {
+        if (this.player.body.velocity.x < -20) this.lessonState.movedLeft = true;
+        if (this.player.body.velocity.x > 20) this.lessonState.movedRight = true;
+
+        const leftIcon = this.lessonState.movedLeft ? '✔' : '⭕';
+        const rightIcon = this.lessonState.movedRight ? '✔' : '⭕';
+        this.txtProgress.setText(`[ ◀ RUN LEFT: ${leftIcon} ]   [ ▶ RUN RIGHT: ${rightIcon} ]`);
+
+        if (this.lessonState.movedLeft && this.lessonState.movedRight) {
+          this.completeCurrentLesson();
+        }
+      } else if (this.currentLesson === 2) {
+        if (this.player.jumpsLeft === 1) {
+          this.lessonState.jumped = true;
+        }
+        if (this.player.jumpsLeft === 0) {
+          this.lessonState.doubleJumped = true;
+        }
+
+        const jumpIcon = this.lessonState.jumped ? '✔' : '⭕';
+        const djumpIcon = this.lessonState.doubleJumped ? '✔' : '⭕';
+        this.txtProgress.setText(`[ JUMP: ${jumpIcon} ]   [ MID-AIR DOUBLE JUMP: ${djumpIcon} ]`);
+
+        if (this.lessonState.jumped && this.lessonState.doubleJumped) {
+          this.completeCurrentLesson();
+        }
+      }
+    }
+  }
+
+  showTutorialVictory() {
+    sound.stopBGM();
+    sound.playBGM('victory');
+    pauseService.hideButtons();
+
+    if (this.hudContainer) {
+      this.hudContainer.setVisible(false);
+    }
+    this.isVictory = true;
+
+    if (typeof window !== 'undefined' && window.touchController) {
+      window.touchController.clearTutorialHighlights();
+      window.touchController.hide();
+    }
+
+    try {
+      confetti({
+        particleCount: 50,
+        spread: 70,
+        origin: { y: 0.6 }
+      });
+    } catch {}
+
+    const w = GAME_CONFIG.WIDTH;
+    const h = GAME_CONFIG.HEIGHT;
+
+    this.add.rectangle(w / 2, h / 2, w, h, 0x000000, 0.75).setDepth(600).setInteractive();
+
+    const card = this.add.container(w / 2, h / 2).setDepth(601);
+
+    const cardBg = this.add.rectangle(0, 0, 360, 180, 0x061a10, 0.96);
+    cardBg.setStrokeStyle(2, 0x4ade80);
+    card.add(cardBg);
+
+    const title = this.add.text(0, -58, '🏆 TRAINING COMPLETE!', {
+      fontFamily: 'Press Start 2P',
+      fontSize: '11px',
+      color: '#ffd166',
+      stroke: '#000000',
+      strokeThickness: 3
+    }).setOrigin(0.5);
+    card.add(title);
+
+    const desc = this.add.text(0, -20, [
+      'You have mastered the Luna Blade!',
+      '• Movement & Mid-Air Double Jumps',
+      '• Ground Cleaves & Upward Air Slashes',
+      '• Stomp Bounces & Shell Tactics'
+    ].join('\n'), {
+      fontFamily: 'Press Start 2P',
+      fontSize: '5.5px',
+      color: '#c8eed4',
+      lineSpacing: 5,
+      align: 'center'
+    }).setOrigin(0.5);
+    card.add(desc);
+
+    const createBtn = (bx, by, bw, bh, bgCol, borderCol, textCol, label, action) => {
+      const rect = this.add.rectangle(bx, by, bw, bh, bgCol)
+        .setStrokeStyle(1.5, borderCol)
+        .setInteractive({ useHandCursor: true });
+      const txt = this.add.text(bx, by, label, {
+        fontFamily: 'Press Start 2P',
+        fontSize: '6px',
+        color: textCol
+      }).setOrigin(0.5).setInteractive({ useHandCursor: true });
+
+      const setHover = (hover) => {
+        const s = hover ? 1.04 : 1.0;
+        rect.setScale(s);
+        txt.setScale(s);
+      };
+
+      rect.on('pointerover', () => setHover(true));
+      txt.on('pointerover', () => setHover(true));
+      rect.on('pointerout', () => setHover(false));
+      txt.on('pointerout', () => setHover(false));
+      rect.on('pointerdown', action);
+      txt.on('pointerdown', action);
+
+      card.add([rect, txt]);
+    };
+
+    createBtn(0, 12, 280, 24, 0x164e22, 0x4ade80, '#ffffff', '⚔️ START STORY MODE', () => {
+      sound.playCoin();
+      this.scene.start('StoryIntroScene');
+    });
+
+    createBtn(-74, 44, 134, 24, 0x1a3848, 0x38bdf8, '#38bdf8', '🏆 DAILY TRIAL', () => {
+      sound.playCoin();
+      this.scene.start('SurvivalScene');
+    });
+
+    createBtn(74, 44, 134, 24, 0x382414, 0xf59e0b, '#f59e0b', '◄ MAIN MENU', () => {
+      sound.playCoin();
+      this.scene.start('MenuScene');
+    });
+
+    this.tweens.add({
+      targets: card,
+      scale: { from: 0.85, to: 1.0 },
+      duration: 350,
+      ease: 'Back.easeOut'
+    });
+  }
+}

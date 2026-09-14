@@ -730,7 +730,7 @@ export default class StoryScene extends Phaser.Scene {
 
       this.startDialogue([
         { speaker: 'SHRINE', text: 'A dark resonance echoes from the abyss: "YOU CANNOT CLEANSE THE CORE, LITTLE MOTH..."' },
-        { speaker: 'LUNA', text: 'The Blight has formed a consciousness... Stand behind me, Sparky! Luna Blade, ignite!' }
+        { speaker: 'LUNA', text: 'The Blight has formed a consciousness... Stand behind me, Sylva! Luna Blade, ignite!' }
       ], () => {
         this.showBossWarningBanner('SHADOW OF THE BLIGHT', 'PRIMORDIAL CRYSTALLINE GUARDIANS');
 
@@ -1219,7 +1219,7 @@ export default class StoryScene extends Phaser.Scene {
     } else if (this.chapterId === 3) {
       this.startDialogue([
         { speaker: 'SHRINE', text: '✨ "THE PRIMORDIAL CORE SHATTERS! Pure celestial light cascades through every root of the World-Tree!"' },
-        { speaker: 'LUNA', text: 'We did it, Sparky... The High Forest is saved. The Silver Moon is restored!' }
+        { speaker: 'LUNA', text: 'We did it, Sylva... The High Forest is saved. The Silver Moon is restored!' }
       ], () => {
         this.cameras.main.fade(800, 255, 255, 255);
         this.time.delayedCall(850, () => {
@@ -1540,7 +1540,7 @@ export default class StoryScene extends Phaser.Scene {
       createBtn(-78, 10, 140, 26, 0x5a1818, 0xff7777, '#ffffff', '↺ RETRY', doRetry);
       createBtn(78, 10, 140, 26, 0x382414, 0xf59e0b, '#f59e0b', '◄ MAIN MENU', doMenu);
 
-      const hintText = this.add.text(0, 42, '▶ PRESS [R] TO RETRY OR [ESC] FOR MENU ◀', {
+      const hintText = this.add.text(0, 42, '▶ TAP RETRY OR MAIN MENU TO CONTINUE ◀', {
         fontFamily: 'Press Start 2P',
         fontSize: '5.5px',
         color: '#ffaaaa'

@@ -436,6 +436,27 @@ html, body {
   transform: scale(0.92);
 }
 
+/* Tutorial guidance highlight animation */
+.touch-btn.tutorial-highlight {
+  animation: tutorialBtnPulse 0.75s ease-in-out infinite alternate !important;
+  border-color: #ffd166 !important;
+  color: #ffffff !important;
+  box-shadow: 0 0 16px rgba(255, 209, 102, 0.9), inset 0 0 12px rgba(246, 192, 38, 0.6) !important;
+  z-index: 10;
+}
+
+@keyframes tutorialBtnPulse {
+  0% {
+    transform: scale(1.0);
+    filter: drop-shadow(0 0 4px #f6c026);
+  }
+  100% {
+    transform: scale(1.12);
+    filter: drop-shadow(0 0 14px #ffd166);
+    border-color: #ffffff !important;
+  }
+}
+
 .touch-actions {
   display: grid;
   grid-template-columns: repeat(2, auto);
