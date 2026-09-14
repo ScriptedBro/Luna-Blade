@@ -147,7 +147,7 @@ export default class StoryDialogueBox extends Phaser.GameObjects.Container {
     });
 
     // Skip Button in upper right
-    this.btnSkip = scene.add.text(boxW / 2 - 10, -boxH / 2 + 2, '[ESC] SKIP', {
+    this.btnSkip = scene.add.text(boxW / 2 - 10, -boxH / 2 + 2, 'SKIP ⏭', {
       fontFamily: 'Press Start 2P',
       fontSize: '5px',
       color: '#7b929e'
@@ -161,6 +161,17 @@ export default class StoryDialogueBox extends Phaser.GameObjects.Container {
     this.bgBox.setInteractive({ useHandCursor: true });
     this.bgBox.on('pointerdown', () => this.handleAction());
     this.dimOverlay.on('pointerdown', () => this.handleAction());
+
+    // Allow virtual touch buttons (SLASH / JUMP / UP-AIR) to advance dialogue
+    this.touchListener = () => {
+      if (typeof window !== 'undefined' && window.touchController) {
+        const triggers = window.touchController.consumeTriggers();
+        if (triggers.justAttack || triggers.justJump || triggers.justUpSlash) {
+          this.handleAction();
+        }
+      }
+    };
+    scene.events.on('update', this.touchListener);
 
     // Keyboard handlers (Space, Enter, E, Esc)
     this.onKeyDown = (event) => {
@@ -264,6 +275,9 @@ export default class StoryDialogueBox extends Phaser.GameObjects.Container {
 
   close() {
     window.removeEventListener('keydown', this.onKeyDown);
+    if (this.scene && this.scene.events && this.touchListener) {
+      this.scene.events.off('update', this.touchListener);
+    }
     if (this.arrowTween) this.arrowTween.stop();
 
     this.scene.tweens.add({
@@ -281,6 +295,9 @@ export default class StoryDialogueBox extends Phaser.GameObjects.Container {
 
   destroy() {
     window.removeEventListener('keydown', this.onKeyDown);
+    if (this.scene && this.scene.events && this.touchListener) {
+      this.scene.events.off('update', this.touchListener);
+    }
     if (this.typingTimer) this.typingTimer.remove();
     super.destroy();
   }

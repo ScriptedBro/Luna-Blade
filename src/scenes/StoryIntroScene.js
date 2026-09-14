@@ -180,13 +180,13 @@ export default class StoryIntroScene extends Phaser.Scene {
     }
 
     // Action Prompts
-    this.txtPrompt = this.add.text(w - 24, h - 12, 'NEXT [SPACE] ▶', {
+    this.txtPrompt = this.add.text(w - 24, h - 12, 'NEXT ▶', {
       fontFamily: 'Press Start 2P',
       fontSize: '5.5px',
       color: '#ffd166'
     }).setOrigin(1, 0.5);
 
-    this.btnSkip = this.add.text(w - 20, 20, '[ESC] SKIP', {
+    this.btnSkip = this.add.text(w - 20, 20, 'SKIP ⏭', {
       fontFamily: 'Press Start 2P',
       fontSize: '5.5px',
       color: '#7b929e'
@@ -219,6 +219,16 @@ export default class StoryIntroScene extends Phaser.Scene {
     this.renderSlide(0);
   }
 
+  update() {
+    if (this.isTransitioning) return;
+    if (typeof window !== 'undefined' && window.touchController) {
+      const triggers = window.touchController.consumeTriggers();
+      if (triggers.justAttack || triggers.justJump || triggers.justUpSlash) {
+        this.advanceSlide();
+      }
+    }
+  }
+
   renderSlide(idx) {
     const data = PROLOGUE_SLIDES[idx];
     if (!data) return;
@@ -242,10 +252,10 @@ export default class StoryIntroScene extends Phaser.Scene {
     });
 
     if (idx === PROLOGUE_SLIDES.length - 1) {
-      this.txtPrompt.setText('BEGIN QUEST [SPACE] ⚔️');
+      this.txtPrompt.setText('BEGIN QUEST ⚔️');
       this.txtPrompt.setColor('#00ffcc');
     } else {
-      this.txtPrompt.setText('NEXT [SPACE] ▶');
+      this.txtPrompt.setText('NEXT ▶');
       this.txtPrompt.setColor('#ffd166');
     }
 

@@ -1160,12 +1160,12 @@ export default class SurvivalScene extends Phaser.Scene {
     };
 
     const btnY = h / 2 + 65;
-    // RETRY [R]
-    const retryBtn = createBtn(w / 2 - 124, btnY, 108, 26, 0x163816, 0x4ade80, '#4ade80', 'RETRY [R]', goRetry);
-    // LEADERBOARD [L]
-    const lbBtn = createBtn(w / 2, btnY, 124, 26, 0x15283c, 0x38bdf8, '#38bdf8', 'LEADERBOARD [L]', goLeaderboard);
-    // MAIN MENU [ESC]
-    const menuBtn = createBtn(w / 2 + 124, btnY, 108, 26, 0x382414, 0xf59e0b, '#f59e0b', 'MAIN MENU [ESC]', goMenu);
+    // RETRY
+    const retryBtn = createBtn(w / 2 - 124, btnY, 108, 26, 0x163816, 0x4ade80, '#4ade80', 'RETRY', goRetry);
+    // LEADERBOARD
+    const lbBtn = createBtn(w / 2, btnY, 124, 26, 0x15283c, 0x38bdf8, '#38bdf8', 'LEADERBOARD', goLeaderboard);
+    // MAIN MENU
+    const menuBtn = createBtn(w / 2 + 124, btnY, 108, 26, 0x382414, 0xf59e0b, '#f59e0b', 'MAIN MENU', goMenu);
 
     this.modalButtons = {
       retry: retryBtn,

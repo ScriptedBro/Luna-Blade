@@ -22,8 +22,15 @@
 
 html, body {
   width: 100%;
+  width: 100dvw;
   height: 100%;
+  height: 100dvh;
+  margin: 0;
+  padding: 0;
   overflow: hidden;
+  position: fixed;
+  inset: 0;
+  overscroll-behavior: none;
   background-color: var(--bg-color);
   color: var(--text-main);
   font-family: var(--font-retro);
@@ -34,21 +41,34 @@ html, body {
   display: flex;
   flex-direction: column;
   width: 100%;
+  width: 100dvw;
   height: 100%;
+  height: 100dvh;
+  max-width: 100dvw;
+  max-height: 100dvh;
   position: relative;
+  overflow: hidden;
+  overscroll-behavior: none;
 }
 
 /* Header & Status Bar */
 #arcade-header {
-  height: 48px;
+  height: calc(48px + env(safe-area-inset-top, 0px));
+  min-height: calc(48px + env(safe-area-inset-top, 0px));
+  flex-shrink: 0;
   background: linear-gradient(180deg, #182818 0%, #0d170d 100%);
   border-bottom: 2px solid var(--panel-border);
   display: flex;
   align-items: center;
   justify-content: space-between;
   padding: 0 16px;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  padding-top: env(safe-area-inset-top, 0px);
   z-index: 100;
   box-shadow: 0 2px 10px rgba(0,0,0,0.6);
+  user-select: none;
+  touch-action: none;
 }
 
 .header-brand {
@@ -162,22 +182,41 @@ html, body {
 /* Game Canvas Wrapper */
 #game-wrapper {
   flex: 1;
-  position: relative;
+  min-height: 0;
   width: 100%;
-  height: calc(100% - 48px);
+  max-width: 100%;
+  position: relative;
   overflow: hidden;
-  background: #000;
+  background: var(--bg-color);
   display: flex;
+  flex-direction: column;
   align-items: center;
-  justify-content: center;
+  justify-content: space-between;
+  touch-action: none;
 }
 
 #game-container {
   width: 100%;
-  height: 100%;
+  max-width: 100%;
+  max-height: 55vh;
+  max-height: 55dvh;
+  aspect-ratio: 16 / 9;
+  flex-shrink: 0;
+  position: relative;
+  overflow: hidden;
   display: flex;
   align-items: center;
   justify-content: center;
+  background: #000;
+  border-bottom: 2px solid var(--panel-border);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.7);
+  touch-action: none;
+}
+
+@supports not (aspect-ratio: 16 / 9) {
+  #game-container {
+    height: 56.25vw;
+  }
 }
 
 #game-container canvas {
@@ -187,6 +226,7 @@ html, body {
   max-width: 100%;
   max-height: 100%;
   box-shadow: 0 0 20px rgba(0, 0, 0, 0.8);
+  display: block;
 }
 
 /* CRT Scanlines Overlay */
@@ -208,18 +248,24 @@ html, body {
   background-size: 100% 3px, 6px 100%;
 }
 
-/* Virtual Touch Controls */
+/* Dedicated Portrait Controls Area */
 .touch-controls {
-  position: absolute;
-  bottom: 12px;
-  left: 0;
-  right: 0;
-  padding: 0 20px;
+  flex: 1;
+  min-height: 0;
+  width: 100%;
   display: flex;
   justify-content: space-between;
-  align-items: flex-end;
-  pointer-events: none;
+  align-items: center;
+  padding: 16px 20px;
+  padding-left: max(20px, env(safe-area-inset-left, 20px));
+  padding-right: max(20px, env(safe-area-inset-right, 20px));
+  padding-bottom: max(28px, env(safe-area-inset-bottom, 20px));
+  background: radial-gradient(ellipse at 50% 90%, #152515 0%, #0c150c 55%, #070c07 100%);
+  position: relative;
   z-index: 60;
+  pointer-events: auto;
+  user-select: none;
+  touch-action: none;
 }
 
 .touch-controls.hidden {
@@ -229,96 +275,133 @@ html, body {
 .touch-btn {
   pointer-events: auto;
   touch-action: none;
-  background: rgba(20, 36, 20, 0.75);
-  border: 2px solid rgba(80, 150, 80, 0.8);
-  border-radius: 8px;
-  color: #fff;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
+  user-select: none;
+  -webkit-user-select: none;
   cursor: pointer;
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.4);
-}
-
-.touch-btn:active, .touch-btn.pressed {
-  background: rgba(60, 130, 60, 0.9);
-  border-color: #98ff20;
-  transform: translateY(2px);
 }
 
 .touch-dpad {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 5px;
+  padding: 6px;
+  margin: -6px;
+  box-sizing: content-box;
 }
 
 .touch-dpad-vertical {
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 5px;
 }
 
 .dpad-btn {
-  width: 50px;
-  height: 48px;
-  font-size: 16px;
+  width: 48px;
+  height: 46px;
+  font-size: 15px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(20, 36, 20, 0.85);
+  border: 2px solid rgba(80, 150, 80, 0.8);
+  color: #fff;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.4), inset 0 1px 1px rgba(255, 255, 255, 0.15);
+  transition: transform 0.08s ease, background 0.08s ease;
+}
+
+.dpad-btn:active, .dpad-btn.pressed {
+  background: rgba(60, 130, 60, 0.95);
+  border-color: #98ff20;
+  transform: scale(0.92);
 }
 
 .touch-actions {
-  display: flex;
-  gap: 12px;
+  display: grid;
+  grid-template-columns: repeat(2, auto);
+  grid-template-areas:
+    "upslash upslash"
+    "attack  jump";
+  gap: 8px 12px;
+  justify-items: center;
+  align-items: center;
+}
+
+#touch-upslash {
+  grid-area: upslash;
+}
+
+#touch-attack {
+  grid-area: attack;
+}
+
+#touch-jump {
+  grid-area: jump;
 }
 
 .action-btn {
-  width: 68px;
-  height: 64px;
+  width: 58px;
+  height: 58px;
   font-family: var(--font-retro);
-  font-size: 10px;
+  font-size: 9px;
+  font-weight: bold;
   border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.5), inset 0 1px 1px rgba(255, 255, 255, 0.2);
+  transition: transform 0.08s ease, filter 0.08s ease, background 0.08s ease;
+}
+
+.action-btn span {
+  pointer-events: none;
+  line-height: 1;
 }
 
 .action-btn.attack {
-  background: rgba(140, 30, 30, 0.75);
-  border-color: #ff5555;
+  background: rgba(160, 32, 32, 0.85);
+  border: 2px solid #ff5555;
+  color: #fff;
 }
 
 .action-btn.attack:active, .action-btn.attack.pressed {
-  background: rgba(200, 40, 40, 0.9);
+  background: rgba(220, 45, 45, 0.95);
   border-color: #ffaaaa;
+  transform: scale(0.92);
+  filter: brightness(1.2);
 }
 
 .action-btn.upslash {
-  background: rgba(180, 130, 20, 0.75);
-  border-color: #f6c026;
+  background: rgba(180, 125, 20, 0.85);
+  border: 2px solid #f6c026;
+  color: #fff;
 }
 
 .action-btn.upslash:active, .action-btn.upslash.pressed {
-  background: rgba(230, 170, 30, 0.9);
+  background: rgba(235, 165, 30, 0.95);
   border-color: #ffe680;
+  transform: scale(0.92);
+  filter: brightness(1.2);
 }
 
 .action-btn.jump {
-  background: rgba(30, 80, 140, 0.75);
-  border-color: #55aaff;
+  background: rgba(25, 90, 160, 0.85);
+  border: 2px solid #55aaff;
+  color: #fff;
 }
 
 .action-btn.jump:active, .action-btn.jump.pressed {
-  background: rgba(40, 120, 200, 0.9);
+  background: rgba(40, 130, 225, 0.95);
   border-color: #aaddff;
-}
-
-.action-btn small {
-  font-size: 7px;
-  opacity: 0.7;
-  margin-top: 2px;
+  transform: scale(0.92);
+  filter: brightness(1.2);
 }
 
 /* Modal Window */
 .modal-overlay {
-  position: absolute;
-  top: 0;
-  left: 0;
+  position: fixed;
+  inset: 0;
   width: 100%;
   height: 100%;
   background: rgba(0, 0, 0, 0.75);
@@ -327,6 +410,8 @@ html, body {
   justify-content: center;
   z-index: 200;
   backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+  touch-action: none;
 }
 
 .modal-overlay.hidden {
@@ -336,7 +421,8 @@ html, body {
 .modal-card {
   width: 90%;
   max-width: 540px;
-  max-height: 85%;
+  max-height: calc(100vh - 32px);
+  max-height: calc(100dvh - 32px - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px));
   background: #152215;
   border: 3px solid #3c6e3c;
   border-radius: 8px;
@@ -344,6 +430,7 @@ html, body {
   flex-direction: column;
   box-shadow: 0 0 25px rgba(0, 0, 0, 0.9);
   overflow: hidden;
+  touch-action: auto;
 }
 
 .modal-header {
@@ -353,6 +440,7 @@ html, body {
   display: flex;
   justify-content: space-between;
   align-items: center;
+  flex-shrink: 0;
 }
 
 .modal-header h3 {
@@ -373,18 +461,24 @@ html, body {
   overflow-y: auto;
   font-size: 11px;
   line-height: 1.6;
+  flex: 1;
+  min-height: 0;
+  touch-action: pan-y;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
 }
 
-/* Responsive adjustments */
+/* Responsive adjustments for mobile screens */
 @media (max-width: 600px) {
   #arcade-header {
-    padding: 0 8px;
+    padding: 0 12px;
   }
   .game-title {
     font-size: 11px;
   }
   .badge-mini-app {
-    display: none;
+    font-size: 7.5px;
+    padding: 2px 5px;
   }
   .dpad-btn {
     width: 44px;
@@ -392,39 +486,58 @@ html, body {
     font-size: 14px;
   }
   .action-btn {
-    width: 58px;
-    height: 56px;
-    font-size: 9px;
+    width: 54px;
+    height: 54px;
+    font-size: 8.5px;
   }
 }
 
-/* Orientation Hint for Mobile Portrait */
-.orientation-hint {
-  position: absolute;
-  top: 12px;
-  left: 50%;
-  transform: translateX(-50%);
-  background: rgba(18, 28, 18, 0.95);
-  border: 1px solid #f6c026;
-  color: #f6c026;
-  padding: 6px 14px;
-  border-radius: 20px;
-  font-size: 8px;
-  z-index: 150;
-  pointer-events: none;
-  letter-spacing: 0.5px;
-  box-shadow: 0 4px 12px rgba(0,0,0,0.8);
-  white-space: nowrap;
-  animation: pulseHint 2.4s infinite ease-in-out;
-}
+/* Dedicated Landscape Layout on Mobile & Wide Viewports */
+@media (orientation: landscape) and (min-height: 240px) {
+  #arcade-header {
+    height: calc(40px + env(safe-area-inset-top, 0px));
+    min-height: calc(40px + env(safe-area-inset-top, 0px));
+  }
 
-.orientation-hint.hidden {
-  display: none !important;
-}
+  #game-wrapper {
+    flex-direction: row;
+    align-items: center;
+    justify-content: center;
+    background: #000;
+  }
 
-@keyframes pulseHint {
-  0%, 100% { opacity: 0.85; transform: translateX(-50%) scale(1); }
-  50% { opacity: 1; transform: translateX(-50%) scale(1.03); }
+  #game-container {
+    width: 100%;
+    height: 100%;
+    max-height: 100%;
+    aspect-ratio: auto;
+    border-bottom: none;
+    box-shadow: none;
+  }
+
+  .touch-controls {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    width: 100%;
+    flex: none;
+    background: transparent;
+    border-top: none;
+    pointer-events: none;
+    padding: 0 20px 12px 20px;
+    padding-left: max(20px, env(safe-area-inset-left, 20px));
+    padding-right: max(20px, env(safe-area-inset-right, 20px));
+    padding-bottom: max(12px, env(safe-area-inset-bottom, 12px));
+    align-items: flex-end;
+  }
+
+  .touch-dpad,
+  .touch-dpad-vertical,
+  .touch-actions,
+  .touch-btn {
+    pointer-events: auto;
+  }
 }
 
 /* Nimiq Modal Styling */
@@ -454,7 +567,12 @@ html, body {
   display: flex;
   flex-direction: column;
   gap: 14px;
-  max-height: 75vh;
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  touch-action: pan-y;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
 }
 
 .nimiq-status-card {
@@ -632,6 +750,12 @@ html, body {
   gap: 8px;
 }
 
+@media (max-width: 380px) {
+  .offering-tiers {
+    grid-template-columns: 1fr;
+  }
+}
+
 .offering-card {
   background: #152415;
   border: 1px solid #335933;
@@ -766,17 +890,5 @@ html, body {
   font-family: monospace;
 }
 
-/* Mobile Safe-Area & Touch UX */
-@supports (padding: max(0px)) {
-  #arcade-header {
-    padding-left: max(8px, env(safe-area-inset-left));
-    padding-right: max(8px, env(safe-area-inset-right));
-    padding-top: max(0px, env(safe-area-inset-top));
-  }
-  .touch-controls {
-    padding-left: max(16px, env(safe-area-inset-left));
-    padding-right: max(16px, env(safe-area-inset-right));
-    padding-bottom: max(8px, env(safe-area-inset-bottom));
-  }
-}
+
 

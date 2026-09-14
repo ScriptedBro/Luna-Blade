@@ -54,4 +54,21 @@ window.touchController = new TouchController(game);
 window.nimiqModal = nimiqModal;
 window.nimiqService = nimiqService;
 
+// Ensure game canvas dynamically updates whenever container dimensions adapt
+if (typeof ResizeObserver !== 'undefined') {
+  const container = document.getElementById('game-container');
+  if (container) {
+    let rafId = null;
+    const ro = new ResizeObserver(() => {
+      cancelAnimationFrame(rafId);
+      rafId = requestAnimationFrame(() => {
+        if (game && game.scale) {
+          game.scale.refresh();
+        }
+      });
+    });
+    ro.observe(container);
+  }
+}
+
 console.log('🌲 Luna Blade: The High Forest initialized successfully!');

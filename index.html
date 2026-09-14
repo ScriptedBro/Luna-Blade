@@ -30,50 +30,35 @@
           <span id="nimiq-btn-text">NIMIQ</span>
           <span id="nimiq-dot" class="nimiq-dot offline"></span>
         </button>
-
-        <!-- Utility Buttons -->
-        <div class="header-actions">
-          <button id="btn-audio" class="pixel-icon-btn" title="Toggle Sound (M)">🔊</button>
-          <button id="btn-touch" class="pixel-icon-btn" title="Toggle Virtual Touch Controls">📱</button>
-          <button id="btn-crt" class="pixel-icon-btn" title="Toggle Retro CRT Scanlines">📺</button>
-          <button id="btn-fullscreen" class="pixel-icon-btn" title="Toggle Fullscreen">⛶</button>
-        </div>
       </div>
     </header>
 
     <!-- Main Game Canvas Container -->
     <main id="game-wrapper">
-      <div id="game-container"></div>
-      <div id="crt-overlay" class="crt-overlay active"></div>
-
-      <!-- Orientation hint for mobile portrait mode -->
-      <div id="orientation-hint" class="orientation-hint hidden">
-        <span>🔄 ROTATE TO LANDSCAPE FOR FULL VIEW</span>
+      <div id="game-container">
+        <div id="crt-overlay" class="crt-overlay"></div>
       </div>
       
       <!-- Virtual Touch Controls for Mobile Viewport -->
-      <div id="touch-controls" class="touch-controls hidden">
+      <div id="touch-controls" class="touch-controls">
         <div class="touch-dpad">
-          <button id="touch-left" class="touch-btn dpad-btn" data-key="left">◀</button>
+          <button id="touch-left" class="touch-btn dpad-btn" data-key="left" aria-label="Left">◀</button>
           <div class="touch-dpad-vertical">
-            <button id="touch-up" class="touch-btn dpad-btn" data-key="up">▲</button>
-            <button id="touch-down" class="touch-btn dpad-btn" data-key="down">▼</button>
+            <button id="touch-up" class="touch-btn dpad-btn" data-key="up" aria-label="Up">▲</button>
+            <button id="touch-down" class="touch-btn dpad-btn" data-key="down" aria-label="Down">▼</button>
           </div>
-          <button id="touch-right" class="touch-btn dpad-btn" data-key="right">▶</button>
+          <button id="touch-right" class="touch-btn dpad-btn" data-key="right" aria-label="Right">▶</button>
         </div>
 
         <div class="touch-actions">
-          <button id="touch-upslash" class="touch-btn action-btn upslash" data-key="upslash">
+          <button id="touch-upslash" class="touch-btn action-btn upslash" data-key="upslash" aria-label="Up-Air">
             <span>UP-AIR</span>
-            <small>K</small>
           </button>
-          <button id="touch-attack" class="touch-btn action-btn attack" data-key="attack">
+          <button id="touch-attack" class="touch-btn action-btn attack" data-key="attack" aria-label="Slash">
             <span>SLASH</span>
-            <small>J</small>
           </button>
-          <button id="touch-jump" class="touch-btn action-btn jump" data-key="jump">
+          <button id="touch-jump" class="touch-btn action-btn jump" data-key="jump" aria-label="Jump">
             <span>JUMP</span>
-            <small>SPC</small>
           </button>
         </div>
       </div>

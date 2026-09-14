@@ -118,7 +118,16 @@ export default class MenuScene extends Phaser.Scene {
     // Footer Info
     const footBox = this.add.rectangle(w / 2, h - 12, 420, 16, 0x091409, 0.85);
     footBox.setStrokeStyle(1, 0x1d3d1d);
-    this.add.text(w / 2, h - 12, 'Controls: WASD/Arrows = Move • Space = Jump • J = Slash • K = Upward', {
+    const isTouch = typeof window !== 'undefined' && (
+      'ontouchstart' in window ||
+      navigator.maxTouchPoints > 0 ||
+      Boolean(document.getElementById('touch-controls'))
+    );
+    const controlsHint = isTouch
+      ? 'TOUCH CONTROLS: D-PAD = MOVE • JUMP • SLASH • UP-AIR'
+      : 'CONTROLS: D-PAD / ARROWS = MOVE • SPACE = JUMP • J = SLASH • K = UP-AIR';
+
+    this.add.text(w / 2, h - 12, controlsHint, {
       fontFamily: 'Press Start 2P',
       fontSize: '5.5px',
       color: '#a0c4a0',

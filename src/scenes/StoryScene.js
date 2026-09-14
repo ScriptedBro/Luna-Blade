@@ -1158,7 +1158,7 @@ export default class StoryScene extends Phaser.Scene {
     banner.add(btnLabel);
 
     // Animated flashing keyboard & touch hint
-    const hintText = this.add.text(0, 38, '▶ PRESS [SPACE] OR [ENTER] TO ADVANCE ◀', {
+    const hintText = this.add.text(0, 38, '▶ TAP OR PRESS ACTION TO ADVANCE ◀', {
       fontFamily: 'Press Start 2P',
       fontSize: '6.5px',
       color: '#f6c026'
@@ -1240,7 +1240,7 @@ export default class StoryScene extends Phaser.Scene {
       }).setOrigin(0.5);
       card.add(retryLabel);
 
-      const hintText = this.add.text(0, 34, '▶ PRESS [SPACE] OR [ENTER] TO RETRY ◀', {
+      const hintText = this.add.text(0, 34, '▶ TAP OR PRESS ACTION TO RETRY ◀', {
         fontFamily: 'Press Start 2P',
         fontSize: '6.5px',
         color: '#ffaaaa'
