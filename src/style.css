@@ -283,17 +283,17 @@ html, body {
 .touch-dpad {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 16px;
   padding: 6px;
   margin: -6px;
   box-sizing: content-box;
 }
 
 .dpad-btn {
-  width: 58px;
-  height: 54px;
-  font-size: 18px;
-  border-radius: 10px;
+  width: 68px;
+  height: 62px;
+  font-size: 22px;
+  border-radius: 12px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -474,15 +474,18 @@ html, body {
     font-size: 7.5px;
     padding: 2px 5px;
   }
+  .touch-dpad {
+    gap: 16px;
+  }
   .dpad-btn {
-    width: 44px;
-    height: 42px;
-    font-size: 14px;
+    width: 68px;
+    height: 62px;
+    font-size: 22px;
   }
   .action-btn {
-    width: 54px;
-    height: 54px;
-    font-size: 8.5px;
+    width: 56px;
+    height: 56px;
+    font-size: 9px;
   }
 }
 
@@ -527,7 +530,6 @@ html, body {
   }
 
   .touch-dpad,
-  .touch-dpad-vertical,
   .touch-actions,
   .touch-btn {
     pointer-events: auto;
