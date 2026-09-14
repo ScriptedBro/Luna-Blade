@@ -6,7 +6,8 @@ export default defineConfig({
   server: {
     port: 5173,
     open: false,
-    host: true
+    host: true,
+    allowedHosts: true
   },
   build: {
     outDir: 'dist',
