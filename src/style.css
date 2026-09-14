@@ -88,15 +88,6 @@ html, body {
   text-shadow: 2px 2px 0px #1e3306;
 }
 
-.badge-mini-app {
-  font-size: 8px;
-  background-color: var(--primary-gold);
-  color: #12180d;
-  padding: 3px 6px;
-  border-radius: 4px;
-  font-weight: bold;
-  letter-spacing: 0.5px;
-}
 
 .header-status {
   display: flex;
@@ -705,10 +696,6 @@ html, body {
   }
   .game-title {
     font-size: 11px;
-  }
-  .badge-mini-app {
-    font-size: 7.5px;
-    padding: 2px 5px;
   }
   .touch-dpad {
     gap: 16px;
