@@ -1082,6 +1082,53 @@ export default class StoryScene extends Phaser.Scene {
       }
     }
 
+    // Boss Gorgok collision mechanics: ONLY damages player when actively CHARGING!
+    if (enemy.mobType === 'boss_gorgok') {
+      if (enemy.state !== 'CHARGE') {
+        return;
+      }
+
+      // If player is airborne and falling downward onto Gorgok while evading his charge, bounce over him!
+      if (this.player.body && this.player.body.velocity.y > 0 && this.player.y < enemy.y - 6) {
+        this.player.setVelocityY(-260);
+        sound.playRicochet();
+        enemy.takeDamage(25, this.player.x);
+        return;
+      }
+
+      // Direct charge impact: heavy damage, screen shake, and strong knockback in charge direction
+      const knockDir = enemy.chargeDir || (enemy.x < this.player.x ? 1 : -1);
+      const enemyDmg = enemy.damage || GAME_CONFIG.MOBS.BOSS_GORGOK?.DAMAGE || 30;
+      const damaged = this.player.takeDamage(enemyDmg, knockDir);
+      if (damaged) {
+        this.comboCount = 0;
+        this.updateHearts();
+        sound.playSlash(2);
+        this.cameras.main.shake(180, 0.02);
+
+        // Visual charge impact cue
+        const impactText = this.add.text(this.player.x, this.player.y - 20, `💥 CHARGE HIT! -${enemyDmg}`, {
+          fontFamily: 'Press Start 2P',
+          fontSize: '7px',
+          color: '#ff2222',
+          stroke: '#000',
+          strokeThickness: 2
+        }).setOrigin(0.5);
+        this.tweens.add({
+          targets: impactText,
+          y: this.player.y - 42,
+          alpha: 0,
+          duration: 650,
+          onComplete: () => impactText.destroy()
+        });
+
+        if (this.player.isDead) {
+          this.handlePlayerGameOver();
+        }
+      }
+      return;
+    }
+
     // Normal damage
     const knockDir = enemy.x < this.player.x ? 1 : -1;
     const enemyDmg = enemy.damage || (enemy.mobType && GAME_CONFIG.MOBS[enemy.mobType.toUpperCase()]?.DAMAGE) || 20;
