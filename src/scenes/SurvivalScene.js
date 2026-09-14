@@ -974,6 +974,60 @@ export default class SurvivalScene extends Phaser.Scene {
   handlePlayerHurt(enemy) {
     if (this.player.isDead || enemy.state === 'DEAD' || enemy.state === 'STUNNED') return;
 
+    // --- UNIVERSAL STOMP BOUNCE DETECTION ---
+    // If player is airborne, falling downward, and physically above the enemy:
+    const isFalling = this.player.body && this.player.body.velocity.y > 20;
+    const playerBottom = this.player.body ? this.player.body.bottom : this.player.y + 16;
+    const enemyTop = enemy.body ? enemy.body.top : enemy.y - 14;
+    const isAbove = playerBottom <= enemyTop + 20 || this.player.y < enemy.y - 4;
+
+    if (isFalling && isAbove) {
+      this.player.setVelocityY(-260);
+      sound.playBoarChargeHit();
+      sound.playRicochet();
+
+      const stompText = this.add.text(enemy.x, enemy.y - 18, '💥 STOMP! -35', {
+        fontFamily: 'Press Start 2P',
+        fontSize: '6.5px',
+        color: '#ffd166',
+        stroke: '#000000',
+        strokeThickness: 2
+      }).setOrigin(0.5).setDepth(200);
+
+      this.tweens.add({
+        targets: stompText,
+        y: stompText.y - 22,
+        alpha: 0,
+        duration: 650,
+        onComplete: () => stompText.destroy()
+      });
+
+      if (enemy.mobType === 'snail') {
+        if (enemy.state === 'WALK') {
+          const res = enemy.takeDamage(35, this.player.x);
+          if (res && res.killed) {
+            this.addKill(enemy.mobType, res.pts, 25, enemy.x, enemy.y - 12, 'STOMP KILL! 👢', enemy);
+          }
+        } else if (enemy.state === 'SHELLED') {
+          const kickDir = this.player.flipX ? -1 : 1;
+          enemy.kickShell(kickDir);
+        } else if (enemy.state === 'SLIDING') {
+          const res = enemy.takeDamage(99, this.player.x);
+          if (res && res.killed) {
+            this.addKill(enemy.mobType, res.pts, 25, enemy.x, enemy.y - 12, 'STOMP KILL! 👢', enemy);
+          }
+        }
+      } else if (enemy.mobType === 'boss_gorgok') {
+        enemy.takeDamage(25, this.player.x);
+      } else {
+        const res = enemy.takeDamage(35, this.player.x);
+        if (res && res.killed) {
+          this.addKill(enemy.mobType, res.pts, 25, enemy.x, enemy.y - 12, 'STOMP KILL! 👢', enemy);
+        }
+      }
+      return; // Successfully stomped: evade all player damage!
+    }
+
     if (enemy.mobType === 'snail' && enemy.state === 'SHELLED') {
       const kickDir = this.player.x < enemy.x ? 1 : -1;
       enemy.kickShell(kickDir);
@@ -981,48 +1035,14 @@ export default class SurvivalScene extends Phaser.Scene {
     }
 
     if (enemy.mobType === 'snail' && enemy.state === 'SLIDING') {
-      // 1. If player is jumping downward onto the shell, bounce off it Mario-style!
-      if (this.player.body && this.player.body.velocity.y > 0 && this.player.y < enemy.y - 2) {
-        this.player.setVelocityY(-250);
-        sound.playRicochet();
-        const res = enemy.takeDamage(99, this.player.x);
-        if (res && res.killed) {
-          this.addKill(enemy.mobType, res.pts, 25, enemy.x, enemy.y - 12, 'STOMP KILL! 👢', enemy);
-        }
-        return;
-      }
-
-      // 2. Only damages player if moving fast towards player
       const dirTowardsPlayer = (enemy.body.velocity.x > 0 && this.player.x > enemy.x) ||
                                (enemy.body.velocity.x < 0 && this.player.x < enemy.x);
       if (!dirTowardsPlayer) return;
     }
 
-    // Boar collision mechanics
-    if (enemy.mobType === 'boar') {
-      // If player is jumping downward onto the boar, bounce off it Mario-style!
-      if (this.player.body && this.player.body.velocity.y > 0 && this.player.y < enemy.y - 2) {
-        this.player.setVelocityY(-250);
-        sound.playRicochet();
-        const res = enemy.takeDamage(40, this.player.x);
-        if (res && res.killed) {
-          this.addKill(enemy.mobType, res.pts, 25, enemy.x, enemy.y - 12, 'STOMP KILL! 👢', enemy);
-        }
-        return;
-      }
-    }
-
     // Boss Gorgok collision mechanics: ONLY damages player when actively CHARGING!
     if (enemy.mobType === 'boss_gorgok') {
       if (enemy.state !== 'CHARGE') {
-        return;
-      }
-
-      // If player is airborne and falling downward onto Gorgok while evading his charge, bounce over him!
-      if (this.player.body && this.player.body.velocity.y > 0 && this.player.y < enemy.y - 6) {
-        this.player.setVelocityY(-260);
-        sound.playRicochet();
-        enemy.takeDamage(25, this.player.x);
         return;
       }
 

@@ -124,6 +124,13 @@ export default class TutorialScene extends Phaser.Scene {
       }
     });
 
+    // Player attack vs enemies
+    this.physics.add.overlap(this.player.attackHitbox, this.enemies, (hitbox, enemy) => {
+      if (this.player.currentSwingHits && this.player.currentSwingHits.has(enemy)) return;
+      if (this.player.currentSwingHits) this.player.currentSwingHits.add(enemy);
+      this.handlePlayerAttackEnemy(enemy);
+    });
+
     // Stomp bounce collision check
     this.physics.add.overlap(this.player, this.enemies, (p, e) => this.handlePlayerEnemyOverlap(e));
 
@@ -250,29 +257,30 @@ export default class TutorialScene extends Phaser.Scene {
     this.lessonCompleted = false;
     this.lessonState = {};
 
-    // Clear previous interactive entities & indicators
-    this.crates.clear(true, true);
-    if (this.enemies) {
-      this.enemies.getChildren().forEach(e => {
-        if (e.indicator) e.indicator.destroy();
-        if (e.dummyLabel) e.dummyLabel.destroy();
-        if (e.stompTag) e.stompTag.destroy();
+    // Clear previous interactive entities & indicators safely
+    if (this.crates) {
+      const crateList = [...this.crates.getChildren()];
+      crateList.forEach(c => {
+        if (c && c.destroy) c.destroy();
       });
-      this.enemies.clear(true, true);
+      this.crates.clear(false, false);
     }
-    if (this.tutorialBee) {
-      if (this.tutorialBee.indicator) this.tutorialBee.indicator.destroy();
-      this.tutorialBee.destroy();
-      this.tutorialBee = null;
+
+    if (this.enemies) {
+      const enemyList = [...this.enemies.getChildren()];
+      enemyList.forEach(e => {
+        if (e.indicator) { e.indicator.destroy(); e.indicator = null; }
+        if (e.dummyLabel) { e.dummyLabel.destroy(); e.dummyLabel = null; }
+        if (e.stompTag) { e.stompTag.destroy(); e.stompTag = null; }
+        if (e && e.destroy) e.destroy();
+      });
+      this.enemies.clear(false, false);
     }
-    if (this.sparringDummy) {
-      if (this.sparringDummy.dummyLabel) this.sparringDummy.dummyLabel.destroy();
-      this.sparringDummy = null;
-    }
-    if (this.trainingSnail) {
-      if (this.trainingSnail.stompTag) this.trainingSnail.stompTag.destroy();
-      this.trainingSnail = null;
-    }
+
+    this.trainingCrate = null;
+    this.tutorialBee = null;
+    this.sparringDummy = null;
+    this.trainingSnail = null;
 
     if (typeof window !== 'undefined' && window.touchController) {
       window.touchController.clearTutorialHighlights();
@@ -511,6 +519,71 @@ export default class TutorialScene extends Phaser.Scene {
     this.sparringDummy = dummy;
   }
 
+  handlePlayerAttackEnemy(enemy) {
+    if (!enemy || !enemy.active || enemy.state === 'DEAD') return;
+
+    // 1. Hit harmless swooping bee in Lesson 4
+    if (this.currentLesson === 4 && enemy === this.tutorialBee && !this.lessonCompleted) {
+      sound.playImpact();
+      sound.playUpwardSlash();
+
+      if (enemy.indicator) {
+        enemy.indicator.destroy();
+        enemy.indicator = null;
+      }
+
+      for (let i = 0; i < 8; i++) {
+        const sp = this.add.circle(enemy.x, enemy.y, 3, 0xffd166, 0.9);
+        this.tweens.add({
+          targets: sp,
+          x: sp.x + Phaser.Math.Between(-30, 30),
+          y: sp.y + Phaser.Math.Between(-30, 30),
+          alpha: 0,
+          scale: 0,
+          duration: 400,
+          onComplete: () => sp.destroy()
+        });
+      }
+
+      const counterText = this.add.text(enemy.x, enemy.y - 14, 'AERIAL SLICE! 💥', {
+        fontFamily: 'Press Start 2P',
+        fontSize: '6.5px',
+        color: '#ffea00',
+        stroke: '#000000',
+        strokeThickness: 2
+      }).setOrigin(0.5);
+      this.tweens.add({
+        targets: counterText,
+        y: counterText.y - 20,
+        alpha: 0,
+        duration: 650,
+        onComplete: () => counterText.destroy()
+      });
+
+      enemy.die();
+      this.tutorialBee = null;
+      this.txtProgress.setText('[ SLICE SWOOPING BEE: 1 / 1 ✔ ]');
+      this.completeCurrentLesson();
+      return;
+    }
+
+    // 2. Hit sparring dummy in Lesson 6
+    if (this.currentLesson === 6 && enemy === this.sparringDummy && !this.lessonCompleted) {
+      const dmg = this.player.attackType === 'upward' ? 22 : 16;
+      sound.playSwordSlash();
+      enemy.takeDamage(dmg, this.player.x, this.player.attackType === 'upward');
+
+      if (enemy.hp <= 0) {
+        if (enemy.dummyLabel) {
+          enemy.dummyLabel.destroy();
+          enemy.dummyLabel = null;
+        }
+        this.txtProgress.setText('[ DEFEAT SPARRING DUMMY: 1 / 1 ✔ ]');
+        this.completeCurrentLesson();
+      }
+    }
+  }
+
   checkCombatHits() {
     if (!this.player || !this.player.isAttacking) return;
     const bounds = this.player.getAttackBounds();
@@ -533,71 +606,27 @@ export default class TutorialScene extends Phaser.Scene {
 
     // 2. Hit harmless swooping bee in Lesson 4
     if (this.currentLesson === 4 && this.tutorialBee && this.tutorialBee.active && !this.lessonCompleted) {
-      const tb = this.tutorialBee.getBounds();
+      const tb = this.tutorialBee.body
+        ? new Phaser.Geom.Rectangle(this.tutorialBee.body.x - 6, this.tutorialBee.body.y - 6, this.tutorialBee.body.width + 12, this.tutorialBee.body.height + 12)
+        : this.tutorialBee.getBounds();
       if (Phaser.Geom.Intersects.RectangleToRectangle(bounds, tb)) {
-        sound.playImpact();
-        sound.playUpwardSlash();
-
-        if (this.tutorialBee.indicator) {
-          this.tutorialBee.indicator.destroy();
-          this.tutorialBee.indicator = null;
+        if (!this.player.currentSwingHits.has(this.tutorialBee)) {
+          this.player.currentSwingHits.add(this.tutorialBee);
+          this.handlePlayerAttackEnemy(this.tutorialBee);
+          return;
         }
-
-        for (let i = 0; i < 8; i++) {
-          const sp = this.add.circle(this.tutorialBee.x, this.tutorialBee.y, 3, 0xffd166, 0.9);
-          this.tweens.add({
-            targets: sp,
-            x: sp.x + Phaser.Math.Between(-30, 30),
-            y: sp.y + Phaser.Math.Between(-30, 30),
-            alpha: 0,
-            scale: 0,
-            duration: 400,
-            onComplete: () => sp.destroy()
-          });
-        }
-
-        const counterText = this.add.text(this.tutorialBee.x, this.tutorialBee.y - 14, 'AERIAL SLICE! 💥', {
-          fontFamily: 'Press Start 2P',
-          fontSize: '6.5px',
-          color: '#ffea00',
-          stroke: '#000000',
-          strokeThickness: 2
-        }).setOrigin(0.5);
-        this.tweens.add({
-          targets: counterText,
-          y: counterText.y - 20,
-          alpha: 0,
-          duration: 650,
-          onComplete: () => counterText.destroy()
-        });
-
-        this.tutorialBee.die();
-        this.tutorialBee = null;
-        this.txtProgress.setText('[ SLICE SWOOPING BEE: 1 / 1 ✔ ]');
-        this.completeCurrentLesson();
-        return;
       }
     }
 
     // 3. Hit sparring dummy in Lesson 6
     if (this.currentLesson === 6 && this.sparringDummy && this.sparringDummy.active && !this.lessonCompleted) {
-      const db = this.sparringDummy.getBounds();
+      const db = this.sparringDummy.body
+        ? new Phaser.Geom.Rectangle(this.sparringDummy.body.x - 10, this.sparringDummy.body.y - 10, this.sparringDummy.body.width + 20, this.sparringDummy.body.height + 20)
+        : this.sparringDummy.getBounds();
       if (Phaser.Geom.Intersects.RectangleToRectangle(bounds, db)) {
         if (!this.player.currentSwingHits.has(this.sparringDummy)) {
           this.player.currentSwingHits.add(this.sparringDummy);
-          const dmg = this.player.attackType === 'upward' ? 22 : 16;
-          
-          sound.playSwordSlash();
-          this.sparringDummy.takeDamage(dmg, this.player.x, this.player.attackType === 'upward');
-
-          if (this.sparringDummy.hp <= 0) {
-            if (this.sparringDummy.dummyLabel) {
-              this.sparringDummy.dummyLabel.destroy();
-              this.sparringDummy.dummyLabel = null;
-            }
-            this.txtProgress.setText('[ DEFEAT SPARRING DUMMY: 1 / 1 ✔ ]');
-            this.completeCurrentLesson();
-          }
+          this.handlePlayerAttackEnemy(this.sparringDummy);
         }
       }
     }
