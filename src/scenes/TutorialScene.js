@@ -83,7 +83,9 @@ export default class TutorialScene extends Phaser.Scene {
     }).setDepth(15);
 
     // Player instance
+    this.physics.world.setBounds(0, 0, w, h);
     this.player = new Player(this, 90, 200);
+    this.player.body.setCollideWorldBounds(true);
     this.physics.add.collider(this.player, this.platforms);
 
     // Fallback cursors for desktop development
@@ -112,11 +114,13 @@ export default class TutorialScene extends Phaser.Scene {
     this.enemies = this.physics.add.group();
     this.physics.add.collider(this.enemies, this.platforms);
 
-    // Combat overlap for sword attacks
-    this.time.addEvent({
-      delay: 50,
-      loop: true,
-      callback: () => this.checkCombatHits()
+    // Player attack vs crates
+    this.physics.add.overlap(this.player.attackHitbox, this.crates, (hitbox, crate) => {
+      if (this.currentLesson === 3 && !this.lessonCompleted && crate.active) {
+        crate.breakCrate(this.player);
+        this.txtProgress.setText('[ SHATTER THE CRATE: 1 / 1 ✔ ]');
+        this.completeCurrentLesson();
+      }
     });
 
     // Stomp bounce collision check
@@ -337,8 +341,10 @@ export default class TutorialScene extends Phaser.Scene {
     if (this.lessonCompleted) return;
     this.lessonCompleted = true;
 
-    sound.playCoin();
-    sound.playSparkle();
+    try {
+      sound.playCoin();
+      if (typeof sound.playSparkle === 'function') sound.playSparkle();
+    } catch {}
 
     // Floating checkmark banner
     const checkText = this.add.text(this.player.x, this.player.y - 42, '✔ LESSON COMPLETE!', {
@@ -398,6 +404,7 @@ export default class TutorialScene extends Phaser.Scene {
 
   spawnTrainingShell(x, y) {
     const snail = new Snail(this, x, y);
+    if (snail.body) snail.body.setCollideWorldBounds(true);
     this.enemies.add(snail);
     this.trainingSnail = snail;
 
@@ -409,6 +416,7 @@ export default class TutorialScene extends Phaser.Scene {
 
   spawnSparringDummy(x, y) {
     const dummy = new Goblin(this, x, y);
+    if (dummy.body) dummy.body.setCollideWorldBounds(true);
     dummy.hp = 35;
     dummy.maxHp = 35;
     dummy.healthBar = new EnemyHealthBar(this, dummy, 35);
@@ -548,6 +556,8 @@ export default class TutorialScene extends Phaser.Scene {
       this.sylva.setFlipX(this.player.flipX);
     }
 
+    this.checkCombatHits();
+
     if (!this.lessonCompleted) {
       if (this.currentLesson === 1) {
         if (this.player.body.velocity.x < -20) this.lessonState.movedLeft = true;
@@ -561,11 +571,12 @@ export default class TutorialScene extends Phaser.Scene {
           this.completeCurrentLesson();
         }
       } else if (this.currentLesson === 2) {
-        if (this.player.jumpsLeft === 1) {
-          this.lessonState.jumped = true;
-        }
-        if (this.player.jumpsLeft === 0) {
-          this.lessonState.doubleJumped = true;
+        if (!this.player.body.blocked.down && this.player.body.velocity.y < -50) {
+          if (this.player.canDoubleJump) {
+            this.lessonState.jumped = true;
+          } else {
+            this.lessonState.doubleJumped = true;
+          }
         }
 
         const jumpIcon = this.lessonState.jumped ? '✔' : '⭕';

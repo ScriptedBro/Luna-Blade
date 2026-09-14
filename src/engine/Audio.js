@@ -408,6 +408,22 @@ class SoundEngine {
     });
   }
 
+  playSparkle() {
+    this.playLevelUp();
+  }
+
+  playImpact() {
+    this.playHit();
+  }
+
+  playSwordSlash() {
+    this.playSlash(1);
+  }
+
+  playBoarChargeHit() {
+    this.playHit();
+  }
+
   playRumble() {
     if (this.muted || !this.ctx) return;
     this.resume();
