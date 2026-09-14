@@ -5,6 +5,7 @@ import Player from '../entities/Player.js';
 import Crate from '../entities/Crate.js';
 import Snail from '../entities/Snail.js';
 import Goblin from '../entities/Goblin.js';
+import Bee from '../entities/Bee.js';
 import EnemyHealthBar from '../ui/EnemyHealthBar.js';
 import { pauseService } from '../engine/PauseService.js';
 import confetti from 'canvas-confetti';
@@ -249,12 +250,28 @@ export default class TutorialScene extends Phaser.Scene {
     this.lessonCompleted = false;
     this.lessonState = {};
 
-    // Clear previous interactive entities
+    // Clear previous interactive entities & indicators
     this.crates.clear(true, true);
-    this.enemies.clear(true, true);
-    if (this.aerialTarget) {
-      this.aerialTarget.destroy();
-      this.aerialTarget = null;
+    if (this.enemies) {
+      this.enemies.getChildren().forEach(e => {
+        if (e.indicator) e.indicator.destroy();
+        if (e.dummyLabel) e.dummyLabel.destroy();
+        if (e.stompTag) e.stompTag.destroy();
+      });
+      this.enemies.clear(true, true);
+    }
+    if (this.tutorialBee) {
+      if (this.tutorialBee.indicator) this.tutorialBee.indicator.destroy();
+      this.tutorialBee.destroy();
+      this.tutorialBee = null;
+    }
+    if (this.sparringDummy) {
+      if (this.sparringDummy.dummyLabel) this.sparringDummy.dummyLabel.destroy();
+      this.sparringDummy = null;
+    }
+    if (this.trainingSnail) {
+      if (this.trainingSnail.stompTag) this.trainingSnail.stompTag.destroy();
+      this.trainingSnail = null;
     }
 
     if (typeof window !== 'undefined' && window.touchController) {
@@ -300,41 +317,41 @@ export default class TutorialScene extends Phaser.Scene {
         break;
 
       case 4:
-        // LESSON 4: UPWARD AIR ATTACK
+        // LESSON 4: UPWARD AIR ATTACK (Harmless Diving Bee)
         this.txtStep.setText('LESSON 4 / 6');
         this.txtTitle.setText('4. UPWARD AERIAL ATTACK');
-        this.txtDialogue.setText('Sylva: "Foes like bees strike from above! Tap UP ATTK to slice skyward!"');
-        this.txtProgress.setText('[ DESTROY AERIAL TARGET: 0 / 1 ]');
+        this.txtDialogue.setText('Sylva: "A corrupted bee swoops from above! Tap UP ATTK to strike it out of the air!"');
+        this.txtProgress.setText('[ SLICE SWOOPING BEE: 0 / 1 ]');
         if (window.touchController) {
           window.touchController.setTutorialHighlight(['touch-upslash']);
         }
-        this.spawnAerialTarget(240, 110);
-        this.lessonState = { aerialDestroyed: false };
+        this.spawnTutorialBee(310, 100);
+        this.lessonState = { beeSliced: false };
         break;
 
       case 5:
-        // LESSON 5: AERIAL STOMP BOUNCE
+        // LESSON 5: AERIAL STOMP BOUNCE (Open airspace, clear of platform)
         this.txtStep.setText('LESSON 5 / 6');
         this.txtTitle.setText('5. AERIAL STOMP BOUNCE');
-        this.txtDialogue.setText('Sylva: "Jump above armored foes and fall onto them to Stomp Bounce safely!"');
+        this.txtDialogue.setText('Sylva: "Jump high above armored foes and fall onto them to Stomp Bounce safely!"');
         this.txtProgress.setText('[ STOMP BOUNCE ON SHELL: 0 / 1 ]');
         if (window.touchController) {
           window.touchController.setTutorialHighlight(['touch-jump']);
         }
-        this.spawnTrainingShell(260, 220);
+        this.spawnTrainingShell(360, 220);
         this.lessonState = { stomped: false };
         break;
 
       case 6:
-        // LESSON 6: LIVE SPARRING
+        // LESSON 6: LIVE COMBAT SPARRING (Defeat training dummy)
         this.txtStep.setText('LESSON 6 / 6');
         this.txtTitle.setText('6. LIVE COMBAT SPARRING');
-        this.txtDialogue.setText('Sylva: "Splendid! Combine all attacks to defeat this corrupted training dummy!"');
+        this.txtDialogue.setText('Sylva: "Splendid! Combine all attacks to defeat this training dummy!"');
         this.txtProgress.setText('[ DEFEAT SPARRING DUMMY: 0 / 1 ]');
         if (window.touchController) {
           window.touchController.clearTutorialHighlights();
         }
-        this.spawnSparringDummy(320, 220);
+        this.spawnSparringDummy(350, 195);
         this.lessonState = { dummyDefeated: false };
         break;
 
@@ -389,32 +406,37 @@ export default class TutorialScene extends Phaser.Scene {
     this.trainingCrate = crate;
   }
 
-  spawnAerialTarget(x, y) {
-    const container = this.add.container(x, y).setDepth(200);
+  spawnTutorialBee(x, y) {
+    const bee = new Bee(this, x, y);
+    bee.isTutorialBee = true;
+    bee.isHarmless = true;
+    bee.hp = 15;
+    bee.maxHp = 15;
+    if (bee.body) {
+      bee.body.setCollideWorldBounds(true);
+    }
+    if (bee.healthBar) {
+      bee.healthBar.update(bee.hp, bee.maxHp);
+    }
 
-    const halo = this.add.circle(0, 0, 18, 0x9333ea, 0.4);
-    const core = this.add.circle(0, 0, 11, 0xc084fc, 0.85);
-    const icon = this.add.text(0, 0, '🎯', { fontSize: '14px' }).setOrigin(0.5);
+    const indicator = this.add.text(x, y - 18, '⚔️ SLICE WITH UP ATTK', {
+      fontFamily: 'Press Start 2P',
+      fontSize: '5px',
+      color: '#ffd166',
+      stroke: '#000000',
+      strokeThickness: 2
+    }).setOrigin(0.5).setDepth(25);
+    bee.indicator = indicator;
 
-    container.add([halo, core, icon]);
+    this.enemies.add(bee);
+    this.tutorialBee = bee;
 
-    this.physics.add.existing(container);
-    container.body.setAllowGravity(false);
-    container.body.setImmovable(true);
-    container.body.setSize(26, 26);
-    container.body.setOffset(-13, -13);
-
-    this.tweens.add({
-      targets: container,
-      y: y - 10,
-      duration: 1000,
-      yoyo: true,
-      loop: -1,
-      ease: 'Sine.easeInOut'
+    // Trigger initial swoop attack toward player after short telegraph
+    this.time.delayedCall(650, () => {
+      if (bee.active && bee.state === 'HOVER') {
+        bee.startSwoop(this.player);
+      }
     });
-
-    container.isAerialTarget = true;
-    this.aerialTarget = container;
   }
 
   spawnTrainingShell(x, y) {
@@ -427,6 +449,26 @@ export default class TutorialScene extends Phaser.Scene {
     if (snail.body) {
       snail.body.setVelocityX(0);
     }
+
+    // Floating bounce guide tag
+    const stompTag = this.add.text(x, y - 24, '⬇ STOMP BOUNCE', {
+      fontFamily: 'Press Start 2P',
+      fontSize: '5.5px',
+      color: '#ffd166',
+      stroke: '#000000',
+      strokeThickness: 2
+    }).setOrigin(0.5).setDepth(25);
+
+    this.tweens.add({
+      targets: stompTag,
+      y: y - 28,
+      duration: 500,
+      yoyo: true,
+      loop: -1,
+      ease: 'Sine.easeInOut'
+    });
+
+    snail.stompTag = stompTag;
   }
 
   spawnSparringDummy(x, y) {
@@ -434,7 +476,37 @@ export default class TutorialScene extends Phaser.Scene {
     if (dummy.body) dummy.body.setCollideWorldBounds(true);
     dummy.hp = 35;
     dummy.maxHp = 35;
-    dummy.healthBar = new EnemyHealthBar(this, dummy, 35);
+    dummy.attackCooldownUntil = Infinity; // Sparring dummy: does not toss bombs
+    dummy.isSparringDummy = true;
+
+    // Immediately render health bar
+    if (dummy.healthBar) {
+      dummy.healthBar.update(dummy.hp, dummy.maxHp);
+    }
+
+    // Distinct Sparring Dummy Nameplate
+    const dummyLabel = this.add.text(x, y - 32, '🥋 TRAINING DUMMY', {
+      fontFamily: 'Press Start 2P',
+      fontSize: '5.5px',
+      color: '#ffd166',
+      stroke: '#000000',
+      strokeThickness: 2
+    }).setOrigin(0.5).setDepth(26);
+    dummy.dummyLabel = dummyLabel;
+
+    // Spawn dust particles
+    for (let i = 0; i < 6; i++) {
+      const puff = this.add.circle(x + Phaser.Math.Between(-15, 15), y + Phaser.Math.Between(-10, 10), 4, 0x88ee88, 0.8);
+      this.tweens.add({
+        targets: puff,
+        y: puff.y - 20,
+        alpha: 0,
+        scale: 0.2,
+        duration: 400,
+        onComplete: () => puff.destroy()
+      });
+    }
+
     this.enemies.add(dummy);
     this.sparringDummy = dummy;
   }
@@ -459,15 +531,20 @@ export default class TutorialScene extends Phaser.Scene {
       }
     }
 
-    // 2. Hit aerial target in Lesson 4
-    if (this.currentLesson === 4 && this.aerialTarget && this.aerialTarget.active && !this.lessonCompleted) {
-      const tb = this.aerialTarget.getBounds();
+    // 2. Hit harmless swooping bee in Lesson 4
+    if (this.currentLesson === 4 && this.tutorialBee && this.tutorialBee.active && !this.lessonCompleted) {
+      const tb = this.tutorialBee.getBounds();
       if (Phaser.Geom.Intersects.RectangleToRectangle(bounds, tb)) {
         sound.playImpact();
         sound.playUpwardSlash();
 
+        if (this.tutorialBee.indicator) {
+          this.tutorialBee.indicator.destroy();
+          this.tutorialBee.indicator = null;
+        }
+
         for (let i = 0; i < 8; i++) {
-          const sp = this.add.circle(this.aerialTarget.x, this.aerialTarget.y, 3, 0xffd166, 0.9);
+          const sp = this.add.circle(this.tutorialBee.x, this.tutorialBee.y, 3, 0xffd166, 0.9);
           this.tweens.add({
             targets: sp,
             x: sp.x + Phaser.Math.Between(-30, 30),
@@ -479,9 +556,24 @@ export default class TutorialScene extends Phaser.Scene {
           });
         }
 
-        this.aerialTarget.destroy();
-        this.aerialTarget = null;
-        this.txtProgress.setText('[ DESTROY AERIAL TARGET: 1 / 1 ✔ ]');
+        const counterText = this.add.text(this.tutorialBee.x, this.tutorialBee.y - 14, 'AERIAL SLICE! 💥', {
+          fontFamily: 'Press Start 2P',
+          fontSize: '6.5px',
+          color: '#ffea00',
+          stroke: '#000000',
+          strokeThickness: 2
+        }).setOrigin(0.5);
+        this.tweens.add({
+          targets: counterText,
+          y: counterText.y - 20,
+          alpha: 0,
+          duration: 650,
+          onComplete: () => counterText.destroy()
+        });
+
+        this.tutorialBee.die();
+        this.tutorialBee = null;
+        this.txtProgress.setText('[ SLICE SWOOPING BEE: 1 / 1 ✔ ]');
         this.completeCurrentLesson();
         return;
       }
@@ -494,29 +586,15 @@ export default class TutorialScene extends Phaser.Scene {
         if (!this.player.currentSwingHits.has(this.sparringDummy)) {
           this.player.currentSwingHits.add(this.sparringDummy);
           const dmg = this.player.attackType === 'upward' ? 22 : 16;
-          this.sparringDummy.hp -= dmg;
+          
           sound.playSwordSlash();
-          sound.playImpact();
-
-          const dmgTxt = this.add.text(this.sparringDummy.x, this.sparringDummy.y - 14, `-${dmg}`, {
-            fontFamily: 'Press Start 2P',
-            fontSize: '6px',
-            color: '#ffdd55'
-          }).setOrigin(0.5);
-          this.tweens.add({
-            targets: dmgTxt,
-            y: dmgTxt.y - 18,
-            alpha: 0,
-            duration: 600,
-            onComplete: () => dmgTxt.destroy()
-          });
-
-          if (this.sparringDummy.healthBar) {
-            this.sparringDummy.healthBar.update();
-          }
+          this.sparringDummy.takeDamage(dmg, this.player.x, this.player.attackType === 'upward');
 
           if (this.sparringDummy.hp <= 0) {
-            this.sparringDummy.die();
+            if (this.sparringDummy.dummyLabel) {
+              this.sparringDummy.dummyLabel.destroy();
+              this.sparringDummy.dummyLabel = null;
+            }
             this.txtProgress.setText('[ DEFEAT SPARRING DUMMY: 1 / 1 ✔ ]');
             this.completeCurrentLesson();
           }
@@ -527,6 +605,31 @@ export default class TutorialScene extends Phaser.Scene {
 
   handlePlayerEnemyOverlap(enemy) {
     if (!this.player || this.player.isDead) return;
+
+    // Harmless bee check: If tutorial bee touches player without being sliced
+    if (enemy.isTutorialBee) {
+      if (!enemy.hasTelegraphedHarmlessTouch) {
+        enemy.hasTelegraphedHarmlessTouch = true;
+        const grazeText = this.add.text(enemy.x, enemy.y - 10, 'SWOOP! (0 DMG)', {
+          fontFamily: 'Press Start 2P',
+          fontSize: '5px',
+          color: '#38bdf8',
+          stroke: '#000000',
+          strokeThickness: 2
+        }).setOrigin(0.5);
+        this.tweens.add({
+          targets: grazeText,
+          y: grazeText.y - 16,
+          alpha: 0,
+          duration: 500,
+          onComplete: () => grazeText.destroy()
+        });
+        this.time.delayedCall(1000, () => {
+          if (enemy.active) enemy.hasTelegraphedHarmlessTouch = false;
+        });
+      }
+      return;
+    }
 
     const isFalling = this.player.body && this.player.body.velocity.y > 40;
     const isAbove = (this.player.y + 16) < enemy.y;
@@ -552,8 +655,22 @@ export default class TutorialScene extends Phaser.Scene {
       });
 
       if (this.currentLesson === 5 && !this.lessonCompleted) {
+        if (enemy.stompTag) {
+          enemy.stompTag.destroy();
+          enemy.stompTag = null;
+        }
         this.txtProgress.setText('[ STOMP BOUNCE ON SHELL: 1 / 1 ✔ ]');
         this.completeCurrentLesson();
+      } else if (this.currentLesson === 6 && this.sparringDummy && this.sparringDummy.active && !this.lessonCompleted) {
+        this.sparringDummy.takeDamage(25, this.player.x, false);
+        if (this.sparringDummy.hp <= 0) {
+          if (this.sparringDummy.dummyLabel) {
+            this.sparringDummy.dummyLabel.destroy();
+            this.sparringDummy.dummyLabel = null;
+          }
+          this.txtProgress.setText('[ DEFEAT SPARRING DUMMY: 1 / 1 ✔ ]');
+          this.completeCurrentLesson();
+        }
       }
     }
   }
@@ -574,6 +691,23 @@ export default class TutorialScene extends Phaser.Scene {
       this.sylva.x += (targetSylvaX - this.sylva.x) * 0.08;
       this.sylva.y += (targetSylvaY - this.sylva.y) * 0.08;
       this.sylva.setFlipX(!this.player.flipX);
+    }
+
+    if (this.enemies) {
+      this.enemies.getChildren().forEach(enemy => {
+        if (enemy.active && enemy.update) {
+          enemy.update(this.player);
+        }
+        if (enemy.indicator && enemy.active) {
+          enemy.indicator.setPosition(enemy.x, enemy.y - 18);
+        }
+        if (enemy.dummyLabel && enemy.active) {
+          enemy.dummyLabel.setPosition(enemy.x, enemy.y - 32);
+        }
+        if (enemy.stompTag && enemy.active) {
+          enemy.stompTag.setPosition(enemy.x, enemy.y - 24);
+        }
+      });
     }
 
     this.checkCombatHits();
