@@ -3,6 +3,8 @@ import { GAME_CONFIG } from '../config.js';
 import { sound } from '../engine/Audio.js';
 import { storage } from '../engine/Storage.js';
 import { getTodaySeedString } from '../engine/PRNG.js';
+import { nimiqModal } from '../ui/NimiqModal.js';
+import { nimiqService } from '../engine/NimiqService.js';
 
 export default class MenuScene extends Phaser.Scene {
   constructor() {
@@ -23,20 +25,20 @@ export default class MenuScene extends Phaser.Scene {
     this.createAmbientLeaves(w, h);
 
     // Title banner container
-    const titleBox = this.add.rectangle(w / 2, 54, 340, 56, 0x0a140a, 0.75);
+    const titleBox = this.add.rectangle(w / 2, 52, 340, 62, 0x0a140a, 0.75);
     titleBox.setStrokeStyle(1, 0x2e4e2e);
 
-    const titleText = this.add.text(w / 2, 38, 'LUNA BLADE', {
+    const titleText = this.add.text(w / 2, 34, 'LUNA BLADE', {
       fontFamily: 'Press Start 2P',
-      fontSize: '18px',
+      fontSize: '17px',
       color: '#f6c026',
       stroke: '#000000',
       strokeThickness: 4
     }).setOrigin(0.5);
 
-    const subText = this.add.text(w / 2, 58, 'THE HIGH FOREST', {
+    const subText = this.add.text(w / 2, 52, 'THE HIGH FOREST', {
       fontFamily: 'Press Start 2P',
-      fontSize: '8px',
+      fontSize: '7.5px',
       color: '#98ff20',
       stroke: '#000000',
       strokeThickness: 3,
@@ -45,10 +47,21 @@ export default class MenuScene extends Phaser.Scene {
 
     // Date & Seed Banner
     const todaySeed = getTodaySeedString();
-    const seedText = this.add.text(w / 2, 72, `TODAY'S SEED: ${todaySeed}`, {
+    this.add.text(w / 2, 64, `TODAY'S SEED: ${todaySeed}`, {
       fontFamily: 'Press Start 2P',
-      fontSize: '5.5px',
+      fontSize: '5px',
       color: '#a0c4a0'
+    }).setOrigin(0.5);
+
+    const status = nimiqService.getStatus();
+    const blessingActive = storage.hasMoonBlessing();
+    const statusStr = blessingActive ? '🌙 CELESTIAL BLESSING ACTIVE (+10% PTS)' : (status.connected ? `⚡ NIMIQ: ${status.shortAddress}` : '⚡ NIMIQ PAY READY');
+    this.add.text(w / 2, 75, statusStr, {
+      fontFamily: 'Press Start 2P',
+      fontSize: '5px',
+      color: blessingActive ? '#64dfdf' : '#ffd166',
+      stroke: '#000000',
+      strokeThickness: 2
     }).setOrigin(0.5);
 
     // Pulse animation on title
@@ -62,8 +75,8 @@ export default class MenuScene extends Phaser.Scene {
     });
 
     // Menu Buttons Container
-    const startY = 112;
-    const spacing = 32;
+    const startY = 96;
+    const spacing = 28;
 
     const options = [
       {
@@ -89,6 +102,12 @@ export default class MenuScene extends Phaser.Scene {
         desc: 'Top Scores & Champion Rankings',
         action: () => this.scene.start('LeaderboardScene'),
         shouldFade: true
+      },
+      {
+        text: '⚡ 5. NIMIQ MOON SHRINE',
+        desc: 'NIM Offerings, Wallet & Run Blessings',
+        action: () => nimiqModal.open(),
+        shouldFade: false
       }
     ];
 

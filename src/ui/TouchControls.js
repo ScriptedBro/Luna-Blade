@@ -1,5 +1,7 @@
 import { sound } from '../engine/Audio.js';
 import { storage } from '../engine/Storage.js';
+import { nimiqService } from '../engine/NimiqService.js';
+import { nimiqModal } from './NimiqModal.js';
 
 export class TouchController {
   constructor(game) {
@@ -10,19 +12,45 @@ export class TouchController {
       up: false,
       down: false,
       justJump: false,
-      justAttack: false
+      justAttack: false,
+      justUpSlash: false
     };
 
     this.touchContainer = document.getElementById('touch-controls');
+    this.orientationHint = document.getElementById('orientation-hint');
     this.initTouchButtons();
     this.initHeaderButtons();
+    this.initNimiqIntegration();
     this.autoDetectTouch();
+    this.initOrientationListener();
   }
 
   autoDetectTouch() {
     const isTouch = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
     if (isTouch && this.touchContainer) {
       this.touchContainer.classList.remove('hidden');
+    }
+  }
+
+  initOrientationListener() {
+    const checkOrientation = () => {
+      if (!this.orientationHint) return;
+      const isPortrait = window.innerHeight > window.innerWidth && (window.innerWidth < 768);
+      if (isPortrait) {
+        this.orientationHint.classList.remove('hidden');
+      } else {
+        this.orientationHint.classList.add('hidden');
+      }
+    };
+
+    window.addEventListener('resize', checkOrientation);
+    window.addEventListener('orientationchange', checkOrientation);
+    checkOrientation();
+  }
+
+  triggerHaptic() {
+    if (typeof navigator !== 'undefined' && typeof navigator.vibrate === 'function') {
+      try { navigator.vibrate(12); } catch {}
     }
   }
 
@@ -35,9 +63,19 @@ export class TouchController {
         e.preventDefault();
         el.classList.add('pressed');
         this.state[key] = true;
+        this.triggerHaptic();
+
         if (isTrigger) {
           if (key === 'jump') this.state.justJump = true;
-          if (key === 'attack') this.state.justAttack = true;
+          if (key === 'attack') {
+            // Combo: if UP button is also held, trigger upward slash!
+            if (this.state.up) {
+              this.state.justUpSlash = true;
+            } else {
+              this.state.justAttack = true;
+            }
+          }
+          if (key === 'upslash') this.state.justUpSlash = true;
         }
       };
 
@@ -59,6 +97,7 @@ export class TouchController {
     bindBtn('touch-down', 'down');
     bindBtn('touch-jump', 'jump', true);
     bindBtn('touch-attack', 'attack', true);
+    bindBtn('touch-upslash', 'upslash', true);
   }
 
   initHeaderButtons() {
@@ -102,14 +141,42 @@ export class TouchController {
     }
   }
 
+  initNimiqIntegration() {
+    const btnNimiq = document.getElementById('btn-nimiq');
+    const txtNimiq = document.getElementById('nimiq-btn-text');
+    const dotNimiq = document.getElementById('nimiq-dot');
+
+    if (btnNimiq) {
+      btnNimiq.addEventListener('click', () => {
+        nimiqModal.open();
+      });
+    }
+
+    // Subscribe to Nimiq status changes to update header indicator
+    nimiqService.subscribe((status) => {
+      if (!txtNimiq || !dotNimiq) return;
+
+      if (status.connected) {
+        dotNimiq.classList.remove('offline');
+        dotNimiq.classList.add('online');
+        txtNimiq.textContent = status.shortAddress || 'CONNECTED';
+      } else {
+        dotNimiq.classList.remove('online');
+        dotNimiq.classList.add('offline');
+        txtNimiq.textContent = 'NIMIQ';
+      }
+    });
+  }
 
   consumeTriggers() {
     const triggers = {
       justJump: this.state.justJump,
-      justAttack: this.state.justAttack
+      justAttack: this.state.justAttack,
+      justUpSlash: this.state.justUpSlash
     };
     this.state.justJump = false;
     this.state.justAttack = false;
+    this.state.justUpSlash = false;
     return triggers;
   }
 }

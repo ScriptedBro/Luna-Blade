@@ -1295,6 +1295,7 @@ export default class StoryScene extends Phaser.Scene {
     if (this.isVictory && this.victoryAdvanceCallback && this.time.now > this.victoryInputReadyTime) {
       const advancePressed = (
         touchInputs.justAttack ||
+        touchInputs.justUpSlash ||
         touchInputs.justJump ||
         Phaser.Input.Keyboard.JustDown(this.cursors.space) ||
         (this.cursors.keys?.ENTER && Phaser.Input.Keyboard.JustDown(this.cursors.keys.ENTER)) ||
@@ -1312,6 +1313,7 @@ export default class StoryScene extends Phaser.Scene {
     if (this.player?.isDead && this.gameOverRetryCallback && this.time.now > this.gameOverInputReadyTime) {
       const retryPressed = (
         touchInputs.justAttack ||
+        touchInputs.justUpSlash ||
         touchInputs.justJump ||
         Phaser.Input.Keyboard.JustDown(this.cursors.space) ||
         (this.cursors.keys?.ENTER && Phaser.Input.Keyboard.JustDown(this.cursors.keys.ENTER)) ||

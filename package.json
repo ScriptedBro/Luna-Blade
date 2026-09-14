@@ -8,10 +8,17 @@
     "build": "vite build",
     "preview": "vite preview"
   },
-  "keywords": ["phaser", "platformer", "pixelart", "nimiq", "miniapp"],
+  "keywords": [
+    "phaser",
+    "platformer",
+    "pixelart",
+    "nimiq",
+    "miniapp"
+  ],
   "author": "",
   "license": "MIT",
   "dependencies": {
+    "@nimiq/mini-app-sdk": "^0.1.0",
     "canvas-confetti": "^1.9.4",
     "phaser": "^4.2.1",
     "vite": "^8.3.0"

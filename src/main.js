@@ -9,6 +9,8 @@ import SurvivalScene from './scenes/SurvivalScene.js';
 import ForgeScene from './scenes/ForgeScene.js';
 import LeaderboardScene from './scenes/LeaderboardScene.js';
 import { TouchController } from './ui/TouchControls.js';
+import { nimiqModal } from './ui/NimiqModal.js';
+import { nimiqService } from './engine/NimiqService.js';
 
 // Phaser 3 Game Configuration
 const phaserConfig = {
@@ -49,5 +51,7 @@ window.__GAME__ = game;
 
 // Initialize Virtual Touch Controls & Header Actions
 window.touchController = new TouchController(game);
+window.nimiqModal = nimiqModal;
+window.nimiqService = nimiqService;
 
 console.log('🌲 Luna Blade: The High Forest initialized successfully!');

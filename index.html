@@ -3,7 +3,11 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
-  <title>Luna Blade: The High Forest | 2D Action-Platformer</title>
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="theme-color" content="#0b110b" />
+  <title>Luna Blade: The High Forest | Nimiq Mini App</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=VT323&display=swap" rel="stylesheet">
@@ -16,10 +20,17 @@
       <div class="header-brand">
         <span class="tree-icon">🌲</span>
         <span class="game-title">LUNA BLADE</span>
-        <span class="badge-mini-app">ARCADE EDITION</span>
+        <span class="badge-mini-app">NIMIQ EDITION</span>
       </div>
       
       <div class="header-status">
+        <!-- Nimiq Wallet Connect Status Button -->
+        <button id="btn-nimiq" class="pixel-wallet-btn" title="Nimiq Altar & Wallet">
+          <span class="nimiq-bolt">⚡</span>
+          <span id="nimiq-btn-text">NIMIQ</span>
+          <span id="nimiq-dot" class="nimiq-dot offline"></span>
+        </button>
+
         <!-- Utility Buttons -->
         <div class="header-actions">
           <button id="btn-audio" class="pixel-icon-btn" title="Toggle Sound (M)">🔊</button>
@@ -34,6 +45,11 @@
     <main id="game-wrapper">
       <div id="game-container"></div>
       <div id="crt-overlay" class="crt-overlay active"></div>
+
+      <!-- Orientation hint for mobile portrait mode -->
+      <div id="orientation-hint" class="orientation-hint hidden">
+        <span>🔄 ROTATE TO LANDSCAPE FOR FULL VIEW</span>
+      </div>
       
       <!-- Virtual Touch Controls for Mobile Viewport -->
       <div id="touch-controls" class="touch-controls hidden">
@@ -47,6 +63,10 @@
         </div>
 
         <div class="touch-actions">
+          <button id="touch-upslash" class="touch-btn action-btn upslash" data-key="upslash">
+            <span>UP-AIR</span>
+            <small>K</small>
+          </button>
           <button id="touch-attack" class="touch-btn action-btn attack" data-key="attack">
             <span>SLASH</span>
             <small>J</small>

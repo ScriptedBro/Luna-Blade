@@ -2,6 +2,7 @@ import Phaser from 'phaser';
 import { GAME_CONFIG } from '../config.js';
 import { sound } from '../engine/Audio.js';
 import { storage } from '../engine/Storage.js';
+import { nimiqModal } from '../ui/NimiqModal.js';
 import confetti from 'canvas-confetti';
 
 export default class ForgeScene extends Phaser.Scene {
@@ -51,6 +52,13 @@ export default class ForgeScene extends Phaser.Scene {
     backBtn.on('pointerdown', () => {
       sound.playCoin();
       this.scene.start('MenuScene');
+    });
+
+    // Nimiq Altar button
+    const nimiqBtn = this.add.rectangle(150, h - 16, 110, 20, 0x2b2205).setStrokeStyle(1, 0xf6c026).setInteractive({ useHandCursor: true });
+    this.add.text(150, h - 16, '⚡ NIMIQ ALTAR', { fontFamily: 'Press Start 2P', fontSize: '5.5px', color: '#f6c026' }).setOrigin(0.5);
+    nimiqBtn.on('pointerdown', () => {
+      nimiqModal.open();
     });
 
     // Preview Sprite of equipped warrior

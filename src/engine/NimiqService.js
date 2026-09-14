@@ -1,141 +1,203 @@
-import { GAME_CONFIG } from '../config.js';
+import { init, getHostLanguage, requestDeviceIdentifier } from '@nimiq/mini-app-sdk';
+import { storage } from './Storage.js';
 
-class NimiqService {
+// Official Community / Game Treasury Address for Luna Blade Offerings
+export const NIMIQ_TREASURY_ADDRESS = 'NQ25 7E2B 2B1B GHE8 L7T1 2P8N V83C P94B T89X';
+
+// 1 NIM = 100,000 Luna (the smallest atomic unit in Nimiq)
+export const LUNA_PER_NIM = 100000;
+
+class NimiqServiceManager {
   constructor() {
-    this.connected = false;
-    this.address = 'NQ42 LUNA BLAD 1616 ALBA TROS 2026';
-    this.shortAddress = 'NQ42 LUNA...2026';
-    this.balanceNim = 150.0;
-    this.network = 'Albatross PoS Testnet (Fast Finality ~1s)';
-    this.txHistory = [];
-    this.listeners = [];
+    this.provider = null;
+    this.address = storage.getNimiqAccount() || null;
+    this.deviceId = null;
+    this.isNimiqPay = false;
+    this.isInitialized = false;
+    this.isSimulated = false;
+    this.listeners = new Set();
+
+    // Check host language synchronously from Nimiq Pay host context
+    this.language = (typeof getHostLanguage === 'function' ? getHostLanguage() : null) ||
+      (typeof navigator !== 'undefined' ? navigator.language?.split('-')[0] : 'en') || 'en';
+
+    // Auto-initialize when loaded
+    this.init();
   }
 
-  init() {
-    // Check if running inside Telegram Mini App or WebApp with Nimiq Provider
-    if (window.Telegram?.WebApp) {
-      window.Telegram.WebApp.ready();
-      window.Telegram.WebApp.expand();
+  async init() {
+    if (this.isInitialized) return;
+
+    try {
+      // Check if window.nimiq already injected or wait with short timeout
+      if (typeof window !== 'undefined' && window.nimiq) {
+        this.provider = window.nimiq;
+        this.isNimiqPay = true;
+      } else {
+        // Attempt init from SDK (resolves when Nimiq Pay injects provider)
+        const nimiq = await Promise.race([
+          init({ timeout: 2500 }),
+          new Promise((_, reject) => setTimeout(() => reject(new Error('Nimiq Pay host timeout')), 2600))
+        ]);
+        if (nimiq) {
+          this.provider = nimiq;
+          this.isNimiqPay = true;
+        }
+      }
+    } catch {
+      // Running in standard browser outside Nimiq Pay
+      this.isNimiqPay = false;
     }
 
-    // Load cached simulated balance or wallet
-    const saved = localStorage.getItem('LUNA_BLADE_NIMIQ');
-    if (saved) {
+    // If inside Nimiq Pay, fetch current accounts
+    if (this.isNimiqPay && this.provider) {
       try {
-        const parsed = JSON.parse(saved);
-        this.balanceNim = parsed.balanceNim ?? 150.0;
-        this.txHistory = parsed.txHistory ?? [];
-      } catch (e) {
-        console.warn('Could not parse Nimiq wallet cache:', e);
+        const accounts = await this.provider.listAccounts();
+        if (Array.isArray(accounts) && accounts.length > 0) {
+          this.address = accounts[0];
+          storage.setNimiqAccount(this.address);
+        }
+      } catch (err) {
+        console.warn('Could not auto-list Nimiq accounts:', err);
+      }
+
+      // Try fetching device identifier for leaderboard & anti-cheat
+      try {
+        this.deviceId = await requestDeviceIdentifier({ reason: 'Luna Blade: Forest Warden Profile' });
+      } catch {
+        // User denied or prompt postponed
       }
     }
-    this.connected = true;
-    this.notify();
-  }
 
-  save() {
-    localStorage.setItem('LUNA_BLADE_NIMIQ', JSON.stringify({
-      balanceNim: this.balanceNim,
-      txHistory: this.txHistory
-    }));
+    this.isInitialized = true;
+    this.notify();
   }
 
   subscribe(callback) {
-    this.listeners.push(callback);
-    callback(this.getState());
-    return () => {
-      this.listeners = this.listeners.filter(cb => cb !== callback);
-    };
+    this.listeners.add(callback);
+    callback(this.getStatus());
+    return () => this.listeners.delete(callback);
   }
 
   notify() {
-    const state = this.getState();
-    this.listeners.forEach(cb => cb(state));
+    const status = this.getStatus();
+    this.listeners.forEach(cb => {
+      try { cb(status); } catch (e) { console.error(e); }
+    });
   }
 
-  getState() {
+  getStatus() {
     return {
-      connected: this.connected,
+      connected: !!this.address,
       address: this.address,
-      shortAddress: this.shortAddress,
-      balanceNim: this.balanceNim,
-      network: this.network,
-      txHistory: this.txHistory
+      shortAddress: this.getShortAddress(),
+      isNimiqPay: this.isNimiqPay,
+      isSimulated: this.isSimulated,
+      deviceId: this.deviceId,
+      language: this.language,
+      hasBlessing: storage.hasMoonBlessing()
     };
   }
 
-  async payNim(amount, purpose = 'In-game purchase') {
-    if (this.balanceNim < amount) {
-      return { success: false, error: 'Insufficient NIM balance' };
+  getShortAddress() {
+    if (!this.address) return '';
+    const clean = this.address.replace(/\s+/g, '');
+    if (clean.length < 10) return clean;
+    return `${clean.slice(0, 4)}...${clean.slice(-4)}`;
+  }
+
+  async connect() {
+    if (this.isNimiqPay && this.provider) {
+      try {
+        const accounts = await this.provider.listAccounts();
+        if (Array.isArray(accounts) && accounts.length > 0) {
+          this.address = accounts[0];
+          this.isSimulated = false;
+          storage.setNimiqAccount(this.address);
+          this.notify();
+          return { success: true, address: this.address };
+        }
+      } catch (err) {
+        return { success: false, error: err.message || 'Connection failed' };
+      }
     }
 
-    // Simulate Albatross PoS ~1s settlement
-    await new Promise(resolve => setTimeout(resolve, 850));
-
-    this.balanceNim -= amount;
-    const txHash = '0x' + Array.from({ length: 32 }, () => Math.floor(Math.random() * 16).toString(16)).join('');
-    
-    const record = {
-      type: 'PAYMENT',
-      amount,
-      purpose,
-      txHash,
-      timestamp: Date.now(),
-      settledInMs: 850
-    };
-
-    this.txHistory.unshift(record);
-    this.save();
+    // Standalone fallback: connect demo / sandbox Nimiq wallet for web testing
+    this.isSimulated = true;
+    this.address = storage.getNimiqAccount() || 'NQ14 9F4S R61V D7A2 B5Q8 W9N3 C2X4 K8J1 L7P9';
+    storage.setNimiqAccount(this.address);
     this.notify();
-
-    return {
-      success: true,
-      txHash,
-      newBalance: this.balanceNim,
-      settledInMs: 850
-    };
+    return { success: true, address: this.address, simulated: true };
   }
 
-  async testClaimPayout(rank = 1) {
-    const pot = GAME_CONFIG.SURVIVAL.DAILY_PRIZE_POOL_NIM;
-    let split = 0.60;
-    if (rank === 2) split = 0.25;
-    if (rank === 3) split = 0.15;
-    const prize = Math.round(pot * split);
-
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    this.balanceNim += prize;
-    const txHash = '0x' + Array.from({ length: 32 }, () => Math.floor(Math.random() * 16).toString(16)).join('');
-
-    const record = {
-      type: 'DAILY_PAYOUT',
-      amount: prize,
-      purpose: `Rank #${rank} Daily Luna Trial Prize`,
-      txHash,
-      timestamp: Date.now(),
-      settledInMs: 1000
-    };
-
-    this.txHistory.unshift(record);
-    this.save();
+  disconnect() {
+    this.address = null;
+    this.isSimulated = false;
+    storage.setNimiqAccount(null);
     this.notify();
-
-    return {
-      success: true,
-      prize,
-      txHash
-    };
   }
 
-  generateTelemetryProof(runData) {
-    // Basic anti-cheat telemetry verification hash
-    const payload = `${runData.seed}_${runData.duration}_${runData.kills}_${runData.score}_${runData.timestamp}`;
-    let hash = 0;
-    for (let i = 0; i < payload.length; i++) {
-      hash = ((hash << 5) - hash + payload.charCodeAt(i)) | 0;
+  async sendMoonOffering(nimAmount, note = 'Luna Blade: Moon Offering') {
+    if (!this.address) {
+      const conn = await this.connect();
+      if (!conn.success) throw new Error('Please connect your Nimiq wallet first');
     }
-    return 'LUNA-PROOF-' + Math.abs(hash).toString(16).toUpperCase();
+
+    const lunaValue = Math.round(nimAmount * LUNA_PER_NIM);
+
+    if (this.isNimiqPay && this.provider) {
+      try {
+        const tx = await this.provider.sendBasicTransactionWithData({
+          recipient: NIMIQ_TREASURY_ADDRESS,
+          value: lunaValue,
+          data: note
+        });
+
+        if (tx && typeof tx === 'object' && 'error' in tx) {
+          throw new Error(tx.error?.message || 'Transaction rejected');
+        }
+
+        // Bestow in-game Moon Blessing
+        storage.addMoonBlessing(nimAmount);
+        this.notify();
+        return { success: true, txHash: typeof tx === 'string' ? tx : 'tx_confirmed', simulated: false };
+      } catch (err) {
+        console.error('Nimiq Pay transaction failed:', err);
+        throw err;
+      }
+    }
+
+    // Standalone / Sandbox mode simulation
+    await new Promise(r => setTimeout(r, 600));
+    const mockHash = 'nim_' + Math.random().toString(16).slice(2, 10) + Math.random().toString(16).slice(2, 10);
+    storage.addMoonBlessing(nimAmount);
+    this.notify();
+    return { success: true, txHash: mockHash, simulated: true };
+  }
+
+  async signScoreProof(score, mode = 'SURVIVAL') {
+    if (!this.address) return null;
+
+    const message = `Luna Blade Score Proof: ${score} pts | Mode: ${mode} | Player: ${this.address} | Time: ${Date.now()}`;
+
+    if (this.isNimiqPay && this.provider) {
+      try {
+        const res = await this.provider.sign(message);
+        if (res && 'signature' in res) {
+          return { message, signature: res.signature, publicKey: res.publicKey };
+        }
+      } catch (e) {
+        console.warn('Sign score rejected:', e);
+      }
+    }
+
+    // Standalone fallback signature
+    return {
+      message,
+      signature: 'sim_sig_' + Math.random().toString(36).substring(2, 18),
+      publicKey: 'sim_pk_' + this.address.replace(/\s+/g, '')
+    };
   }
 }
 
-export const nimiq = new NimiqService();
+export const nimiqService = new NimiqServiceManager();

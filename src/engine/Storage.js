@@ -20,6 +20,8 @@ const DEFAULT_STATE = {
   },
   dailyRecords: {}, // keyed by date string
   highScore: 0,
+  nimiqAccount: null,
+  moonBlessings: 0,
 };
 
 class StorageManager {
@@ -156,6 +158,34 @@ class StorageManager {
   getDailyRecord(dateStr) {
     if (!this.data.dailyRecords) this.data.dailyRecords = {};
     return this.data.dailyRecords[dateStr] || null;
+  }
+
+  getNimiqAccount() {
+    return this.data.nimiqAccount || null;
+  }
+
+  setNimiqAccount(account) {
+    this.data.nimiqAccount = account;
+    this.save();
+  }
+
+  addMoonBlessing(nimAmount = 10) {
+    this.data.moonBlessings = (this.data.moonBlessings || 0) + Math.max(1, Math.floor(nimAmount / 10));
+    this.save();
+    return this.data.moonBlessings;
+  }
+
+  hasMoonBlessing() {
+    return (this.data.moonBlessings || 0) > 0;
+  }
+
+  consumeMoonBlessing() {
+    if ((this.data.moonBlessings || 0) > 0) {
+      this.data.moonBlessings -= 1;
+      this.save();
+      return true;
+    }
+    return false;
   }
 }
 
