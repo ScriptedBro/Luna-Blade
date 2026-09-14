@@ -37,6 +37,62 @@
     <main id="game-wrapper">
       <div id="game-container">
         <div id="crt-overlay" class="crt-overlay"></div>
+
+        <!-- Animated Retro Loading Screen (renders immediately while bundle/assets download) -->
+        <div id="game-loader" class="game-loader">
+          <div class="loader-content">
+            <div class="loader-mascot-row">
+              <span class="loader-icon-moon">🌙</span>
+              <span class="loader-icon-blade">⚔️</span>
+              <span class="loader-icon-sprite">✨</span>
+            </div>
+            <div class="loader-game-title">LUNA BLADE</div>
+            <div class="loader-progress-box">
+              <div id="loader-bar-fill" class="loader-bar-fill"></div>
+            </div>
+            <div id="loader-status-text" class="loader-status-text">🌲 AWAKENING HIGH FOREST...</div>
+            <div class="loader-tip-hint">NIMIQ RETRO ARCADE • PREPARING REALM</div>
+          </div>
+        </div>
+        <script>
+          (function() {
+            var tips = [
+              "🌲 Awakening ancient forest spirits...",
+              "⚔️ Sharpening celestial moon blades...",
+              "🌙 Gathering radiant lunar shards...",
+              "⚡ Syncing Nimiq cryptographic altars...",
+              "✨ Sylva is preparing your satchel...",
+              "🐗 Calming wild forest boars...",
+              "🍄 Harvesting glowing spore lanterns...",
+              "🛡️ Readying the High Forest..."
+            ];
+            var tipIdx = 0;
+            var statusEl = document.getElementById('loader-status-text');
+            var barEl = document.getElementById('loader-bar-fill');
+            var progress = 14;
+            var timer = setInterval(function() {
+              if (progress < 88) {
+                progress += Math.floor(Math.random() * 8) + 4;
+                if (progress > 88) progress = 88;
+                if (barEl) barEl.style.width = progress + '%';
+              }
+              tipIdx = (tipIdx + 1) % tips.length;
+              if (statusEl) statusEl.textContent = tips[tipIdx];
+            }, 850);
+            window.__dismissGameLoader = function() {
+              clearInterval(timer);
+              if (barEl) barEl.style.width = '100%';
+              if (statusEl) statusEl.textContent = '✨ ENTERING THE HIGH FOREST...';
+              var loader = document.getElementById('game-loader');
+              if (loader) {
+                loader.classList.add('fade-out');
+                setTimeout(function() {
+                  if (loader.parentNode) loader.parentNode.removeChild(loader);
+                }, 400);
+              }
+            };
+          })();
+        </script>
       </div>
       
       <!-- Virtual Touch Controls for Mobile Viewport -->

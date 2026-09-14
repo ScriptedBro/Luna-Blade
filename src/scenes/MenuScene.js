@@ -18,6 +18,10 @@ export default class MenuScene extends Phaser.Scene {
     this.cameras.main.resetFX();
     sound.startBGM();
 
+    if (typeof window !== 'undefined' && typeof window.__dismissGameLoader === 'function') {
+      window.__dismissGameLoader();
+    }
+
     // Parallax background
     this.bg = this.add.tileSprite(0, 0, w, h, 'env_bg').setOrigin(0, 0);
 

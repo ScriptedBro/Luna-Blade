@@ -23,12 +23,24 @@ export default class BootScene extends Phaser.Scene {
 
     this.load.on('progress', (value) => {
       progressBar.width = 192 * value;
+      const barEl = document.getElementById('loader-bar-fill');
+      const statusEl = document.getElementById('loader-status-text');
+      if (barEl) barEl.style.width = Math.max(14, Math.floor(value * 100)) + '%';
+      if (statusEl) {
+        if (value < 0.3) statusEl.textContent = '🌲 GATHERING HIGH FORESTS...';
+        else if (value < 0.6) statusEl.textContent = '⚔️ FORGING CELESTIAL BLADES...';
+        else if (value < 0.85) statusEl.textContent = '✨ SUMMONING SYLVA SPRITE...';
+        else statusEl.textContent = '🌙 ENTERING REALM...';
+      }
     });
 
     this.load.on('complete', () => {
       progressBox.destroy();
       progressBar.destroy();
       loadingText.destroy();
+      if (typeof window !== 'undefined' && typeof window.__dismissGameLoader === 'function') {
+        window.__dismissGameLoader();
+      }
     });
 
     // Character Spritesheets (Normalized to 96x80 with feet resting on uniform baseline y=74)
