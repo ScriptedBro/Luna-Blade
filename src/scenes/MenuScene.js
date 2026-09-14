@@ -13,6 +13,7 @@ export default class MenuScene extends Phaser.Scene {
     const w = this.cameras.main.width;
     const h = this.cameras.main.height;
 
+    this.cameras.main.resetFX();
     sound.startBGM();
 
     // Parallax background
@@ -46,17 +47,15 @@ export default class MenuScene extends Phaser.Scene {
     const todaySeed = getTodaySeedString();
     const seedText = this.add.text(w / 2, 72, `TODAY'S SEED: ${todaySeed}`, {
       fontFamily: 'Press Start 2P',
-      fontSize: '6px',
-      color: '#e9b213',
-      stroke: '#000000',
-      strokeThickness: 2
+      fontSize: '5.5px',
+      color: '#a0c4a0'
     }).setOrigin(0.5);
 
-    // Subtle gentle bobbing title
+    // Pulse animation on title
     this.tweens.add({
-      targets: [titleBox, titleText, subText, seedText],
-      y: '-=3',
-      duration: 1800,
+      targets: [titleText, subText],
+      scale: 1.02,
+      duration: 1200,
       yoyo: true,
       loop: -1,
       ease: 'Sine.easeInOut'
@@ -70,27 +69,31 @@ export default class MenuScene extends Phaser.Scene {
       {
         text: '⚔️ 1. STORY MODE',
         desc: 'The Shattered Moon & The Blighted Roots',
-        action: () => this.openStoryModal()
+        action: () => this.openStoryModal(),
+        shouldFade: false
       },
       {
         text: '🏆 2. DAILY LUNA TRIAL',
         desc: 'Seeded Survival • 3 Lives • Daily Tournament',
-        action: () => this.scene.start('SurvivalScene')
+        action: () => this.scene.start('SurvivalScene'),
+        shouldFade: true
       },
       {
         text: '⚒️ 3. FORGE & SATCHEL',
         desc: 'Craft Blades & Companion Relics',
-        action: () => this.scene.start('ForgeScene')
+        action: () => this.scene.start('ForgeScene'),
+        shouldFade: true
       },
       {
         text: '💰 4. DAILY LEADERBOARD',
         desc: 'Top Scores & Champion Rankings',
-        action: () => this.scene.start('LeaderboardScene')
+        action: () => this.scene.start('LeaderboardScene'),
+        shouldFade: true
       }
     ];
 
     options.forEach((opt, idx) => {
-      this.createMenuButton(w / 2, startY + idx * spacing, opt.text, opt.desc, opt.action);
+      this.createMenuButton(w / 2, startY + idx * spacing, opt.text, opt.desc, opt.action, opt.shouldFade);
     });
 
     // Footer Info
@@ -120,7 +123,7 @@ export default class MenuScene extends Phaser.Scene {
     boar.setFlipX(true);
   }
 
-  createMenuButton(x, y, label, subtitle, callback) {
+  createMenuButton(x, y, label, subtitle, callback, shouldFade = false) {
     const btnBg = this.add.rectangle(x, y, 320, 24, 0x142814, 0.85);
     btnBg.setStrokeStyle(1, 0x3c6e3c);
     btnBg.setInteractive({ useHandCursor: true });
@@ -152,8 +155,12 @@ export default class MenuScene extends Phaser.Scene {
 
     btnBg.on('pointerdown', () => {
       sound.playCoin();
-      this.cameras.main.fade(200, 0, 0, 0);
-      this.time.delayedCall(220, callback);
+      if (shouldFade) {
+        this.cameras.main.fade(200, 0, 0, 0);
+        this.time.delayedCall(220, callback);
+      } else {
+        callback();
+      }
     });
   }
 
