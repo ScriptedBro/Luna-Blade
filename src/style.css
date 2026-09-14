@@ -449,23 +449,23 @@ html, body {
   display: grid;
   grid-template-columns: repeat(2, auto);
   grid-template-areas:
-    "upslash upslash"
-    "attack  jump";
+    "jump    jump"
+    "attack  upslash";
   gap: 8px 12px;
   justify-items: center;
   align-items: center;
 }
 
-#touch-upslash {
-  grid-area: upslash;
+#touch-jump {
+  grid-area: jump;
 }
 
 #touch-attack {
   grid-area: attack;
 }
 
-#touch-jump {
-  grid-area: jump;
+#touch-upslash {
+  grid-area: upslash;
 }
 
 .action-btn {
@@ -773,8 +773,8 @@ html, body {
     display: grid;
     grid-template-columns: repeat(2, auto);
     grid-template-areas:
-      "upslash upslash"
-      "attack  jump";
+      "jump    jump"
+      "attack  upslash";
     gap: 6px 8px;
     justify-items: center;
     align-items: center;

@@ -128,8 +128,8 @@ export default class MenuScene extends Phaser.Scene {
       Boolean(document.getElementById('touch-controls'))
     );
     const controlsHint = isTouch
-      ? 'TOUCH CONTROLS: D-PAD = MOVE • JUMP • SLASH • UP-AIR'
-      : 'CONTROLS: D-PAD / ARROWS = MOVE • SPACE = JUMP • J = SLASH • K = UP-AIR';
+      ? 'TOUCH CONTROLS: D-PAD = MOVE • JUMP • SLASH • UP ATTK'
+      : 'CONTROLS: D-PAD / ARROWS = MOVE • SPACE = JUMP • J = SLASH • K = UP ATTK';
 
     this.add.text(w / 2, h - 12, controlsHint, {
       fontFamily: 'Press Start 2P',
