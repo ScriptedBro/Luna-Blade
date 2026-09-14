@@ -178,11 +178,16 @@ export default class TutorialScene extends Phaser.Scene {
 
   createPlatform(x, y, width) {
     const depth = 10;
-    const body = this.add.rectangle(x + width / 2, y + 6, width, 12, 0x000000, 0);
+    const count = Math.max(1, Math.round(width / 48));
+    const actualWidth = count * 48;
+    const body = this.add.rectangle(x + actualWidth / 2, y + 6, actualWidth, 12, 0x000000, 0);
     this.physics.add.existing(body, true);
+    body.body.checkCollision.down = false;
+    body.body.checkCollision.left = false;
+    body.body.checkCollision.right = false;
+    body.body.checkCollision.up = true;
     this.platforms.add(body);
 
-    const count = Math.ceil(width / 48);
     for (let i = 0; i < count; i++) {
       this.add.image(x + i * 48, y, 'plat_wood').setOrigin(0, 0).setDepth(depth);
     }

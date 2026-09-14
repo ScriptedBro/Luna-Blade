@@ -244,15 +244,25 @@ export default class SurvivalScene extends Phaser.Scene {
 
     // Build platforms from deterministic spec
     this.spec.platforms.forEach(plat => {
-      // Invisible static collider body
-      const rect = this.add.rectangle(plat.x, plat.y, plat.width, plat.height, 0x000000, 0);
-      this.physics.add.existing(rect, true);
-      this.platforms.add(rect);
-
-      const startX = plat.x - plat.width / 2;
+      const isGround = plat.type === 'ground';
+      const count = isGround ? 0 : Math.max(1, Math.round(plat.width / 48));
+      const actualWidth = isGround ? plat.width : count * 48;
+      const startX = plat.x - actualWidth / 2;
       const topY = plat.y - plat.height / 2;
 
-      if (plat.type === 'ground') {
+      // Invisible static collider body matching visual width
+      const rect = this.add.rectangle(plat.x, plat.y, actualWidth, plat.height, 0x000000, 0);
+      this.physics.add.existing(rect, true);
+      if (!isGround) {
+        // One-way platform: solid top surface, jump-through from below, no side snags
+        rect.body.checkCollision.down = false;
+        rect.body.checkCollision.left = false;
+        rect.body.checkCollision.right = false;
+        rect.body.checkCollision.up = true;
+      }
+      this.platforms.add(rect);
+
+      if (isGround) {
         // Render lush grass cliff top
         const numTiles = Math.ceil(plat.width / 16);
         for (let i = 0; i < numTiles; i++) {
@@ -286,7 +296,6 @@ export default class SurvivalScene extends Phaser.Scene {
         }
       } else {
         // Elevated wooden timber / ruins platforms
-        const count = Math.ceil(plat.width / 48);
         for (let i = 0; i < count; i++) {
           this.add.image(startX + i * 48, topY, 'plat_wood').setOrigin(0, 0).setDepth(depth);
         }

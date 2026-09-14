@@ -236,8 +236,8 @@ export default class StoryScene extends Phaser.Scene {
       this.createPlatform(840, 240, 100);
 
       // Stepping logs across the deep rapids
-      this.createPlatform(990, 320, 55);
-      this.createPlatform(1055, 270, 55);
+      this.createPlatform(990, 320, 48);
+      this.createPlatform(1055, 270, 48);
 
       // High secret canopy lookout with hidden cache
       this.createPlatform(1010, 185, 90);
@@ -534,26 +534,32 @@ export default class StoryScene extends Phaser.Scene {
 
   createPlatform(x, y, width) {
     const depth = 10;
-    // Static collider body
-    const body = this.add.rectangle(x + width / 2, y + 6, width, 12, 0x000000, 0);
+    const tileSize = this.chapterId === 2 ? 75 : 48;
+    const count = Math.max(1, Math.round(width / tileSize));
+    const actualWidth = count * tileSize;
+
+    // Static collider body matching visual width exactly
+    const body = this.add.rectangle(x + actualWidth / 2, y + 6, actualWidth, 12, 0x000000, 0);
     this.physics.add.existing(body, true);
+    // One-way platform: solid surface to stand on, jump-through from below, no side snags
+    body.body.checkCollision.down = false;
+    body.body.checkCollision.left = false;
+    body.body.checkCollision.right = false;
+    body.body.checkCollision.up = true;
     this.platforms.add(body);
 
     if (this.chapterId === 3) {
       // Ancient stone ruins platform
-      const count = Math.ceil(width / 48);
       for (let i = 0; i < count; i++) {
         this.add.image(x + i * 48, y, 'plat_stone').setOrigin(0, 0).setDepth(depth);
       }
     } else if (this.chapterId === 2) {
       // High tree branches
-      const count = Math.ceil(width / 75);
       for (let i = 0; i < count; i++) {
         this.add.image(x + i * 75, y - 2, 'plat_branch').setOrigin(0, 0).setDepth(depth);
       }
     } else {
       // Whispering Woods: wooden timber platform
-      const count = Math.ceil(width / 48);
       for (let i = 0; i < count; i++) {
         this.add.image(x + i * 48, y, 'plat_wood').setOrigin(0, 0).setDepth(depth);
       }
