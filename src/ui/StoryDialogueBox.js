@@ -133,8 +133,10 @@ export default class StoryDialogueBox extends Phaser.GameObjects.Container {
     // Prompt to advance [TAP TO CONTINUE ▼]
     this.promptArrow = scene.add.text(boxW / 2 - 12, boxH / 2 - 10, 'TAP TO CONTINUE ▼', {
       fontFamily: 'Press Start 2P',
-      fontSize: '5px',
-      color: '#ffd166'
+      fontSize: '5.5px',
+      color: '#ffd166',
+      stroke: '#000000',
+      strokeThickness: 2
     }).setOrigin(1, 0.5);
     this.add(this.promptArrow);
 
@@ -146,39 +148,89 @@ export default class StoryDialogueBox extends Phaser.GameObjects.Container {
       loop: -1
     });
 
-    // Skip Button in upper right
-    this.btnSkip = scene.add.text(boxW / 2 - 10, -boxH / 2 + 2, 'SKIP ⏭', {
+    // Skip Button in upper right (prominent pill button)
+    this.skipBtnBg = scene.add.rectangle(boxW / 2 - 40, -boxH / 2 + 4, 68, 18, 0x162c1e, 0.95);
+    this.skipBtnBg.setStrokeStyle(1.5, 0x48e4b6);
+    this.skipBtnBg.setOrigin(0.5, 0.5);
+    this.add(this.skipBtnBg);
+
+    this.btnSkip = scene.add.text(boxW / 2 - 40, -boxH / 2 + 4, 'SKIP ⏭', {
       fontFamily: 'Press Start 2P',
-      fontSize: '5px',
-      color: '#7b929e'
-    }).setOrigin(1, 0.5).setInteractive({ useHandCursor: true });
-    this.btnSkip.on('pointerover', () => this.btnSkip.setColor('#ffffff'));
-    this.btnSkip.on('pointerout', () => this.btnSkip.setColor('#7b929e'));
-    this.btnSkip.on('pointerdown', () => this.skipAll());
+      fontSize: '6px',
+      color: '#ffd166',
+      stroke: '#000000',
+      strokeThickness: 2
+    }).setOrigin(0.5, 0.5);
     this.add(this.btnSkip);
 
-    // Click anywhere on dialogue box to advance
-    this.bgBox.setInteractive({ useHandCursor: true });
-    this.bgBox.on('pointerdown', () => this.handleAction());
-    this.dimOverlay.on('pointerdown', () => this.handleAction());
+    // Set scrollFactor 0 on all children so Phaser hit testing does not suffer camera scroll offsets
+    this.each((child) => {
+      if (child.setScrollFactor) child.setScrollFactor(0);
+    });
 
-    // Allow virtual touch buttons (SLASH / JUMP / UP-AIR) to advance dialogue
+    this.lastActionTime = 0;
+
+    const triggerAction = (isSkip = false) => {
+      const now = performance.now();
+      if (now - this.lastActionTime < 180) return;
+      this.lastActionTime = now;
+      if (isSkip) {
+        this.skipAll();
+      } else {
+        this.handleAction();
+      }
+    };
+
+    // 1. Phaser scene pointer listener: receives all canvas taps with raw viewport coords (0 to 480, 0 to 270)
+    this.scenePointerListener = (pointer) => {
+      if (!this.active || !this.visible) return;
+      // Skip button bounding area (with generous touch padding for mobile thumbs)
+      const isSkip = (pointer.x >= 360 && pointer.x <= 475 && pointer.y >= 170 && pointer.y <= 230);
+      triggerAction(isSkip);
+    };
+    scene.input.on('pointerdown', this.scenePointerListener);
+
+    // 2. Direct DOM canvas pointer listener for absolute mobile browser responsiveness
+    const canvas = scene.game && scene.game.canvas ? scene.game.canvas : null;
+    if (canvas) {
+      this.canvasPointerListener = (e) => {
+        if (!this.active || !this.visible) return;
+        const rect = canvas.getBoundingClientRect();
+        if (rect.width <= 0 || rect.height <= 0) return;
+        const clientX = e.clientX || (e.touches && e.touches[0] ? e.touches[0].clientX : 0);
+        const clientY = e.clientY || (e.touches && e.touches[0] ? e.touches[0].clientY : 0);
+        const touchX = (clientX - rect.left) * (GAME_CONFIG.WIDTH / rect.width);
+        const touchY = (clientY - rect.top) * (GAME_CONFIG.HEIGHT / rect.height);
+        const isSkip = (touchX >= 360 && touchX <= 475 && touchY >= 170 && touchY <= 230);
+        triggerAction(isSkip);
+      };
+      canvas.addEventListener('pointerdown', this.canvasPointerListener);
+      canvas.addEventListener('touchstart', this.canvasPointerListener, { passive: true });
+    }
+
+    // 3. Direct game object interaction fallback
+    this.skipBtnBg.setInteractive({ useHandCursor: true }).on('pointerdown', () => triggerAction(true));
+    this.btnSkip.setInteractive({ useHandCursor: true }).on('pointerdown', () => triggerAction(true));
+    this.bgBox.setInteractive({ useHandCursor: true }).on('pointerdown', () => triggerAction(false));
+    this.dimOverlay.setInteractive().on('pointerdown', () => triggerAction(false));
+
+    // 4. Touch virtual triggers fallback
     this.touchListener = () => {
       if (typeof window !== 'undefined' && window.touchController) {
         const triggers = window.touchController.consumeTriggers();
         if (triggers.justAttack || triggers.justJump || triggers.justUpSlash) {
-          this.handleAction();
+          triggerAction(false);
         }
       }
     };
     scene.events.on('update', this.touchListener);
 
-    // Keyboard handlers (Space, Enter, E, Esc)
+    // 5. Keyboard handlers (Space, Enter, E, Esc)
     this.onKeyDown = (event) => {
       if (event.code === 'Space' || event.code === 'Enter' || event.code === 'KeyE') {
-        this.handleAction();
+        triggerAction(false);
       } else if (event.code === 'Escape') {
-        this.skipAll();
+        triggerAction(true);
       }
     };
     window.addEventListener('keydown', this.onKeyDown);
@@ -276,12 +328,34 @@ export default class StoryDialogueBox extends Phaser.GameObjects.Container {
     this.close();
   }
 
-  close() {
+  cleanUpListeners() {
     window.removeEventListener('keydown', this.onKeyDown);
+    if (this.scene && this.scene.input && this.scenePointerListener) {
+      this.scene.input.off('pointerdown', this.scenePointerListener);
+      this.scenePointerListener = null;
+    }
+    const canvas = this.scene && this.scene.game ? this.scene.game.canvas : null;
+    if (canvas && this.canvasPointerListener) {
+      canvas.removeEventListener('pointerdown', this.canvasPointerListener);
+      canvas.removeEventListener('touchstart', this.canvasPointerListener);
+      this.canvasPointerListener = null;
+    }
     if (this.scene && this.scene.events && this.touchListener) {
       this.scene.events.off('update', this.touchListener);
+      this.touchListener = null;
     }
-    if (this.arrowTween) this.arrowTween.stop();
+    if (this.arrowTween) {
+      this.arrowTween.stop();
+      this.arrowTween = null;
+    }
+    if (this.typingTimer) {
+      this.typingTimer.remove();
+      this.typingTimer = null;
+    }
+  }
+
+  close() {
+    this.cleanUpListeners();
 
     this.scene.tweens.add({
       targets: this,
@@ -297,11 +371,7 @@ export default class StoryDialogueBox extends Phaser.GameObjects.Container {
   }
 
   destroy() {
-    window.removeEventListener('keydown', this.onKeyDown);
-    if (this.scene && this.scene.events && this.touchListener) {
-      this.scene.events.off('update', this.touchListener);
-    }
-    if (this.typingTimer) this.typingTimer.remove();
+    this.cleanUpListeners();
     super.destroy();
   }
 }

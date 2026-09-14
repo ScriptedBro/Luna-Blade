@@ -43,6 +43,7 @@ export default class StoryScene extends Phaser.Scene {
     this.bossTriggered = false;
     this.arenaGateWall = null;
     this.arenaGateVisual = null;
+    this.skipIntroCard = Boolean(data && data.skipIntroCard);
   }
 
   create() {
@@ -171,7 +172,11 @@ export default class StoryScene extends Phaser.Scene {
     this.createStoryHUD();
 
     // Chapter Title Intro Card
-    this.showChapterIntroCard();
+    if (this.skipIntroCard) {
+      this.triggerChapterOpeningDialogue();
+    } else {
+      this.showChapterIntroCard();
+    }
   }
 
   buildChapterLevel() {
@@ -877,10 +882,22 @@ export default class StoryScene extends Phaser.Scene {
 
     const advanceIntro = () => {
       if (!this.chapterIntroCard) return;
+      this.input.off('pointerdown', pointerHandler);
+      if (this.game && this.game.canvas) {
+        this.game.canvas.removeEventListener('pointerdown', canvasHandler);
+      }
       this.chapterIntroCard.destroy();
       this.chapterIntroCard = null;
       this.triggerChapterOpeningDialogue();
     };
+
+    const pointerHandler = () => advanceIntro();
+    this.input.once('pointerdown', pointerHandler);
+
+    const canvasHandler = () => advanceIntro();
+    if (this.game && this.game.canvas) {
+      this.game.canvas.addEventListener('pointerdown', canvasHandler, { once: true });
+    }
     box.setInteractive({ useHandCursor: true }).on('pointerdown', advanceIntro);
 
     this.time.delayedCall(2400, () => {

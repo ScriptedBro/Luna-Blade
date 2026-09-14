@@ -156,7 +156,8 @@ export default class BootScene extends Phaser.Scene {
     const targetScene = urlParams.get('scene');
     if (targetScene === 'story') {
       const ch = parseInt(urlParams.get('chapter') || '1', 10);
-      this.scene.start('StoryScene', { chapter: ch });
+      const skipIntroCard = urlParams.get('skipIntro') === 'true';
+      this.scene.start('StoryScene', { chapter: ch, skipIntroCard });
     } else if (targetScene === 'survival') {
       this.scene.start('SurvivalScene');
     } else if (targetScene === 'forge') {
