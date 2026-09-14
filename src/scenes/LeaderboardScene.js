@@ -5,6 +5,7 @@ import { storage } from '../engine/Storage.js';
 import { getTodaySeedString } from '../engine/PRNG.js';
 import { nimiqService } from '../engine/NimiqService.js';
 import { nimiqModal } from '../ui/NimiqModal.js';
+import { pauseService } from '../engine/PauseService.js';
 import confetti from 'canvas-confetti';
 
 export default class LeaderboardScene extends Phaser.Scene {
@@ -17,6 +18,8 @@ export default class LeaderboardScene extends Phaser.Scene {
     const h = GAME_CONFIG.HEIGHT;
     this.todaySeed = getTodaySeedString();
     this.lastScore = data?.lastScore || 0;
+
+    pauseService.detachScene();
 
     if (typeof window !== 'undefined' && window.touchController) {
       window.touchController.hide();

@@ -15,6 +15,7 @@ import { GAME_CONFIG } from '../config.js';
 import { sound } from '../engine/Audio.js';
 import { storage } from '../engine/Storage.js';
 import { getTodaySeedString, generateDailySurvivalSpec } from '../engine/PRNG.js';
+import { pauseService } from '../engine/PauseService.js';
 import confetti from 'canvas-confetti';
 
 export default class SurvivalScene extends Phaser.Scene {
@@ -31,6 +32,12 @@ export default class SurvivalScene extends Phaser.Scene {
     if (typeof window !== 'undefined' && window.touchController) {
       window.touchController.show();
     }
+
+    pauseService.attachScene(this, 'DAILY SURVIVAL TRIAL');
+    pauseService.showButtons();
+    this.events.once('shutdown', () => {
+      pauseService.detachScene();
+    });
 
     this.physics.world.setBounds(0, 0, this.arenaWidth, this.arenaHeight);
 
@@ -1026,6 +1033,7 @@ export default class SurvivalScene extends Phaser.Scene {
     if (this.isGameOver) return;
     this.isGameOver = true;
     sound.playGameOver();
+    pauseService.hideButtons();
 
     if (typeof window !== 'undefined' && window.touchController) {
       window.touchController.hide();
@@ -1051,9 +1059,7 @@ export default class SurvivalScene extends Phaser.Scene {
       proofHash
     });
 
-    this.time.delayedCall(300, () => {
-      this.showGameOverModal(proofHash);
-    });
+    this.showGameOverModal(proofHash);
   }
 
   showGameOverModal(proofHash) {
@@ -1103,6 +1109,10 @@ export default class SurvivalScene extends Phaser.Scene {
       if (modalClosed) return;
       modalClosed = true;
       this.input.keyboard.off('keydown', onKeyDown);
+      this.input.off('pointerdown', onScenePointerDown);
+      if (this.game && this.game.canvas) {
+        this.game.canvas.removeEventListener('pointerdown', onCanvasPointerDown);
+      }
     };
 
     const goRetry = () => {
@@ -1180,6 +1190,42 @@ export default class SurvivalScene extends Phaser.Scene {
       leaderboard: lbBtn,
       menu: menuBtn
     };
+
+    const buttons = [
+      { minX: (w / 2 - 124) - 54, maxX: (w / 2 - 124) + 54, minY: btnY - 13, maxY: btnY + 13, action: goRetry },
+      { minX: (w / 2) - 62, maxX: (w / 2) + 62, minY: btnY - 13, maxY: btnY + 13, action: goLeaderboard },
+      { minX: (w / 2 + 124) - 54, maxX: (w / 2 + 124) + 54, minY: btnY - 13, maxY: btnY + 13, action: goMenu }
+    ];
+
+    const onScenePointerDown = (pointer) => {
+      if (modalClosed) return;
+      const px = pointer.x;
+      const py = pointer.y;
+      for (const b of buttons) {
+        if (px >= b.minX && px <= b.maxX && py >= b.minY && py <= b.maxY) {
+          b.action();
+          return;
+        }
+      }
+    };
+    this.input.on('pointerdown', onScenePointerDown);
+
+    const onCanvasPointerDown = (e) => {
+      if (modalClosed) return;
+      if (!this.game || !this.game.canvas) return;
+      const rect = this.game.canvas.getBoundingClientRect();
+      const px = ((e.clientX - rect.left) / rect.width) * w;
+      const py = ((e.clientY - rect.top) / rect.height) * h;
+      for (const b of buttons) {
+        if (px >= b.minX && px <= b.maxX && py >= b.minY && py <= b.maxY) {
+          b.action();
+          return;
+        }
+      }
+    };
+    if (this.game && this.game.canvas) {
+      this.game.canvas.addEventListener('pointerdown', onCanvasPointerDown);
+    }
   }
 
   update() {

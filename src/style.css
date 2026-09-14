@@ -597,6 +597,107 @@ html, body {
   overscroll-behavior: contain;
 }
 
+/* In-Game Pause Modal */
+.pause-modal-card {
+  max-width: 360px;
+  background: #0f1c0f;
+  border: 2px solid #4ade80;
+  box-shadow: 0 0 30px rgba(0, 0, 0, 0.95), 0 0 15px rgba(74, 222, 128, 0.25);
+  border-radius: 8px;
+}
+
+.pause-modal-header {
+  background: #183318;
+  border-bottom: 2px solid #2e592e;
+}
+
+.pause-header-icon {
+  color: #4ade80;
+  font-size: 14px;
+}
+
+.pause-modal-body {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+  padding: 20px 16px;
+}
+
+.pause-mode-desc {
+  font-family: var(--font-retro);
+  font-size: 7px;
+  color: #a0c4a0;
+  text-align: center;
+  letter-spacing: 0.5px;
+  line-height: 1.4;
+}
+
+.pause-btn-group {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  gap: 10px;
+}
+
+.pixel-modal-btn {
+  font-family: var(--font-retro);
+  font-size: 8px;
+  letter-spacing: 0.5px;
+  height: 38px;
+  width: 100%;
+  border-radius: 4px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s ease;
+  touch-action: manipulation;
+  user-select: none;
+}
+
+.pixel-modal-btn:active {
+  transform: translateY(1px) scale(0.98);
+}
+
+.pixel-modal-btn.btn-resume {
+  background: linear-gradient(180deg, #1d4d1d 0%, #112e11 100%);
+  border: 1.5px solid #4ade80;
+  color: #ffffff;
+  box-shadow: 0 2px 8px rgba(74, 222, 128, 0.2);
+}
+.pixel-modal-btn.btn-resume:hover {
+  background: #286628;
+  border-color: #86efac;
+}
+
+.pixel-modal-btn.btn-retry {
+  background: linear-gradient(180deg, #3d2314 0%, #24140a 100%);
+  border: 1.5px solid #f59e0b;
+  color: #ffd166;
+}
+.pixel-modal-btn.btn-retry:hover {
+  background: #522f1a;
+  border-color: #fbbf24;
+}
+
+.pixel-modal-btn.btn-menu {
+  background: linear-gradient(180deg, #1c261c 0%, #0d140d 100%);
+  border: 1.5px solid #476647;
+  color: #a0c4a0;
+}
+.pixel-modal-btn.btn-menu:hover {
+  background: #2c3d2c;
+  color: #ffffff;
+}
+
+.pause-tip {
+  font-family: var(--font-retro);
+  font-size: 5.5px;
+  color: #627d62;
+  text-align: center;
+}
+
 /* Responsive adjustments for mobile screens */
 @media (max-width: 600px) {
   #arcade-header {
@@ -626,6 +727,41 @@ html, body {
 
 /* Floating Landscape Nimiq Button (hidden by default in portrait) */
 .landscape-nimiq-btn {
+  display: none !important;
+}
+
+/* Pause Buttons */
+.pause-header-btn {
+  background: linear-gradient(180deg, #182e18 0%, #0c180c 100%);
+  border: 1px solid #4ade80;
+  color: #4ade80;
+  border-radius: 4px;
+  height: 32px;
+  padding: 0 10px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+  font-family: var(--font-retro);
+  font-size: 8px;
+  letter-spacing: 0.5px;
+  transition: all 0.2s ease;
+}
+
+.pause-header-btn:hover {
+  background: #244624;
+  box-shadow: 0 0 8px rgba(74, 222, 128, 0.4);
+}
+
+.pause-header-btn:active {
+  transform: translateY(1px);
+}
+
+.pause-header-btn.hidden {
+  display: none !important;
+}
+
+.landscape-pause-btn {
   display: none !important;
 }
 
@@ -667,6 +803,43 @@ html, body {
   .landscape-nimiq-btn:active {
     transform: scale(0.94);
     background: rgba(30, 52, 30, 0.95);
+  }
+
+  /* Sleek floating Pause button in landscape toolbar */
+  .landscape-pause-btn {
+    display: flex !important;
+    align-items: center;
+    gap: 6px;
+    position: fixed;
+    top: max(8px, env(safe-area-inset-top, 8px));
+    right: calc(max(14px, env(safe-area-inset-right, 14px)) + 98px);
+    z-index: 120;
+    background: rgba(13, 23, 13, 0.85);
+    border: 1px solid rgba(74, 222, 128, 0.85);
+    border-radius: 20px;
+    padding: 4px 10px;
+    color: #4ade80;
+    font-family: var(--font-retro);
+    font-size: 8px;
+    letter-spacing: 0.5px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.7);
+    backdrop-filter: blur(6px);
+    -webkit-backdrop-filter: blur(6px);
+    cursor: pointer;
+    pointer-events: auto;
+    user-select: none;
+    -webkit-user-select: none;
+    touch-action: manipulation;
+    transition: transform 0.1s ease, background 0.1s ease;
+  }
+
+  .landscape-pause-btn:active {
+    transform: scale(0.94);
+    background: rgba(30, 52, 30, 0.95);
+  }
+
+  .landscape-pause-btn.hidden {
+    display: none !important;
   }
 
   #app {

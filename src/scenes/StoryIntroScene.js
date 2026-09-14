@@ -2,6 +2,7 @@ import Phaser from 'phaser';
 import { GAME_CONFIG } from '../config.js';
 import { sound } from '../engine/Audio.js';
 import { storage } from '../engine/Storage.js';
+import { pauseService } from '../engine/PauseService.js';
 
 const PROLOGUE_SLIDES = [
   {
@@ -131,6 +132,8 @@ export default class StoryIntroScene extends Phaser.Scene {
     const h = GAME_CONFIG.HEIGHT;
     this.currentSlide = 0;
     this.isTransitioning = false;
+
+    pauseService.detachScene();
 
     if (typeof window !== 'undefined' && window.touchController) {
       window.touchController.hide();

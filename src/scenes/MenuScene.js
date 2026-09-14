@@ -5,6 +5,7 @@ import { storage } from '../engine/Storage.js';
 import { getTodaySeedString } from '../engine/PRNG.js';
 import { nimiqModal } from '../ui/NimiqModal.js';
 import { nimiqService } from '../engine/NimiqService.js';
+import { pauseService } from '../engine/PauseService.js';
 
 export default class MenuScene extends Phaser.Scene {
   constructor() {
@@ -15,6 +16,7 @@ export default class MenuScene extends Phaser.Scene {
     const w = this.cameras.main.width;
     const h = this.cameras.main.height;
 
+    pauseService.detachScene();
     this.cameras.main.resetFX();
     sound.startBGM();
 

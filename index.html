@@ -24,6 +24,11 @@
       </div>
       
       <div class="header-status">
+        <!-- Pause Button (Header / Portrait) -->
+        <button id="btn-pause-header" class="pixel-wallet-btn pause-header-btn hidden" title="Pause Game (Esc / P)" aria-label="Pause">
+          <span>⏸ PAUSE</span>
+        </button>
+
         <!-- Nimiq Wallet Connect Status Button -->
         <button id="btn-nimiq" class="pixel-wallet-btn" title="Nimiq Altar & Wallet">
           <span class="nimiq-bolt">⚡</span>
@@ -32,6 +37,11 @@
         </button>
       </div>
     </header>
+
+    <!-- Floating Landscape Pause Button (only visible in landscape mode during battle) -->
+    <button id="btn-pause-landscape" class="landscape-pause-btn hidden" title="Pause Game (Esc / P)" aria-label="Pause">
+      <span>⏸ PAUSE</span>
+    </button>
 
     <!-- Floating Landscape Nimiq Status/Wallet Button (only visible in landscape mode) -->
     <button id="btn-nimiq-landscape" class="landscape-nimiq-btn" title="Nimiq Altar & Wallet" aria-label="Nimiq Wallet">
@@ -132,6 +142,36 @@
         </div>
         <div id="modal-body" class="modal-body">
           <!-- Dynamic Content -->
+        </div>
+      </div>
+    </div>
+
+    <!-- In-Game Pause Modal Overlay -->
+    <div id="pause-modal" class="modal-overlay hidden">
+      <div class="modal-card pause-modal-card">
+        <div class="modal-header pause-modal-header">
+          <div class="modal-title-wrap">
+            <span class="pause-header-icon">⏸</span>
+            <h3 id="pause-modal-title">GAME PAUSED</h3>
+          </div>
+          <button id="btn-close-pause" class="pixel-close-btn" aria-label="Resume">✖</button>
+        </div>
+        <div class="modal-body pause-modal-body">
+          <div id="pause-mode-desc" class="pause-mode-desc">CHAPTER 1: WHISPERING WOODS</div>
+          <div class="pause-btn-group">
+            <button id="btn-pause-resume" class="pixel-modal-btn btn-resume">
+              ▶ RESUME GAME
+            </button>
+            <button id="btn-pause-retry" class="pixel-modal-btn btn-retry">
+              ↺ RETRY BATTLE
+            </button>
+            <button id="btn-pause-menu" class="pixel-modal-btn btn-menu">
+              ◄ MAIN MENU
+            </button>
+          </div>
+          <div class="pause-tip">
+            PRESS [ESC] OR [P] TO RESUME
+          </div>
         </div>
       </div>
     </div>

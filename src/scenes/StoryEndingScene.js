@@ -2,6 +2,7 @@ import Phaser from 'phaser';
 import { GAME_CONFIG } from '../config.js';
 import { sound } from '../engine/Audio.js';
 import { storage } from '../engine/Storage.js';
+import { pauseService } from '../engine/PauseService.js';
 import confetti from 'canvas-confetti';
 
 export default class StoryEndingScene extends Phaser.Scene {
@@ -12,6 +13,8 @@ export default class StoryEndingScene extends Phaser.Scene {
   create(data) {
     const w = GAME_CONFIG.WIDTH;
     const h = GAME_CONFIG.HEIGHT;
+
+    pauseService.detachScene();
 
     if (typeof window !== 'undefined' && window.touchController) {
       window.touchController.hide();

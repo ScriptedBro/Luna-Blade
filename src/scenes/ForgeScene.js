@@ -3,6 +3,7 @@ import { GAME_CONFIG } from '../config.js';
 import { sound } from '../engine/Audio.js';
 import { storage } from '../engine/Storage.js';
 import { nimiqModal } from '../ui/NimiqModal.js';
+import { pauseService } from '../engine/PauseService.js';
 import confetti from 'canvas-confetti';
 
 export default class ForgeScene extends Phaser.Scene {
@@ -13,6 +14,8 @@ export default class ForgeScene extends Phaser.Scene {
   create() {
     const w = GAME_CONFIG.WIDTH;
     const h = GAME_CONFIG.HEIGHT;
+
+    pauseService.detachScene();
 
     if (typeof window !== 'undefined' && window.touchController) {
       window.touchController.hide();

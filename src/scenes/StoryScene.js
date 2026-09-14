@@ -17,6 +17,7 @@ import StoryDialogueBox from '../ui/StoryDialogueBox.js';
 import { GAME_CONFIG } from '../config.js';
 import { sound } from '../engine/Audio.js';
 import { storage } from '../engine/Storage.js';
+import { pauseService } from '../engine/PauseService.js';
 import confetti from 'canvas-confetti';
 
 export default class StoryScene extends Phaser.Scene {
@@ -53,6 +54,12 @@ export default class StoryScene extends Phaser.Scene {
     if (typeof window !== 'undefined' && window.touchController) {
       window.touchController.hide();
     }
+
+    pauseService.attachScene(this, `CHAPTER ${this.chapterId}: ${this.chapterConfig.title}`);
+    pauseService.hideButtons();
+    this.events.once('shutdown', () => {
+      pauseService.detachScene();
+    });
 
     // Physics bounds
     this.physics.world.setBounds(0, 0, this.levelWidth, this.levelHeight);
@@ -948,6 +955,7 @@ export default class StoryScene extends Phaser.Scene {
     if (typeof window !== 'undefined' && window.touchController) {
       window.touchController.hide();
     }
+    pauseService.hideButtons();
     this.physics.pause();
     if (this.player && this.player.body) {
       this.player.setVelocity(0, 0);
@@ -962,13 +970,16 @@ export default class StoryScene extends Phaser.Scene {
       });
     }
     const box = new StoryDialogueBox(this);
+    this.dialogueBox = box;
     box.startDialogue(lines, () => {
+      this.dialogueBox = null;
       this.inDialogue = false;
       this.physics.resume();
       if (!this.isVictory && (!this.player || !this.player.isDead)) {
         if (typeof window !== 'undefined' && window.touchController) {
           window.touchController.show();
         }
+        pauseService.showButtons();
       }
       if (onComplete) onComplete();
     });
@@ -1110,6 +1121,7 @@ export default class StoryScene extends Phaser.Scene {
     if (this.isVictory) return;
     this.isVictory = true;
     sound.playVictory();
+    pauseService.hideButtons();
 
     if (typeof window !== 'undefined' && window.touchController) {
       window.touchController.hide();
@@ -1151,6 +1163,11 @@ export default class StoryScene extends Phaser.Scene {
   }
 
   showVictoryBanner() {
+    pauseService.hideButtons();
+    if (typeof window !== 'undefined' && window.touchController) {
+      window.touchController.hide();
+    }
+
     // Celebration Confetti
     try {
       confetti({
@@ -1167,45 +1184,121 @@ export default class StoryScene extends Phaser.Scene {
     // Victory Banner Container
     const banner = this.add.container(w / 2, h / 2).setScrollFactor(0).setDepth(500);
 
-    // Dim background overlay (tapping background also advances)
-    const overlay = this.add.rectangle(0, 0, w, h, 0x000000, 0.5).setInteractive();
+    // Dim background overlay (interactive to block touches underneath)
+    const overlay = this.add.rectangle(0, 0, w, h, 0x000000, 0.65).setInteractive();
     banner.add(overlay);
 
-    const box = this.add.rectangle(0, 0, 360, 140, 0x0b2110, 0.95);
+    const nextCh = this.chapterId < 3 ? this.chapterId + 1 : null;
+    const boxHeight = nextCh ? 164 : 140;
+    const box = this.add.rectangle(0, 0, 380, boxHeight, 0x0b2110, 0.96);
     box.setStrokeStyle(2, 0xf6c026);
     banner.add(box);
 
-    const title = this.add.text(0, -45, '✨ SHRINE CLEANSED! ✨', {
+    const title = this.add.text(0, -boxHeight / 2 + 22, '✨ SHRINE CLEANSED! ✨', {
       fontFamily: 'Press Start 2P',
       fontSize: '11px',
       color: '#f6c026'
     }).setOrigin(0.5);
     banner.add(title);
 
-    const nextCh = this.chapterId < 3 ? this.chapterId + 1 : null;
     const subTitleText = nextCh ? `Chapter ${this.chapterId} Cleared! | Foes Cleansed: ${this.killsCount}` : `Forest Restored! All 3 Shrines Cleansed!`;
-    const msg = this.add.text(0, -22, subTitleText, {
+    const msg = this.add.text(0, -boxHeight / 2 + 42, subTitleText, {
       fontFamily: 'Press Start 2P',
       fontSize: '7px',
       color: '#b0f0b0'
     }).setOrigin(0.5);
     banner.add(msg);
 
-    const btnText = nextCh ? `ADVANCE TO CHAPTER ${nextCh} ➔` : 'RETURN TO MAIN MENU ➔';
-    const btn = this.add.rectangle(0, 8, 270, 26, 0x1d5828).setStrokeStyle(2, 0x76ee76).setInteractive({ useHandCursor: true });
-    banner.add(btn);
+    let actionTaken = false;
+    const cleanup = () => {
+      this.input.off('pointerdown', onScenePointerDown);
+      this.input.keyboard.off('keydown', onKeyDown);
+      if (this.game && this.game.canvas) {
+        this.game.canvas.removeEventListener('pointerdown', onCanvasPointerDown);
+      }
+    };
 
-    const btnLabel = this.add.text(0, 8, btnText, {
-      fontFamily: 'Press Start 2P',
-      fontSize: '8px',
-      color: '#ffffff'
-    }).setOrigin(0.5);
-    banner.add(btnLabel);
+    const doAdvance = () => {
+      if (actionTaken || this.time.now < this.victoryInputReadyTime) return;
+      actionTaken = true;
+      cleanup();
+      sound.playCoin();
+      if (nextCh) {
+        this.scene.restart({ chapter: nextCh });
+      } else {
+        this.scene.start('MenuScene');
+      }
+    };
 
-    // Animated flashing keyboard & touch hint
-    const hintText = this.add.text(0, 38, '▶ TAP OR PRESS ACTION TO ADVANCE ◀', {
+    const doRetry = () => {
+      if (actionTaken || this.time.now < this.victoryInputReadyTime) return;
+      actionTaken = true;
+      cleanup();
+      sound.playCoin();
+      this.scene.restart({ chapter: this.chapterId });
+    };
+
+    const doMenu = () => {
+      if (actionTaken || this.time.now < this.victoryInputReadyTime) return;
+      actionTaken = true;
+      cleanup();
+      sound.playCoin();
+      this.scene.start('MenuScene');
+    };
+
+    this.victoryAdvanceCallback = nextCh ? doAdvance : doMenu;
+
+    const buttons = [];
+    const createBtn = (relX, relY, bw, bh, bgCol, borderCol, textCol, label, action) => {
+      const btnRect = this.add.rectangle(relX, relY, bw, bh, bgCol)
+        .setStrokeStyle(1.5, borderCol)
+        .setInteractive({ useHandCursor: true });
+      banner.add(btnRect);
+
+      const btnLabel = this.add.text(relX, relY, label, {
+        fontFamily: 'Press Start 2P',
+        fontSize: '7px',
+        color: textCol
+      }).setOrigin(0.5);
+      banner.add(btnLabel);
+
+      const setHover = (hover) => {
+        const s = hover ? 1.03 : 1.0;
+        btnRect.setScale(s);
+        btnLabel.setScale(s);
+      };
+
+      btnRect.on('pointerover', () => setHover(true));
+      btnRect.on('pointerout', () => setHover(false));
+      btnRect.on('pointerdown', action);
+
+      buttons.push({
+        minX: (w / 2 + relX) - bw / 2,
+        maxX: (w / 2 + relX) + bw / 2,
+        minY: (h / 2 + relY) - bh / 2,
+        maxY: (h / 2 + relY) + bh / 2,
+        action
+      });
+
+      return { btnRect, btnLabel };
+    };
+
+    if (nextCh) {
+      // Advance to next chapter
+      createBtn(0, -6, 280, 26, 0x1d5828, 0x76ee76, '#ffffff', `ADVANCE TO CHAPTER ${nextCh} ➔`, doAdvance);
+      // Secondary options: Retry Chapter or Main Menu
+      createBtn(-78, 30, 140, 24, 0x223322, 0x55aa55, '#88ee88', '↺ RETRY', doRetry);
+      createBtn(78, 30, 140, 24, 0x332818, 0xee9933, '#ffcc77', '◄ MAIN MENU', doMenu);
+    } else {
+      // Replay Chapter or Main Menu
+      createBtn(-80, 8, 150, 28, 0x223322, 0x55aa55, '#88ee88', '↺ REPLAY CHAPTER', doRetry);
+      createBtn(80, 8, 150, 28, 0x332818, 0xee9933, '#ffcc77', '◄ MAIN MENU', doMenu);
+    }
+
+    const hintY = nextCh ? 56 : 42;
+    const hintText = this.add.text(0, hintY, '▶ SELECT AN OPTION TO CONTINUE ◀', {
       fontFamily: 'Press Start 2P',
-      fontSize: '6.5px',
+      fontSize: '6px',
       color: '#f6c026'
     }).setOrigin(0.5);
     banner.add(hintText);
@@ -1219,37 +1312,60 @@ export default class StoryScene extends Phaser.Scene {
       ease: 'Sine.easeInOut'
     });
 
-    // Advance logic
-    let advanced = false;
-    const advanceNext = () => {
-      if (advanced) return;
-      if (this.time.now < this.victoryInputReadyTime) return;
-      advanced = true;
-      sound.playCoin();
-      if (nextCh) {
-        this.scene.restart({ chapter: nextCh });
-      } else {
-        this.scene.start('MenuScene');
+    const onScenePointerDown = (pointer) => {
+      if (actionTaken || this.time.now < this.victoryInputReadyTime) return;
+      const px = pointer.x;
+      const py = pointer.y;
+      for (const b of buttons) {
+        if (px >= b.minX && px <= b.maxX && py >= b.minY && py <= b.maxY) {
+          b.action();
+          return;
+        }
       }
     };
+    this.input.on('pointerdown', onScenePointerDown);
 
-    this.victoryAdvanceCallback = advanceNext;
-
-    btn.on('pointerdown', advanceNext);
-    overlay.on('pointerdown', advanceNext);
-
-    // Direct key listener
-    this.input.keyboard.on('keydown', (event) => {
-      if (!this.isVictory) return;
-      if (event.code === 'Space' || event.code === 'Enter' || event.code === 'KeyJ' || event.code === 'KeyZ' || event.code === 'KeyE') {
-        advanceNext();
+    const onCanvasPointerDown = (e) => {
+      if (actionTaken || this.time.now < this.victoryInputReadyTime) return;
+      if (!this.game || !this.game.canvas) return;
+      const rect = this.game.canvas.getBoundingClientRect();
+      const px = ((e.clientX - rect.left) / rect.width) * w;
+      const py = ((e.clientY - rect.top) / rect.height) * h;
+      for (const b of buttons) {
+        if (px >= b.minX && px <= b.maxX && py >= b.minY && py <= b.maxY) {
+          b.action();
+          return;
+        }
       }
-    });
+    };
+    if (this.game && this.game.canvas) {
+      this.game.canvas.addEventListener('pointerdown', onCanvasPointerDown);
+    }
+
+    const onKeyDown = (event) => {
+      if (actionTaken || this.time.now < this.victoryInputReadyTime) return;
+      const key = (event.key || '').toUpperCase();
+      if (nextCh && (key === 'ENTER' || key === ' ' || key === 'J')) {
+        doAdvance();
+      } else if (key === 'R') {
+        doRetry();
+      } else if (key === 'ESCAPE' || key === 'M') {
+        doMenu();
+      }
+    };
+    this.input.keyboard.on('keydown', onKeyDown);
   }
 
   handlePlayerGameOver() {
+    if (this.isGameOver) return;
+    this.isGameOver = true;
     sound.playGameOver();
-    this.gameOverInputReadyTime = this.time.now + 700;
+    pauseService.hideButtons();
+    this.gameOverInputReadyTime = this.time.now + 350;
+
+    if (this.player && !this.player.isDead) {
+      this.player.die();
+    }
 
     if (typeof window !== 'undefined' && window.touchController) {
       window.touchController.hide();
@@ -1260,38 +1376,100 @@ export default class StoryScene extends Phaser.Scene {
       this.chapterIntroCard = null;
     }
 
-    this.time.delayedCall(700, () => {
-      const w = GAME_CONFIG.WIDTH;
-      const h = GAME_CONFIG.HEIGHT;
-      const card = this.add.container(w / 2, h / 2).setScrollFactor(0).setDepth(500);
+    const w = GAME_CONFIG.WIDTH;
+    const h = GAME_CONFIG.HEIGHT;
+    const card = this.add.container(w / 2, h / 2).setScrollFactor(0).setDepth(500);
 
-      const overlay = this.add.rectangle(0, 0, w, h, 0x000000, 0.5).setInteractive();
+      const overlay = this.add.rectangle(0, 0, w, h, 0x000000, 0.65).setInteractive();
       card.add(overlay);
 
-      const box = this.add.rectangle(0, 0, 320, 120, 0x240e0e, 0.95);
+      const box = this.add.rectangle(0, 0, 360, 130, 0x240e0e, 0.96);
       box.setStrokeStyle(2, 0xff4444);
       card.add(box);
 
-      const title = this.add.text(0, -35, 'YOU FELL IN BATTLE', {
+      const title = this.add.text(0, -42, 'YOU FELL IN BATTLE', {
         fontFamily: 'Press Start 2P',
         fontSize: '11px',
         color: '#ff4444'
       }).setOrigin(0.5);
       card.add(title);
 
-      const retryBtn = this.add.rectangle(0, 5, 220, 24, 0x5a1818).setStrokeStyle(2, 0xff7777).setInteractive({ useHandCursor: true });
-      card.add(retryBtn);
-
-      const retryLabel = this.add.text(0, 5, 'RETRY CHAPTER ↺', {
-        fontFamily: 'Press Start 2P',
-        fontSize: '8px',
-        color: '#ffffff'
-      }).setOrigin(0.5);
-      card.add(retryLabel);
-
-      const hintText = this.add.text(0, 34, '▶ TAP OR PRESS ACTION TO RETRY ◀', {
+      const subtitle = this.add.text(0, -22, `Chapter ${this.chapterId}: ${this.chapterConfig.title}`, {
         fontFamily: 'Press Start 2P',
         fontSize: '6.5px',
+        color: '#ffaaaa'
+      }).setOrigin(0.5);
+      card.add(subtitle);
+
+      let actionTaken = false;
+      const cleanup = () => {
+        this.input.off('pointerdown', onScenePointerDown);
+        this.input.keyboard.off('keydown', onKeyDown);
+        if (this.game && this.game.canvas) {
+          this.game.canvas.removeEventListener('pointerdown', onCanvasPointerDown);
+        }
+      };
+
+      const doRetry = () => {
+        if (actionTaken || this.time.now < this.gameOverInputReadyTime) return;
+        actionTaken = true;
+        cleanup();
+        sound.playCoin();
+        this.scene.restart({ chapter: this.chapterId });
+      };
+
+      const doMenu = () => {
+        if (actionTaken || this.time.now < this.gameOverInputReadyTime) return;
+        actionTaken = true;
+        cleanup();
+        sound.playCoin();
+        this.scene.start('MenuScene');
+      };
+
+      this.gameOverRetryCallback = doRetry;
+
+      const buttons = [];
+      const createBtn = (relX, relY, bw, bh, bgCol, borderCol, textCol, label, action) => {
+        const btnRect = this.add.rectangle(relX, relY, bw, bh, bgCol)
+          .setStrokeStyle(1.5, borderCol)
+          .setInteractive({ useHandCursor: true });
+        card.add(btnRect);
+
+        const btnLabel = this.add.text(relX, relY, label, {
+          fontFamily: 'Press Start 2P',
+          fontSize: '7px',
+          color: textCol
+        }).setOrigin(0.5);
+        card.add(btnLabel);
+
+        const setHover = (hover) => {
+          const s = hover ? 1.04 : 1.0;
+          btnRect.setScale(s);
+          btnLabel.setScale(s);
+        };
+
+        btnRect.on('pointerover', () => setHover(true));
+        btnRect.on('pointerout', () => setHover(false));
+        btnRect.on('pointerdown', action);
+
+        buttons.push({
+          minX: (w / 2 + relX) - bw / 2,
+          maxX: (w / 2 + relX) + bw / 2,
+          minY: (h / 2 + relY) - bh / 2,
+          maxY: (h / 2 + relY) + bh / 2,
+          action
+        });
+
+        return { btnRect, btnLabel };
+      };
+
+      // Two distinct buttons side-by-side: Retry and Main Menu
+      createBtn(-78, 10, 140, 26, 0x5a1818, 0xff7777, '#ffffff', '↺ RETRY', doRetry);
+      createBtn(78, 10, 140, 26, 0x382414, 0xf59e0b, '#f59e0b', '◄ MAIN MENU', doMenu);
+
+      const hintText = this.add.text(0, 42, '▶ PRESS [R] TO RETRY OR [ESC] FOR MENU ◀', {
+        fontFamily: 'Press Start 2P',
+        fontSize: '5.5px',
         color: '#ffaaaa'
       }).setOrigin(0.5);
       card.add(hintText);
@@ -1305,26 +1483,46 @@ export default class StoryScene extends Phaser.Scene {
         ease: 'Sine.easeInOut'
       });
 
-      let retried = false;
-      const doRetry = () => {
-        if (retried) return;
-        if (this.time.now < this.gameOverInputReadyTime) return;
-        retried = true;
-        this.scene.restart({ chapter: this.chapterId });
-      };
-
-      this.gameOverRetryCallback = doRetry;
-
-      retryBtn.on('pointerdown', doRetry);
-      overlay.on('pointerdown', doRetry);
-
-      this.input.keyboard.on('keydown', (event) => {
-        if (!this.player?.isDead) return;
-        if (event.code === 'Space' || event.code === 'Enter' || event.code === 'KeyR' || event.code === 'KeyJ') {
-          doRetry();
+      const onScenePointerDown = (pointer) => {
+        if (actionTaken || this.time.now < this.gameOverInputReadyTime) return;
+        const px = pointer.x;
+        const py = pointer.y;
+        for (const b of buttons) {
+          if (px >= b.minX && px <= b.maxX && py >= b.minY && py <= b.maxY) {
+            b.action();
+            return;
+          }
         }
-      });
-    });
+      };
+      this.input.on('pointerdown', onScenePointerDown);
+
+      const onCanvasPointerDown = (e) => {
+        if (actionTaken || this.time.now < this.gameOverInputReadyTime) return;
+        if (!this.game || !this.game.canvas) return;
+        const rect = this.game.canvas.getBoundingClientRect();
+        const px = ((e.clientX - rect.left) / rect.width) * w;
+        const py = ((e.clientY - rect.top) / rect.height) * h;
+        for (const b of buttons) {
+          if (px >= b.minX && px <= b.maxX && py >= b.minY && py <= b.maxY) {
+            b.action();
+            return;
+          }
+        }
+      };
+      if (this.game && this.game.canvas) {
+        this.game.canvas.addEventListener('pointerdown', onCanvasPointerDown);
+      }
+
+      const onKeyDown = (event) => {
+        if (actionTaken || this.time.now < this.gameOverInputReadyTime) return;
+        const key = (event.key || '').toUpperCase();
+        if (key === 'R' || key === 'ENTER' || key === ' ' || key === 'J') {
+          doRetry();
+        } else if (key === 'ESCAPE' || key === 'M') {
+          doMenu();
+        }
+      };
+      this.input.keyboard.on('keydown', onKeyDown);
   }
 
   update() {
