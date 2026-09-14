@@ -95,9 +95,7 @@ export class TouchController {
     const dpadContainer = document.querySelector('.touch-dpad');
     const dpadBtns = {
       'touch-left': { key: 'left', el: document.getElementById('touch-left') },
-      'touch-right': { key: 'right', el: document.getElementById('touch-right') },
-      'touch-up': { key: 'up', el: document.getElementById('touch-up') },
-      'touch-down': { key: 'down', el: document.getElementById('touch-down') }
+      'touch-right': { key: 'right', el: document.getElementById('touch-right') }
     };
 
     let activeDpadPointerId = null;
@@ -241,9 +239,9 @@ export class TouchController {
       });
     };
 
-    bindActionBtn('touch-jump', 'jump');
-    bindActionBtn('touch-attack', 'attack');
     bindActionBtn('touch-upslash', 'upslash');
+    bindActionBtn('touch-attack', 'attack');
+    bindActionBtn('touch-jump', 'jump');
 
     // Reset inputs when user switches apps or browser loses focus
     const resetAllInputs = () => {

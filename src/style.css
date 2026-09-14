@@ -283,23 +283,17 @@ html, body {
 .touch-dpad {
   display: flex;
   align-items: center;
-  gap: 5px;
+  gap: 8px;
   padding: 6px;
   margin: -6px;
   box-sizing: content-box;
 }
 
-.touch-dpad-vertical {
-  display: flex;
-  flex-direction: column;
-  gap: 5px;
-}
-
 .dpad-btn {
-  width: 48px;
-  height: 46px;
-  font-size: 15px;
-  border-radius: 8px;
+  width: 58px;
+  height: 54px;
+  font-size: 18px;
+  border-radius: 10px;
   display: flex;
   align-items: center;
   justify-content: center;
