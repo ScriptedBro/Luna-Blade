@@ -34,10 +34,14 @@ class NimiqServiceManager {
         this.provider = window.nimiq;
         this.isNimiqPay = true;
       } else {
+        // If top-level outside iframe, Nimiq Pay is not injecting, use swift check
+        const isEmbedded = typeof window !== 'undefined' && (window.self !== window.top || window.opener);
+        const timeoutMs = isEmbedded ? 600 : 200;
+
         // Attempt init from SDK (resolves when Nimiq Pay injects provider)
         const nimiq = await Promise.race([
-          init({ timeout: 2500 }),
-          new Promise((_, reject) => setTimeout(() => reject(new Error('Nimiq Pay host timeout')), 2600))
+          init({ timeout: timeoutMs }),
+          new Promise((_, reject) => setTimeout(() => reject(new Error('Nimiq Pay host timeout')), timeoutMs + 50))
         ]);
         if (nimiq) {
           this.provider = nimiq;
