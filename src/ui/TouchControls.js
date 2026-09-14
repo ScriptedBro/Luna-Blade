@@ -50,6 +50,10 @@ export class TouchController {
         setTimeout(handleResize, 300);
       });
     }
+    if (typeof window !== 'undefined' && window.visualViewport) {
+      window.visualViewport.addEventListener('resize', handleResize);
+      window.visualViewport.addEventListener('scroll', handleResize);
+    }
 
     // Prevent default touch gestures that cause page scroll or pull-to-refresh
     document.addEventListener(
@@ -304,25 +308,34 @@ export class TouchController {
     const txtNimiq = document.getElementById('nimiq-btn-text');
     const dotNimiq = document.getElementById('nimiq-dot');
 
-    if (btnNimiq) {
-      btnNimiq.addEventListener('click', () => {
-        nimiqModal.open();
-      });
-    }
+    const btnNimiqLand = document.getElementById('btn-nimiq-landscape');
+    const txtNimiqLand = document.getElementById('nimiq-btn-text-landscape');
+    const dotNimiqLand = document.getElementById('nimiq-dot-landscape');
+
+    const openAltar = () => {
+      nimiqModal.open();
+    };
+
+    if (btnNimiq) btnNimiq.addEventListener('click', openAltar);
+    if (btnNimiqLand) btnNimiqLand.addEventListener('click', openAltar);
 
     // Subscribe to Nimiq status changes to update header indicator
     nimiqService.subscribe((status) => {
-      if (!txtNimiq || !dotNimiq) return;
+      const updateBadge = (txt, dot) => {
+        if (!txt || !dot) return;
+        if (status.connected) {
+          dot.classList.remove('offline');
+          dot.classList.add('online');
+          txt.textContent = status.shortAddress || 'CONNECTED';
+        } else {
+          dot.classList.remove('online');
+          dot.classList.add('offline');
+          txt.textContent = 'NIMIQ';
+        }
+      };
 
-      if (status.connected) {
-        dotNimiq.classList.remove('offline');
-        dotNimiq.classList.add('online');
-        txtNimiq.textContent = status.shortAddress || 'CONNECTED';
-      } else {
-        dotNimiq.classList.remove('online');
-        dotNimiq.classList.add('offline');
-        txtNimiq.textContent = 'NIMIQ';
-      }
+      updateBadge(txtNimiq, dotNimiq);
+      updateBadge(txtNimiqLand, dotNimiqLand);
     });
   }
 

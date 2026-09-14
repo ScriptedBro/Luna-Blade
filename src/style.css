@@ -624,44 +624,165 @@ html, body {
   }
 }
 
-/* Dedicated Landscape Layout on Mobile & Wide Viewports */
-@media (orientation: landscape) and (min-height: 240px) {
+/* Floating Landscape Nimiq Button (hidden by default in portrait) */
+.landscape-nimiq-btn {
+  display: none !important;
+}
+
+/* Dedicated Full-Screen Landscape Layout on Mobile & Wide Viewports */
+@media (orientation: landscape) {
+  /* Hide the top arcade header completely so canvas expands to full screen */
   #arcade-header {
-    height: calc(40px + env(safe-area-inset-top, 0px));
-    min-height: calc(40px + env(safe-area-inset-top, 0px));
+    display: none !important;
+  }
+
+  /* Sleek floating Nimiq indicator in landscape corner */
+  .landscape-nimiq-btn {
+    display: flex !important;
+    align-items: center;
+    gap: 6px;
+    position: fixed;
+    top: max(8px, env(safe-area-inset-top, 8px));
+    right: max(14px, env(safe-area-inset-right, 14px));
+    z-index: 120;
+    background: rgba(13, 23, 13, 0.82);
+    border: 1px solid rgba(246, 192, 38, 0.8);
+    border-radius: 20px;
+    padding: 4px 10px;
+    color: #f6c026;
+    font-family: var(--font-retro);
+    font-size: 8px;
+    letter-spacing: 0.5px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.7);
+    backdrop-filter: blur(6px);
+    -webkit-backdrop-filter: blur(6px);
+    cursor: pointer;
+    pointer-events: auto;
+    user-select: none;
+    -webkit-user-select: none;
+    touch-action: manipulation;
+    transition: transform 0.1s ease, background 0.1s ease;
+  }
+
+  .landscape-nimiq-btn:active {
+    transform: scale(0.94);
+    background: rgba(30, 52, 30, 0.95);
+  }
+
+  #app {
+    width: 100vw;
+    width: 100dvw;
+    height: 100vh;
+    height: 100dvh;
+    max-width: 100dvw;
+    max-height: 100dvh;
+    overflow: hidden;
+    position: fixed;
+    inset: 0;
   }
 
   #game-wrapper {
-    flex-direction: row;
+    position: fixed;
+    inset: 0;
+    width: 100vw;
+    width: 100dvw;
+    height: 100vh;
+    height: 100dvh;
+    max-width: 100dvw;
+    max-height: 100dvh;
+    background: #000;
+    display: flex;
     align-items: center;
     justify-content: center;
-    background: #000;
+    overflow: hidden;
+    padding: 0;
+    margin: 0;
   }
 
   #game-container {
+    position: absolute;
+    inset: 0;
     width: 100%;
     height: 100%;
+    max-width: 100%;
     max-height: 100%;
     aspect-ratio: auto;
     border-bottom: none;
     box-shadow: none;
+    background: #000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
   }
 
+  #game-container canvas {
+    max-width: 100% !important;
+    max-height: 100% !important;
+    display: block;
+    box-shadow: none;
+  }
+
+  /* Floating controls overlay directly onto full-screen viewport */
   .touch-controls {
-    position: absolute;
-    bottom: 0;
-    left: 0;
-    right: 0;
-    width: 100%;
-    flex: none;
-    background: transparent;
-    border-top: none;
-    pointer-events: none;
-    padding: 0 20px 12px 20px;
-    padding-left: max(20px, env(safe-area-inset-left, 20px));
-    padding-right: max(20px, env(safe-area-inset-right, 20px));
-    padding-bottom: max(12px, env(safe-area-inset-bottom, 12px));
+    position: fixed;
+    inset: 0;
+    width: 100vw;
+    width: 100dvw;
+    height: 100vh;
+    height: 100dvh;
+    display: flex;
+    justify-content: space-between;
     align-items: flex-end;
+    pointer-events: none;
+    z-index: 100;
+    background: transparent !important;
+    border-top: none;
+    padding: 0 16px;
+    padding-left: max(18px, env(safe-area-inset-left, 18px));
+    padding-right: max(18px, env(safe-area-inset-right, 18px));
+    padding-bottom: max(18px, env(safe-area-inset-bottom, 18px));
+    box-sizing: border-box;
+  }
+
+  .touch-dpad {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 0;
+    pointer-events: auto;
+  }
+
+  .dpad-btn {
+    width: 62px;
+    height: 56px;
+    font-size: 20px;
+    border-radius: 10px;
+    pointer-events: auto;
+    background: rgba(16, 32, 16, 0.88);
+    border-color: rgba(90, 180, 90, 0.85);
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.6);
+  }
+
+  .touch-actions {
+    display: grid;
+    grid-template-columns: repeat(2, auto);
+    grid-template-areas:
+      "upslash upslash"
+      "attack  jump";
+    gap: 8px 10px;
+    justify-items: center;
+    align-items: center;
+    margin-bottom: 0;
+    pointer-events: auto;
+  }
+
+  .action-btn {
+    width: 56px;
+    height: 56px;
+    font-size: 8.5px;
+    pointer-events: auto;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.6);
   }
 
   .touch-dpad,
