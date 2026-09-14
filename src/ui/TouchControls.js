@@ -35,6 +35,16 @@ export class TouchController {
       if (this.game && this.game.scale) {
         this.game.scale.refresh();
       }
+
+      if (typeof window !== 'undefined' && window.visualViewport && this.touchContainer) {
+        const isLandscape = window.innerWidth > window.innerHeight;
+        if (isLandscape) {
+          const bottomOffset = Math.max(0, window.innerHeight - window.visualViewport.height - (window.visualViewport.offsetTop || 0));
+          this.touchContainer.style.setProperty('--keyboard-or-bar-offset', `${Math.round(bottomOffset)}px`);
+        } else {
+          this.touchContainer.style.removeProperty('--keyboard-or-bar-offset');
+        }
+      }
     };
 
     window.addEventListener('resize', handleResize);
