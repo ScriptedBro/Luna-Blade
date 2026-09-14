@@ -141,44 +141,91 @@ const PROLOGUE_SLIDES = [
         loop: -1
       });
 
-      // 5. Raining Burning Lunar Core Meteors
-      const meteors = [
-        { startX: 90, startY: 46, angle: -0.65, speed: 1000, delay: 0 },
-        { startX: 175, startY: 42, angle: -0.7, speed: 900, delay: 350 },
-        { startX: 290, startY: 44, angle: -0.6, speed: 1150, delay: 180 },
-        { startX: 370, startY: 48, angle: -0.68, speed: 980, delay: 500 }
+      // 5. Raining Burning Lunar Core Shards & Meteors (plunging DOWN into the forest roots)
+      const fallingShards = [
+        // Burning Lunar Core shards bursting from the bottom fracture of the shattered moon (cx=240, cy=54)
+        { startX: cx - 6, startY: cy + 12, targetX: cx - 45, targetY: 138, tailLen: 26, speed: 720, delay: 0 },
+        { startX: cx + 4, startY: cy + 14, targetX: cx + 48, targetY: 136, tailLen: 26, speed: 750, delay: 220 },
+        { startX: cx - 2, startY: cy + 18, targetX: cx - 15, targetY: 142, tailLen: 22, speed: 640, delay: 460 },
+        { startX: cx - 8, startY: cy + 10, targetX: cx - 85, targetY: 135, tailLen: 30, speed: 820, delay: 680 },
+        { startX: cx + 8, startY: cy + 10, targetX: cx + 90, targetY: 135, tailLen: 30, speed: 800, delay: 350 },
+
+        // Jagged Meteors raining down diagonally from high celestial atmosphere into the elder roots
+        { startX: 70, startY: -20, targetX: 125, targetY: 136, tailLen: 42, speed: 850, delay: 100 },
+        { startX: 160, startY: -25, targetX: 205, targetY: 138, tailLen: 36, speed: 820, delay: 380 },
+        { startX: 320, startY: -25, targetX: 275, targetY: 138, tailLen: 36, speed: 840, delay: 550 },
+        { startX: 410, startY: -20, targetX: 355, targetY: 136, tailLen: 42, speed: 870, delay: 250 },
+        { startX: 240, startY: -30, targetX: 240, targetY: 140, tailLen: 38, speed: 780, delay: 750 }
       ];
 
-      meteors.forEach((m, idx) => {
+      fallingShards.forEach((m, idx) => {
+        const dx = m.targetX - m.startX;
+        const dy = m.targetY - m.startY;
+        const flightAngle = Math.atan2(dy, dx);
+
         const mGroup = scene.add.container(m.startX, m.startY);
+        mGroup.setAlpha(0); // Invisible until tween starts
 
-        const tail = scene.add.rectangle(0, 0, 32, 2.5, 0xff5500, 0.85);
-        tail.setOrigin(1, 0.5);
-        tail.setRotation(m.angle);
+        // Fiery outer flare tail
+        const tailOuter = scene.add.rectangle(0, 0, m.tailLen, 3.8, 0xff2200, 0.6);
+        tailOuter.setOrigin(1, 0.5);
+        tailOuter.setRotation(flightAngle);
 
-        const coreGlow = scene.add.circle(0, 0, 5, 0xffbb22, 0.7);
-        const core = scene.add.circle(0, 0, 2.5, 0xffffff);
+        // Fiery inner bright core tail
+        const tailInner = scene.add.rectangle(0, 0, m.tailLen * 0.75, 2.0, 0xffaa00, 0.95);
+        tailInner.setOrigin(1, 0.5);
+        tailInner.setRotation(flightAngle);
 
-        mGroup.add(tail);
+        // White-hot trailing needle
+        const tailNeedle = scene.add.rectangle(0, 0, m.tailLen * 0.45, 1.0, 0xffffff, 0.95);
+        tailNeedle.setOrigin(1, 0.5);
+        tailNeedle.setRotation(flightAngle);
+
+        // Glowing burning head at (0, 0)
+        const outerGlow = scene.add.circle(0, 0, 5.5, 0xff3300, 0.5);
+        const coreGlow = scene.add.circle(0, 0, 3.8, 0xffaa00, 0.85);
+        const coreWhite = scene.add.circle(0, 0, 2.0, 0xffffff, 1.0);
+
+        mGroup.add(tailOuter);
+        mGroup.add(tailInner);
+        mGroup.add(tailNeedle);
+        mGroup.add(outerGlow);
         mGroup.add(coreGlow);
-        mGroup.add(core);
+        mGroup.add(coreWhite);
         container.add(mGroup);
-
-        const targetX = m.startX + Math.cos(m.angle + Math.PI) * -110;
-        const targetY = m.startY + Math.sin(m.angle + Math.PI) * -110;
 
         scene.tweens.add({
           targets: mGroup,
-          x: targetX,
-          y: targetY,
-          alpha: { start: 1, to: 0 },
-          scaleX: { start: 1, to: 0.6 },
+          x: { start: m.startX, to: m.targetX },
+          y: { start: m.startY, to: m.targetY },
+          alpha: { start: 1, to: 0.1 },
+          scaleX: { start: 1.1, to: 0.7 },
+          scaleY: { start: 1.1, to: 0.7 },
           duration: m.speed,
           delay: m.delay,
           loop: -1,
-          repeatDelay: 300 + idx * 180
+          repeatDelay: 220 + (idx % 4) * 140,
+          onStart: () => mGroup.setAlpha(1),
+          onRepeat: () => {
+            mGroup.setPosition(m.startX, m.startY);
+            mGroup.setAlpha(1);
+          }
         });
       });
+
+      // 6. Scorched Ground Embers rising from the elder roots where lunar shards plunge
+      const groundEmbers = scene.add.particles(0, 0, "spark", {
+        x: { min: 80, max: 400 },
+        y: { min: 126, max: 138 },
+        scale: { start: 0.8, end: 0 },
+        alpha: { start: 0.85, end: 0 },
+        speedY: { min: -26, max: -10 },
+        speedX: { min: -12, max: 12 },
+        lifespan: 1100,
+        frequency: 110,
+        tint: [0xff3300, 0xff7700, 0xffcc00]
+      });
+      container.add(groundEmbers);
     }
   },
   {
