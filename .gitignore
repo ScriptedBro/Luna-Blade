@@ -10,6 +10,11 @@ screenshot_*.png
 
 # Archives
 *.zip
+**/*.zip
+*.tar.gz
+*.tgz
+*.rar
+*.7z
 
 # System files
 .DS_Store
