@@ -36,8 +36,10 @@ export default class SurvivalScene extends Phaser.Scene {
     pauseService.attachScene(this, 'DAILY SURVIVAL TRIAL');
     pauseService.showButtons();
     pauseService.updateTimer(0);
+    sound.playBGM('battle');
     this.events.once('shutdown', () => {
       pauseService.detachScene();
+      sound.stopBGM();
     });
 
     this.physics.world.setBounds(0, 0, this.arenaWidth, this.arenaHeight);
@@ -1029,6 +1031,7 @@ export default class SurvivalScene extends Phaser.Scene {
   handleGameOver() {
     if (this.isGameOver) return;
     this.isGameOver = true;
+    sound.stopBGM();
     sound.playGameOver();
     pauseService.hideButtons();
 

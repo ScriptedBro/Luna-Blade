@@ -518,7 +518,7 @@ export default class StoryIntroScene extends Phaser.Scene {
       frequency: 180
     });
 
-    sound.startBGM();
+    sound.playBGM('title');
     this.renderSlide(0);
   }
 

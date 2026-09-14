@@ -1,9 +1,21 @@
+const BGM_TRACKS = {
+  title: '/assets/audio/bgm_title.mp3',
+  forest: '/assets/audio/bgm_forest.mp3',
+  battle: '/assets/audio/bgm_battle.mp3',
+  boss: '/assets/audio/bgm_boss.mp3',
+  victory: '/assets/audio/bgm_victory.mp3'
+};
+
 class SoundEngine {
   constructor() {
     this.ctx = null;
     this.muted = false;
     this.bgmPlaying = false;
-    this.bgmInterval = null;
+    this.currentTrack = null;
+    this.currentAudio = null;
+    this.audioCache = new Map();
+    this.bgmVolume = 0.45;
+    this.unlocked = false;
     this.masterGain = null;
     this.sfxGain = null;
     this.bgmGain = null;
@@ -29,6 +41,22 @@ class SoundEngine {
     } catch (e) {
       console.warn('WebAudio not supported:', e);
     }
+
+    if (typeof window !== 'undefined' && !this.unlocked) {
+      const unlock = () => {
+        this.resume();
+        if (this.currentAudio && this.currentAudio.paused && !this.muted && this.currentTrack) {
+          this.currentAudio.play().catch(() => {});
+        }
+        this.unlocked = true;
+        window.removeEventListener('pointerdown', unlock);
+        window.removeEventListener('keydown', unlock);
+        window.removeEventListener('touchstart', unlock);
+      };
+      window.addEventListener('pointerdown', unlock, { once: true });
+      window.addEventListener('keydown', unlock, { once: true });
+      window.addEventListener('touchstart', unlock, { once: true });
+    }
   }
 
   resume() {
@@ -43,8 +71,11 @@ class SoundEngine {
   toggleMute() {
     this.init();
     this.muted = !this.muted;
-    if (this.masterGain) {
+    if (this.masterGain && this.ctx) {
       this.masterGain.gain.setValueAtTime(this.muted ? 0 : 1.0, this.ctx.currentTime);
+    }
+    if (this.currentAudio) {
+      this.currentAudio.volume = this.muted ? 0 : this.bgmVolume;
     }
     return this.muted;
   }
@@ -401,56 +432,79 @@ class SoundEngine {
     osc.stop(t + 0.8);
   }
 
-  startBGM() {
-    if (this.bgmPlaying) return;
+  playBGM(key = 'title') {
     this.init();
+    const url = BGM_TRACKS[key] || BGM_TRACKS.title;
+
+    // If this track is already playing, do nothing
+    if (this.currentTrack === key && this.currentAudio && !this.currentAudio.paused) {
+      return;
+    }
+
+    let audio = this.audioCache.get(url);
+    if (!audio) {
+      audio = new Audio(url);
+      audio.loop = true;
+      audio.preload = 'auto';
+      this.audioCache.set(url, audio);
+    }
+
+    // Crossfade out previous audio if playing and different
+    const oldAudio = this.currentAudio;
+    if (oldAudio && oldAudio !== audio && !oldAudio.paused) {
+      let v = oldAudio.volume;
+      const fadeStep = v / 8;
+      const fadeOutTimer = setInterval(() => {
+        v = Math.max(0, v - fadeStep);
+        oldAudio.volume = v;
+        if (v <= 0.01) {
+          clearInterval(fadeOutTimer);
+          oldAudio.pause();
+          oldAudio.currentTime = 0;
+        }
+      }, 25);
+    }
+
+    audio.currentTime = 0;
+    audio.volume = this.muted ? 0 : this.bgmVolume;
+
+    const playPromise = audio.play();
+    if (playPromise !== undefined) {
+      playPromise.catch(() => {
+        // Handled by user-interaction unlock
+      });
+    }
+
+    this.currentAudio = audio;
+    this.currentTrack = key;
     this.bgmPlaying = true;
-    
-    // Atmospheric procedural chiptune arpeggiator
-    const chordProgression = [
-      [220, 261.63, 329.63, 440], // Am
-      [174.61, 220, 261.63, 349.23], // F
-      [196, 246.94, 293.66, 392], // G
-      [164.81, 196, 246.94, 329.63] // Em
-    ];
-    let chordIdx = 0;
-    let step = 0;
-
-    const playStep = () => {
-      if (!this.bgmPlaying || !this.ctx || this.muted) return;
-      const t = this.ctx.currentTime;
-      const chord = chordProgression[chordIdx];
-      const noteFreq = chord[step % chord.length];
-
-      const osc = this.ctx.createOscillator();
-      const gain = this.ctx.createGain();
-      osc.type = 'triangle';
-      osc.frequency.setValueAtTime(noteFreq, t);
-
-      gain.gain.setValueAtTime(0.18, t);
-      gain.gain.exponentialRampToValueAtTime(0.005, t + 0.22);
-
-      osc.connect(gain);
-      gain.connect(this.bgmGain);
-
-      osc.start(t);
-      osc.stop(t + 0.24);
-
-      step++;
-      if (step >= 8) {
-        step = 0;
-        chordIdx = (chordIdx + 1) % chordProgression.length;
-      }
-    };
-
-    this.bgmInterval = setInterval(playStep, 180);
   }
 
-  stopBGM() {
+  startBGM(key = 'title') {
+    this.playBGM(key);
+  }
+
+  stopBGM(fade = true) {
     this.bgmPlaying = false;
-    if (this.bgmInterval) {
-      clearInterval(this.bgmInterval);
-      this.bgmInterval = null;
+    this.currentTrack = null;
+    const a = this.currentAudio;
+    if (!a) return;
+
+    if (fade && a.volume > 0.05 && !a.paused) {
+      let v = a.volume;
+      const fadeStep = v / 10;
+      const timer = setInterval(() => {
+        v = Math.max(0, v - fadeStep);
+        a.volume = v;
+        if (v <= 0.01) {
+          clearInterval(timer);
+          a.pause();
+          a.currentTime = 0;
+        }
+      }, 30);
+    } else {
+      a.pause();
+      a.currentTime = 0;
     }
   }
 }

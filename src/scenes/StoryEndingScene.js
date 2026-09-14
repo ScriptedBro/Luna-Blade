@@ -15,6 +15,10 @@ export default class StoryEndingScene extends Phaser.Scene {
     const h = GAME_CONFIG.HEIGHT;
 
     pauseService.detachScene();
+    sound.playBGM('victory');
+    this.events.once('shutdown', () => {
+      sound.stopBGM();
+    });
 
     if (typeof window !== 'undefined' && window.touchController) {
       window.touchController.hide();

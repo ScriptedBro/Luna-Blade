@@ -12,6 +12,7 @@ import { TouchController } from './ui/TouchControls.js';
 import { nimiqModal } from './ui/NimiqModal.js';
 import { nimiqService } from './engine/NimiqService.js';
 import { pauseService } from './engine/PauseService.js';
+import { sound } from './engine/Audio.js';
 
 // Phaser 3 Game Configuration
 const phaserConfig = {
@@ -55,6 +56,7 @@ window.touchController = new TouchController(game);
 window.nimiqModal = nimiqModal;
 window.nimiqService = nimiqService;
 window.pauseService = pauseService;
+window.sound = sound;
 
 // Ensure game canvas dynamically updates whenever container dimensions adapt
 if (typeof ResizeObserver !== 'undefined') {

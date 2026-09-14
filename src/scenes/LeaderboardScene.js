@@ -20,6 +20,7 @@ export default class LeaderboardScene extends Phaser.Scene {
     this.lastScore = data?.lastScore || 0;
 
     pauseService.detachScene();
+    sound.playBGM('title');
 
     if (typeof window !== 'undefined' && window.touchController) {
       window.touchController.hide();

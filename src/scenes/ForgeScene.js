@@ -16,6 +16,7 @@ export default class ForgeScene extends Phaser.Scene {
     const h = GAME_CONFIG.HEIGHT;
 
     pauseService.detachScene();
+    sound.playBGM('title');
 
     if (typeof window !== 'undefined' && window.touchController) {
       window.touchController.hide();

@@ -60,8 +60,10 @@ export default class StoryScene extends Phaser.Scene {
     pauseService.attachScene(this, `CHAPTER ${this.chapterId}: ${this.chapterConfig.title}`);
     pauseService.hideButtons();
     pauseService.updateTimer(0);
+    sound.playBGM(this.chapterId === 3 ? 'boss' : 'forest');
     this.events.once('shutdown', () => {
       pauseService.detachScene();
+      sound.stopBGM();
     });
 
     // Physics bounds
@@ -729,6 +731,7 @@ export default class StoryScene extends Phaser.Scene {
   }
 
   showBossWarningBanner(name, subtitle) {
+    sound.playBGM('boss');
     const w = GAME_CONFIG.WIDTH;
     const banner = this.add.container(w / 2, 70).setScrollFactor(0).setDepth(480);
 
@@ -1166,6 +1169,7 @@ export default class StoryScene extends Phaser.Scene {
   }
 
   showVictoryBanner() {
+    sound.playBGM('victory');
     pauseService.hideButtons();
     if (typeof window !== 'undefined' && window.touchController) {
       window.touchController.hide();
@@ -1362,6 +1366,7 @@ export default class StoryScene extends Phaser.Scene {
   handlePlayerGameOver() {
     if (this.isGameOver) return;
     this.isGameOver = true;
+    sound.stopBGM();
     sound.playGameOver();
     pauseService.hideButtons();
     this.gameOverInputReadyTime = this.time.now + 350;
