@@ -354,7 +354,7 @@ export default class Player extends Phaser.Physics.Arcade.Sprite {
   }
 
   takeDamage(amount = 20, knockbackDir = 0) {
-    if (this.isDead || this.scene.time.now < this.invulnerableUntil) return false;
+    if (this.isDead || (this.scene && this.scene.inDialogue) || this.scene.time.now < this.invulnerableUntil) return false;
 
     // Normalize knockback direction: if a world X coordinate was passed, determine direction relative to player
     let dir = 0;
@@ -386,6 +386,11 @@ export default class Player extends Phaser.Physics.Arcade.Sprite {
 
     if (this.health <= 0) {
       this.die();
+      if (this.scene && typeof this.scene.handlePlayerGameOver === 'function') {
+        this.scene.handlePlayerGameOver();
+      } else if (this.scene && typeof this.scene.handleGameOver === 'function') {
+        this.scene.handleGameOver();
+      }
     }
     return true;
   }

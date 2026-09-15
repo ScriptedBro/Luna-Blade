@@ -466,6 +466,12 @@ export default class StoryScene extends Phaser.Scene {
     // Caldera Obelisk (Locked by Ignis)
     this.obelisk = new Obelisk(this, 2520, 380, 'Shrine of the Molten Core');
     this.obelisk.lock();
+
+    // Periodic lava geyser eruptions across molten pits for timed platform leaps
+    this.createLavaGeyser(510, 392, 240, 0);
+    this.createLavaGeyser(1100, 392, 240, 900);
+    this.createLavaGeyser(1680, 392, 240, 1800);
+    this.createLavaGeyser(2035, 392, 240, 2700);
   }
 
   buildChapter5LunarSpire() {
@@ -754,6 +760,8 @@ export default class StoryScene extends Phaser.Scene {
   createHazard(x, y, width, label) {
     const haz = this.add.rectangle(x + width / 2, y + 16, width, 24, 0x000000, 0);
     this.physics.add.existing(haz, true);
+    haz.isLava = (this.chapterId === 4) || (label && label.includes('LAVA'));
+    haz.hazardLabel = label;
     this.hazards.add(haz);
 
     if (this.chapterId === 4) {
@@ -813,6 +821,137 @@ export default class StoryScene extends Phaser.Scene {
         this.add.triangle(x + i * 16 + 8, y + 12, 0, 16, 8, 0, 16, 16, 0x888899).setDepth(11);
       }
     }
+  }
+
+  createLavaGeyser(x, surfaceY = 392, peakY = 240, cycleDelay = 0) {
+    if (!this.lavaGeysers) {
+      this.lavaGeysers = [];
+    }
+
+    const colHeight = surfaceY - peakY;
+    const geyser = this.add.container(x, surfaceY).setDepth(14);
+
+    // Visual layers for the eruption column
+    const outerFlame = this.add.rectangle(0, -colHeight / 2, 28, colHeight, 0xff2200, 0.85);
+    const innerFlame = this.add.rectangle(0, -colHeight / 2, 16, colHeight, 0xff8800, 0.95);
+    const coreFlame = this.add.rectangle(0, -colHeight / 2, 6, colHeight, 0xffffff, 1.0);
+    const crest = this.add.ellipse(0, -colHeight, 32, 18, 0xffcc00, 0.9);
+
+    geyser.add([outerFlame, innerFlame, coreFlame, crest]);
+    geyser.setScale(1, 0); // Flat at lava surface initially
+
+    // Physics hitbox for active eruption
+    const hitbox = this.add.rectangle(x, surfaceY - colHeight / 2, 24, colHeight, 0x000000, 0);
+    this.physics.add.existing(hitbox, true);
+    hitbox.body.enable = false;
+    hitbox.isLavaGeyser = true;
+    this.hazards.add(hitbox);
+
+    // Surface bubbling warning indicator
+    const warningGlow = this.add.circle(x, surfaceY - 2, 16, 0xff6600, 0).setDepth(13);
+
+    const geyserData = {
+      x, surfaceY, peakY, colHeight, geyser, hitbox, warningGlow,
+      state: 'DORMANT'
+    };
+    this.lavaGeysers.push(geyserData);
+
+    const runCycle = () => {
+      if (!this.scene || !this.scene.isActive()) return;
+
+      // 1. DORMANT (2.4s) - Safe to leap
+      geyserData.state = 'DORMANT';
+      if (hitbox.body) hitbox.body.enable = false;
+      geyser.setScale(1, 0);
+      warningGlow.setAlpha(0);
+
+      this.time.delayedCall(2400, () => {
+        if (!this.scene || !this.scene.isActive() || this.isGameOver || this.isVictory) return;
+
+        // 2. WARNING TELEGRAPH (800ms) - Rising warning sparks & pulsing surface glow
+        geyserData.state = 'WARNING';
+        warningGlow.setAlpha(0.6);
+        this.tweens.add({
+          targets: warningGlow,
+          scaleX: 1.8,
+          scaleY: 1.8,
+          alpha: { from: 0.3, to: 0.9 },
+          duration: 200,
+          yoyo: true,
+          repeat: 3
+        });
+
+        for (let i = 0; i < 8; i++) {
+          this.time.delayedCall(i * 90, () => {
+            if (!this.scene || !this.scene.isActive()) return;
+            const ember = this.add.circle(x + Phaser.Math.Between(-12, 12), surfaceY - 6, Phaser.Math.Between(2, 4), 0xffaa00, 0.9);
+            this.tweens.add({
+              targets: ember,
+              y: ember.y - Phaser.Math.Between(20, 45),
+              alpha: 0,
+              duration: 350,
+              onComplete: () => ember.destroy()
+            });
+          });
+        }
+
+        this.time.delayedCall(800, () => {
+          if (!this.scene || !this.scene.isActive() || this.isGameOver || this.isVictory) return;
+
+          // 3. ERUPTION SURGE (1200ms) - Active pillar of fire
+          geyserData.state = 'ERUPT';
+          if (hitbox.body) hitbox.body.enable = true;
+          warningGlow.setAlpha(0);
+          sound.playBoarChargeHit();
+
+          this.tweens.add({
+            targets: geyser,
+            scaleY: 1,
+            duration: 160,
+            ease: 'Back.easeOut'
+          });
+
+          // Continuous spray of fiery embers while erupting
+          const sprayTimer = this.time.addEvent({
+            delay: 70,
+            repeat: 14,
+            callback: () => {
+              if (!this.scene || !this.scene.isActive() || geyserData.state !== 'ERUPT') return;
+              const spark = this.add.circle(x + Phaser.Math.Between(-10, 10), peakY + Phaser.Math.Between(-10, 10), Phaser.Math.Between(3, 6), 0xffdd00, 0.9);
+              this.physics.add.existing(spark);
+              spark.body.setVelocity(Phaser.Math.Between(-60, 60), Phaser.Math.Between(-120, -40));
+              spark.body.setGravityY(250);
+              this.tweens.add({
+                targets: spark,
+                alpha: 0,
+                duration: 400,
+                onComplete: () => spark.destroy()
+              });
+            }
+          });
+
+          // 4. RECEDE (200ms)
+          this.time.delayedCall(1200, () => {
+            sprayTimer.destroy();
+            if (!this.scene || !this.scene.isActive()) return;
+            if (hitbox.body) hitbox.body.enable = false;
+            geyserData.state = 'RECEDE';
+
+            this.tweens.add({
+              targets: geyser,
+              scaleY: 0,
+              duration: 200,
+              ease: 'Sine.easeIn',
+              onComplete: () => {
+                runCycle();
+              }
+            });
+          });
+        });
+      });
+    };
+
+    this.time.delayedCall(cycleDelay, runCycle);
   }
 
   spawnMob(type, x, y) {
@@ -1301,17 +1440,40 @@ export default class StoryScene extends Phaser.Scene {
     if (this.enemies) {
       this.enemies.getChildren().forEach(e => {
         if (e.body) {
-          e.body.velocity.x = 0;
-          e.body.velocity.y = 0;
+          e.body.setVelocity(0, 0);
+        }
+        if (e.attackCooldownUntil !== undefined) {
+          e.attackCooldownUntil = this.time.now + 2500;
+        }
+        if (e.nextActionTime !== undefined) {
+          e.nextActionTime = this.time.now + 2500;
         }
       });
     }
+    // Clear in-flight projectiles so player is not hit during dialogue
+    if (this.projectiles) {
+      this.projectiles.clear(true, true);
+    }
+
     const box = new StoryDialogueBox(this);
     this.dialogueBox = box;
     box.startDialogue(lines, () => {
       this.dialogueBox = null;
       this.inDialogue = false;
       this.physics.resume();
+
+      // Give player a 1.2s grace window after dialogue before mobs attack
+      if (this.enemies) {
+        this.enemies.getChildren().forEach(e => {
+          if (e.attackCooldownUntil !== undefined) {
+            e.attackCooldownUntil = this.time.now + 1200;
+          }
+          if (e.nextActionTime !== undefined) {
+            e.nextActionTime = this.time.now + 1200;
+          }
+        });
+      }
+
       if (!this.isVictory && (!this.player || !this.player.isDead)) {
         if (typeof window !== 'undefined' && window.touchController) {
           window.touchController.show();
@@ -1495,7 +1657,55 @@ export default class StoryScene extends Phaser.Scene {
   }
 
   handleHazardHit(player, hazard) {
-    if (player.isDead) return;
+    if (player.isDead || this.inDialogue) return;
+
+    // 1. Lava Geyser eruption column hit
+    if (hazard && hazard.isLavaGeyser) {
+      const damaged = player.takeDamage(28, player.flipX ? 1 : -1);
+      if (damaged) {
+        this.updateHearts();
+        sound.playHit();
+        this.cameras.main.shake(160, 0.02);
+        this.showFloatingText(player.x, player.y - 20, 'LAVA GEYSER! 🔥', '#ff6600');
+        player.setVelocityY(-260);
+        player.setVelocityX(player.flipX ? 140 : -140);
+        if (player.isDead) {
+          this.handlePlayerGameOver();
+        }
+      }
+      return;
+    }
+
+    // 2. Entering molten lava pit = INSTANT DEATH
+    const isLava = (this.chapterId === 4) || (hazard && hazard.isLava) || (hazard && hazard.hazardLabel && hazard.hazardLabel.includes('LAVA'));
+    if (isLava) {
+      player.health = 0;
+      this.updateHearts();
+      sound.playHit();
+      this.cameras.main.shake(500, 0.035);
+      this.showFloatingText(player.x, player.y - 20, 'INCINERATED BY LAVA! ☠️', '#ff3300');
+
+      // Incineration flame particles
+      for (let i = 0; i < 24; i++) {
+        const flame = this.add.circle(player.x, player.y + 10, Phaser.Math.Between(4, 9), 0xff4400, 0.9);
+        this.physics.add.existing(flame);
+        flame.body.setVelocity(Phaser.Math.Between(-140, 140), Phaser.Math.Between(-260, -60));
+        flame.body.setGravityY(350);
+        this.tweens.add({
+          targets: flame,
+          alpha: 0,
+          scale: 0.2,
+          duration: 700,
+          onComplete: () => flame.destroy()
+        });
+      }
+
+      player.die();
+      this.handlePlayerGameOver();
+      return;
+    }
+
+    // 3. Other hazards (water, honeycomb, spikes, astral chasm)
     const damaged = player.takeDamage(20, player.flipX ? 1 : -1);
     if (damaged) {
       this.updateHearts();
@@ -1596,7 +1806,7 @@ export default class StoryScene extends Phaser.Scene {
 
     const w = GAME_CONFIG.WIDTH;
     const h = GAME_CONFIG.HEIGHT;
-    this.victoryInputReadyTime = this.time.now + 350; // brief delay so final attack swing doesn't accidentally skip
+    this.victoryInputReadyTime = performance.now() + 350; // brief delay so final attack swing doesn't accidentally skip
 
     // Victory Banner Container
     const banner = this.add.container(w / 2, h / 2).setScrollFactor(0).setDepth(500);
@@ -1638,7 +1848,7 @@ export default class StoryScene extends Phaser.Scene {
     this.activeVictoryCleanup = cleanup;
 
     const doAdvance = () => {
-      if (actionTaken || this.time.now < this.victoryInputReadyTime) return;
+      if (actionTaken || performance.now() < this.victoryInputReadyTime) return;
       actionTaken = true;
       cleanup();
       sound.playCoin();
@@ -1650,7 +1860,7 @@ export default class StoryScene extends Phaser.Scene {
     };
 
     const doRetry = () => {
-      if (actionTaken || this.time.now < this.victoryInputReadyTime) return;
+      if (actionTaken || performance.now() < this.victoryInputReadyTime) return;
       actionTaken = true;
       cleanup();
       sound.playCoin();
@@ -1658,7 +1868,7 @@ export default class StoryScene extends Phaser.Scene {
     };
 
     const doMenu = () => {
-      if (actionTaken || this.time.now < this.victoryInputReadyTime) return;
+      if (actionTaken || performance.now() < this.victoryInputReadyTime) return;
       actionTaken = true;
       cleanup();
       sound.playCoin();
@@ -1781,7 +1991,7 @@ export default class StoryScene extends Phaser.Scene {
     sound.stopBGM();
     sound.playGameOver();
     pauseService.hideButtons();
-    this.gameOverInputReadyTime = this.time.now + 350;
+    this.gameOverInputReadyTime = performance.now() + 350;
 
     if (this.player && !this.player.isDead) {
       this.player.die();
@@ -1798,153 +2008,157 @@ export default class StoryScene extends Phaser.Scene {
 
     const w = GAME_CONFIG.WIDTH;
     const h = GAME_CONFIG.HEIGHT;
-    const card = this.add.container(w / 2, h / 2).setScrollFactor(0).setDepth(500);
 
-      const overlay = this.add.rectangle(0, 0, w, h, 0x000000, 0.65).setInteractive();
-      card.add(overlay);
+    // Use scene-level UI objects with setScrollFactor(0) to guarantee
+    // button hit-tests are never offset by camera scroll!
+    const overlay = this.add.rectangle(w / 2, h / 2, w, h, 0x000000, 0.72)
+      .setScrollFactor(0)
+      .setDepth(490);
 
-      const box = this.add.rectangle(0, 0, 360, 130, 0x240e0e, 0.96);
-      box.setStrokeStyle(2, 0xff4444);
-      card.add(box);
+    const box = this.add.rectangle(w / 2, h / 2, 360, 130, 0x240e0e, 0.96)
+      .setStrokeStyle(2, 0xff4444)
+      .setScrollFactor(0)
+      .setDepth(500);
 
-      const title = this.add.text(0, -42, 'YOU FELL IN BATTLE', {
-        fontFamily: 'Press Start 2P',
-        fontSize: '11px',
-        color: '#ff4444'
-      }).setOrigin(0.5);
-      card.add(title);
+    const title = this.add.text(w / 2, h / 2 - 42, 'YOU FELL IN BATTLE', {
+      fontFamily: 'Press Start 2P',
+      fontSize: '11px',
+      color: '#ff4444'
+    }).setOrigin(0.5).setScrollFactor(0).setDepth(501);
 
-      const subtitle = this.add.text(0, -22, `Chapter ${this.chapterId}: ${this.chapterConfig.title}`, {
-        fontFamily: 'Press Start 2P',
-        fontSize: '6.5px',
-        color: '#ffaaaa'
-      }).setOrigin(0.5);
-      card.add(subtitle);
+    const subtitle = this.add.text(w / 2, h / 2 - 22, `Chapter ${this.chapterId}: ${this.chapterConfig.title}`, {
+      fontFamily: 'Press Start 2P',
+      fontSize: '6.5px',
+      color: '#ffaaaa'
+    }).setOrigin(0.5).setScrollFactor(0).setDepth(501);
 
-      let actionTaken = false;
-      const cleanup = () => {
-        this.input.off('pointerdown', onScenePointerDown);
-        this.input.keyboard.off('keydown', onKeyDown);
-        if (this.game && this.game.canvas) {
-          this.game.canvas.removeEventListener('pointerdown', onCanvasPointerDown);
-        }
-        this.activeGameOverCleanup = null;
-      };
-      this.activeGameOverCleanup = cleanup;
+    const hintText = this.add.text(w / 2, h / 2 + 42, '▶ TAP RETRY OR MAIN MENU TO CONTINUE ◀', {
+      fontFamily: 'Press Start 2P',
+      fontSize: '5.5px',
+      color: '#ffaaaa'
+    }).setOrigin(0.5).setScrollFactor(0).setDepth(501);
 
-      const doRetry = () => {
-        if (actionTaken || this.time.now < this.gameOverInputReadyTime) return;
-        actionTaken = true;
-        cleanup();
-        sound.playCoin();
-        this.scene.restart({ chapter: this.chapterId });
-      };
+    this.tweens.add({
+      targets: hintText,
+      alpha: { from: 1, to: 0.25 },
+      duration: 500,
+      yoyo: true,
+      repeat: -1,
+      ease: 'Sine.easeInOut'
+    });
 
-      const doMenu = () => {
-        if (actionTaken || this.time.now < this.gameOverInputReadyTime) return;
-        actionTaken = true;
-        cleanup();
-        sound.playCoin();
-        this.scene.start('MenuScene');
-      };
-
-      this.gameOverRetryCallback = doRetry;
-
-      const buttons = [];
-      const createBtn = (relX, relY, bw, bh, bgCol, borderCol, textCol, label, action) => {
-        const btnRect = this.add.rectangle(relX, relY, bw, bh, bgCol)
-          .setStrokeStyle(1.5, borderCol)
-          .setInteractive({ useHandCursor: true });
-        card.add(btnRect);
-
-        const btnLabel = this.add.text(relX, relY, label, {
-          fontFamily: 'Press Start 2P',
-          fontSize: '7px',
-          color: textCol
-        }).setOrigin(0.5);
-        card.add(btnLabel);
-
-        const setHover = (hover) => {
-          const s = hover ? 1.04 : 1.0;
-          btnRect.setScale(s);
-          btnLabel.setScale(s);
-        };
-
-        btnRect.on('pointerover', () => setHover(true));
-        btnRect.on('pointerout', () => setHover(false));
-        btnRect.on('pointerdown', action);
-
-        buttons.push({
-          minX: (w / 2 + relX) - bw / 2,
-          maxX: (w / 2 + relX) + bw / 2,
-          minY: (h / 2 + relY) - bh / 2,
-          maxY: (h / 2 + relY) + bh / 2,
-          action
-        });
-
-        return { btnRect, btnLabel };
-      };
-
-      // Two distinct buttons side-by-side: Retry and Main Menu
-      createBtn(-78, 10, 140, 26, 0x5a1818, 0xff7777, '#ffffff', '↺ RETRY', doRetry);
-      createBtn(78, 10, 140, 26, 0x382414, 0xf59e0b, '#f59e0b', '◄ MAIN MENU', doMenu);
-
-      const hintText = this.add.text(0, 42, '▶ TAP RETRY OR MAIN MENU TO CONTINUE ◀', {
-        fontFamily: 'Press Start 2P',
-        fontSize: '5.5px',
-        color: '#ffaaaa'
-      }).setOrigin(0.5);
-      card.add(hintText);
-
-      this.tweens.add({
-        targets: hintText,
-        alpha: { from: 1, to: 0.25 },
-        duration: 500,
-        yoyo: true,
-        repeat: -1,
-        ease: 'Sine.easeInOut'
-      });
-
-      const onScenePointerDown = (pointer) => {
-        if (actionTaken || this.time.now < this.gameOverInputReadyTime) return;
-        const px = pointer.x;
-        const py = pointer.y;
-        for (const b of buttons) {
-          if (px >= b.minX && px <= b.maxX && py >= b.minY && py <= b.maxY) {
-            b.action();
-            return;
-          }
-        }
-      };
-      this.input.on('pointerdown', onScenePointerDown);
-
-      const onCanvasPointerDown = (e) => {
-        if (actionTaken || this.time.now < this.gameOverInputReadyTime) return;
-        if (!this.game || !this.game.canvas) return;
-        const rect = this.game.canvas.getBoundingClientRect();
-        const px = ((e.clientX - rect.left) / rect.width) * w;
-        const py = ((e.clientY - rect.top) / rect.height) * h;
-        for (const b of buttons) {
-          if (px >= b.minX && px <= b.maxX && py >= b.minY && py <= b.maxY) {
-            b.action();
-            return;
-          }
-        }
-      };
+    let actionTaken = false;
+    const cleanup = () => {
+      this.input.off('pointerdown', onScenePointerDown);
+      this.input.keyboard.off('keydown', onKeyDown);
       if (this.game && this.game.canvas) {
-        this.game.canvas.addEventListener('pointerdown', onCanvasPointerDown);
+        this.game.canvas.removeEventListener('pointerdown', onCanvasPointerDown);
       }
+      overlay.destroy();
+      box.destroy();
+      title.destroy();
+      subtitle.destroy();
+      hintText.destroy();
+      retryBtn.destroy();
+      retryLabel.destroy();
+      menuBtn.destroy();
+      menuLabel.destroy();
+      this.activeGameOverCleanup = null;
+    };
+    this.activeGameOverCleanup = cleanup;
 
-      const onKeyDown = (event) => {
-        if (actionTaken || this.time.now < this.gameOverInputReadyTime) return;
-        const key = (event.key || '').toUpperCase();
-        if (key === 'R' || key === 'ENTER' || key === ' ' || key === 'J') {
-          doRetry();
-        } else if (key === 'ESCAPE' || key === 'M') {
-          doMenu();
-        }
-      };
-      this.input.keyboard.on('keydown', onKeyDown);
+    const doRetry = () => {
+      if (actionTaken || performance.now() < this.gameOverInputReadyTime) return;
+      actionTaken = true;
+      cleanup();
+      sound.playCoin();
+      this.scene.restart({ chapter: this.chapterId });
+    };
+
+    const doMenu = () => {
+      if (actionTaken || performance.now() < this.gameOverInputReadyTime) return;
+      actionTaken = true;
+      cleanup();
+      sound.playCoin();
+      this.scene.start('MenuScene');
+    };
+
+    this.gameOverRetryCallback = doRetry;
+
+    // Retry Button
+    const rx = w / 2 - 78;
+    const ry = h / 2 + 10;
+    const retryBtn = this.add.rectangle(rx, ry, 140, 28, 0x5a1818)
+      .setStrokeStyle(1.5, 0xff7777)
+      .setScrollFactor(0)
+      .setDepth(502)
+      .setInteractive({ useHandCursor: true });
+
+    const retryLabel = this.add.text(rx, ry, '↺ RETRY', {
+      fontFamily: 'Press Start 2P',
+      fontSize: '7px',
+      color: '#ffffff'
+    }).setOrigin(0.5).setScrollFactor(0).setDepth(503).setInteractive({ useHandCursor: true });
+
+    retryBtn.on('pointerdown', doRetry);
+    retryLabel.on('pointerdown', doRetry);
+
+    // Menu Button
+    const mx = w / 2 + 78;
+    const my = h / 2 + 10;
+    const menuBtn = this.add.rectangle(mx, my, 140, 28, 0x382414)
+      .setStrokeStyle(1.5, 0xf59e0b)
+      .setScrollFactor(0)
+      .setDepth(502)
+      .setInteractive({ useHandCursor: true });
+
+    const menuLabel = this.add.text(mx, my, '◄ MAIN MENU', {
+      fontFamily: 'Press Start 2P',
+      fontSize: '7px',
+      color: '#f59e0b'
+    }).setOrigin(0.5).setScrollFactor(0).setDepth(503).setInteractive({ useHandCursor: true });
+
+    menuBtn.on('pointerdown', doMenu);
+    menuLabel.on('pointerdown', doMenu);
+
+    const onScenePointerDown = (pointer) => {
+      if (actionTaken || performance.now() < this.gameOverInputReadyTime) return;
+      const px = pointer.x;
+      const py = pointer.y;
+      if (px >= rx - 70 && px <= rx + 70 && py >= ry - 14 && py <= ry + 14) {
+        doRetry();
+      } else if (px >= mx - 70 && px <= mx + 70 && py >= my - 14 && py <= my + 14) {
+        doMenu();
+      }
+    };
+    this.input.on('pointerdown', onScenePointerDown);
+
+    const onCanvasPointerDown = (e) => {
+      if (actionTaken || performance.now() < this.gameOverInputReadyTime) return;
+      if (!this.game || !this.game.canvas) return;
+      const rect = this.game.canvas.getBoundingClientRect();
+      const px = ((e.clientX - rect.left) / rect.width) * w;
+      const py = ((e.clientY - rect.top) / rect.height) * h;
+      if (px >= rx - 70 && px <= rx + 70 && py >= ry - 14 && py <= ry + 14) {
+        doRetry();
+      } else if (px >= mx - 70 && px <= mx + 70 && py >= my - 14 && py <= my + 14) {
+        doMenu();
+      }
+    };
+    if (this.game && this.game.canvas) {
+      this.game.canvas.addEventListener('pointerdown', onCanvasPointerDown);
+    }
+
+    const onKeyDown = (event) => {
+      if (actionTaken || performance.now() < this.gameOverInputReadyTime) return;
+      const key = (event.key || '').toUpperCase();
+      if (key === 'R' || key === 'ENTER' || key === ' ' || key === 'J') {
+        doRetry();
+      } else if (key === 'ESCAPE' || key === 'M') {
+        doMenu();
+      }
+    };
+    this.input.keyboard.on('keydown', onKeyDown);
   }
 
   update() {
@@ -1969,7 +2183,7 @@ export default class StoryScene extends Phaser.Scene {
     } : {};
 
     // Victory screen keyboard/touch advance check
-    if (this.isVictory && this.victoryAdvanceCallback && this.time.now > this.victoryInputReadyTime) {
+    if (this.isVictory && this.victoryAdvanceCallback && performance.now() > this.victoryInputReadyTime) {
       const advancePressed = (
         touchInputs.justAttack ||
         touchInputs.justUpSlash ||
@@ -1987,7 +2201,7 @@ export default class StoryScene extends Phaser.Scene {
     }
 
     // Game over screen keyboard/touch retry check
-    if (this.player?.isDead && this.gameOverRetryCallback && this.time.now > this.gameOverInputReadyTime) {
+    if (this.player?.isDead && this.gameOverRetryCallback && performance.now() > this.gameOverInputReadyTime) {
       const retryPressed = (
         touchInputs.justAttack ||
         touchInputs.justUpSlash ||
@@ -2027,10 +2241,12 @@ export default class StoryScene extends Phaser.Scene {
     if (this.bgFogPines) this.bgFogPines.tilePositionX = camScrollX * 0.12;
     if (this.bgMidPines) this.bgMidPines.tilePositionX = camScrollX * 0.22;
 
-    // Update enemies
-    this.enemies.getChildren().forEach(enemy => {
-      enemy.update(this.player);
-    });
+    // Update enemies only when NOT in dialogue
+    if (!this.inDialogue && this.enemies) {
+      this.enemies.getChildren().forEach(enemy => {
+        enemy.update(this.player);
+      });
+    }
 
     // Combo decay
     if (this.comboCount > 0 && this.time.now > this.comboTimer) {
@@ -2040,6 +2256,11 @@ export default class StoryScene extends Phaser.Scene {
         alpha: 0,
         duration: 200
       });
+    }
+
+    // Failsafe game over check (any source of player death)
+    if (this.player && this.player.isDead && !this.isGameOver) {
+      this.handlePlayerGameOver();
     }
 
     // Fall out of world check

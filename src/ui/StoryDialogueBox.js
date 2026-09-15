@@ -387,6 +387,13 @@ export default class StoryDialogueBox extends Phaser.GameObjects.Container {
   close() {
     this.cleanUpListeners();
 
+    if (!this.scene || !this.scene.tweens) {
+      const cb = this.onCompleteCallback;
+      this.destroy();
+      if (cb) cb();
+      return;
+    }
+
     this.scene.tweens.add({
       targets: this,
       alpha: 0,
