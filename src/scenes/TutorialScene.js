@@ -186,7 +186,7 @@ export default class TutorialScene extends Phaser.Scene {
     const actualWidth = count * 48;
     const body = this.add.rectangle(x + actualWidth / 2, y + 6, actualWidth, 12, 0x000000, 0);
     this.physics.add.existing(body, true);
-    body.body.checkCollision.down = false;
+    body.body.checkCollision.down = true;
     body.body.checkCollision.left = false;
     body.body.checkCollision.right = false;
     body.body.checkCollision.up = true;

@@ -254,8 +254,8 @@ export default class SurvivalScene extends Phaser.Scene {
       const rect = this.add.rectangle(plat.x, plat.y, actualWidth, plat.height, 0x000000, 0);
       this.physics.add.existing(rect, true);
       if (!isGround) {
-        // One-way platform: solid top surface, jump-through from below, no side snags
-        rect.body.checkCollision.down = false;
+        // Solid bottom & top: blocks jumping through from underneath while preventing side snagging
+        rect.body.checkCollision.down = true;
         rect.body.checkCollision.left = false;
         rect.body.checkCollision.right = false;
         rect.body.checkCollision.up = true;
