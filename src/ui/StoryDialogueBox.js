@@ -244,7 +244,18 @@ export default class StoryDialogueBox extends Phaser.GameObjects.Container {
     this.bgBox.setInteractive({ useHandCursor: true }).on('pointerdown', () => triggerAction(false));
     this.dimOverlay.setInteractive().on('pointerdown', () => triggerAction(false));
 
-    // 4. Touch virtual triggers fallback
+    // 4. Global window/document touch & pointer fallback for mobile phones
+    // In portrait mode, the canvas is only on the top ~40% of the screen.
+    // This guarantees that tapping anywhere on the device (including the empty virtual controls area) advances dialogue.
+    this.globalPointerListener = (e) => {
+      if (!this.active || !this.visible) return;
+      if (canvas && e.target === canvas) return; // Handled by canvas listener
+      triggerAction(false);
+    };
+    window.addEventListener('pointerdown', this.globalPointerListener);
+    window.addEventListener('touchstart', this.globalPointerListener, { passive: true });
+
+    // 5. Touch virtual triggers fallback
     this.touchListener = () => {
       if (typeof window !== 'undefined' && window.touchController) {
         const triggers = window.touchController.consumeTriggers();
@@ -255,7 +266,7 @@ export default class StoryDialogueBox extends Phaser.GameObjects.Container {
     };
     scene.events.on('update', this.touchListener);
 
-    // 5. Keyboard handlers (Space, Enter, E, Esc)
+    // 6. Keyboard handlers (Space, Enter, E, Esc)
     this.onKeyDown = (event) => {
       if (event.code === 'Space' || event.code === 'Enter' || event.code === 'KeyE') {
         triggerAction(false);
@@ -369,6 +380,11 @@ export default class StoryDialogueBox extends Phaser.GameObjects.Container {
       canvas.removeEventListener('pointerdown', this.canvasPointerListener);
       canvas.removeEventListener('touchstart', this.canvasPointerListener);
       this.canvasPointerListener = null;
+    }
+    if (this.globalPointerListener) {
+      window.removeEventListener('pointerdown', this.globalPointerListener);
+      window.removeEventListener('touchstart', this.globalPointerListener);
+      this.globalPointerListener = null;
     }
     if (this.scene && this.scene.events && this.touchListener) {
       this.scene.events.off('update', this.touchListener);

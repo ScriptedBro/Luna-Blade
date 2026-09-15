@@ -903,6 +903,10 @@ export default class StoryScene extends Phaser.Scene {
 
       this.time.delayedCall(2400, () => {
         if (!this.scene || !this.scene.isActive() || this.isGameOver || this.isVictory) return;
+        if (this.inDialogue) {
+          this.time.delayedCall(1000, runCycle);
+          return;
+        }
 
         // 2. WARNING TELEGRAPH (800ms) - Rising warning sparks & pulsing surface glow
         geyserData.state = 'WARNING';
@@ -919,7 +923,7 @@ export default class StoryScene extends Phaser.Scene {
 
         for (let i = 0; i < 8; i++) {
           this.time.delayedCall(i * 90, () => {
-            if (!this.scene || !this.scene.isActive()) return;
+            if (!this.scene || !this.scene.isActive() || this.inDialogue) return;
             const ember = this.add.circle(x + Phaser.Math.Between(-12, 12), surfaceY - 6, Phaser.Math.Between(2, 4), 0xffaa00, 0.9);
             this.tweens.add({
               targets: ember,
@@ -933,6 +937,11 @@ export default class StoryScene extends Phaser.Scene {
 
         this.time.delayedCall(800, () => {
           if (!this.scene || !this.scene.isActive() || this.isGameOver || this.isVictory) return;
+          if (this.inDialogue) {
+            warningGlow.setAlpha(0);
+            this.time.delayedCall(1000, runCycle);
+            return;
+          }
 
           // 3. ERUPTION SURGE (1200ms) - Active pillar of fire
           geyserData.state = 'ERUPT';
@@ -952,7 +961,7 @@ export default class StoryScene extends Phaser.Scene {
             delay: 70,
             repeat: 14,
             callback: () => {
-              if (!this.scene || !this.scene.isActive() || geyserData.state !== 'ERUPT') return;
+              if (!this.scene || !this.scene.isActive() || geyserData.state !== 'ERUPT' || this.inDialogue) return;
               const spark = this.add.circle(x + Phaser.Math.Between(-10, 10), peakY + Phaser.Math.Between(-10, 10), Phaser.Math.Between(3, 6), 0xffdd00, 0.9);
               this.physics.add.existing(spark);
               spark.body.setVelocity(Phaser.Math.Between(-60, 60), Phaser.Math.Between(-120, -40));
@@ -1334,7 +1343,11 @@ export default class StoryScene extends Phaser.Scene {
         this.showBossWarningBanner(GAME_CONFIG.MOBS.BOSS_SKELETON.NAME, 'ANCIENT MONARCH OF THE CRYPT');
       });
     } else if (chapter === 4) {
-      if (this.player && this.player.x < 2120) this.player.x = 2120;
+      if (this.player) {
+        if (this.player.x < 2120) this.player.x = 2120;
+        if (this.player.y > 346) this.player.y = 346;
+        if (this.player.body) this.player.setVelocity(0, 0);
+      }
       // Restrict camera to Chapter 4 Ignis Arena
       this.cameras.main.setBounds(2080, 0, 520, this.levelHeight);
 
@@ -1368,7 +1381,11 @@ export default class StoryScene extends Phaser.Scene {
         this.showBossWarningBanner(GAME_CONFIG.MOBS.BOSS_DEMON.NAME, 'PYROMANCER OF THE OBSIDIAN DEEP');
       });
     } else if (chapter === 5) {
-      if (this.player && this.player.x < 2120) this.player.x = 2120;
+      if (this.player) {
+        if (this.player.x < 2120) this.player.x = 2120;
+        if (this.player.y > 346) this.player.y = 346;
+        if (this.player.body) this.player.setVelocity(0, 0);
+      }
       // Restrict camera to Chapter 5 Umbra Pinnacle Arena
       this.cameras.main.setBounds(2080, 0, 520, this.levelHeight);
 
@@ -1656,7 +1673,7 @@ export default class StoryScene extends Phaser.Scene {
       this.startDialogue([
         { speaker: 'LUNA', text: 'The temperature is rising rapidly... We have entered the Obsidian Caldera.' },
         { speaker: 'COMPANION', text: 'Watch your step, Luna! The ground below is collapsing into molten lava pools!' },
-        { speaker: 'LUNA', text: 'And soaring above the magma is Ignis, the Cinder Drake. Prepare your leaps—we fight across the embers!' }
+        { speaker: 'LUNA', text: 'And soaring above the magma is Ignis, the Cinder Drake. Prepare your leaps -- we fight across the embers!' }
       ]);
     } else if (this.chapterId === 5) {
       this.startDialogue([
@@ -1671,6 +1688,10 @@ export default class StoryScene extends Phaser.Scene {
     if (this.chapterIntroCard) {
       this.chapterIntroCard.destroy();
       this.chapterIntroCard = null;
+    }
+    if (this.dialogueBox) {
+      this.dialogueBox.destroy();
+      this.dialogueBox = null;
     }
     this.inDialogue = true;
     if (typeof window !== 'undefined' && window.touchController) {
