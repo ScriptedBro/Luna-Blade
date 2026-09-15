@@ -261,7 +261,6 @@ export default class MenuScene extends Phaser.Scene {
     const ch3Unlocked = storage.isChapterUnlocked(3);
     const ch4Unlocked = storage.isChapterUnlocked(4);
     const ch5Unlocked = storage.isChapterUnlocked(5);
-    const epilogueUnlocked = !!storage.data.storyProgress?.chapter5?.completed;
 
     const entries = [
       {
@@ -302,18 +301,8 @@ export default class MenuScene extends Phaser.Scene {
       }
     ];
 
-    if (epilogueUnlocked) {
-      entries.push({
-        title: '✨ EPILOGUE: THE SILVER DAWN',
-        desc: 'Restoration Cinematic',
-        unlocked: true,
-        isEpilogue: true,
-        action: () => this.scene.start('StoryEndingScene')
-      });
-    }
-
-    const startY = 56;
-    const spacing = 21;
+    const startY = 60;
+    const spacing = 22;
     const btnW = 398;
     const btnH = 18;
 
@@ -329,7 +318,7 @@ export default class MenuScene extends Phaser.Scene {
       const t = this.add.text(leftX, ey, item.title, {
         fontFamily: 'Press Start 2P',
         fontSize: '5px',
-        color: item.unlocked ? (item.isEpilogue ? '#ffd166' : '#ffffff') : '#556b73'
+        color: item.unlocked ? '#ffffff' : '#556b73'
       }).setOrigin(0, 0.5).setDepth(602);
       this.storyModalObjects.push(t);
 
@@ -338,7 +327,7 @@ export default class MenuScene extends Phaser.Scene {
       const d = this.add.text(rightX, ey, item.desc, {
         fontFamily: 'Press Start 2P',
         fontSize: '4.5px',
-        color: item.unlocked ? (item.isEpilogue ? '#ffea75' : '#64dfdf') : '#667b84'
+        color: item.unlocked ? '#64dfdf' : '#667b84'
       }).setOrigin(1, 0.5).setDepth(602);
       this.storyModalObjects.push(d);
 
@@ -348,9 +337,9 @@ export default class MenuScene extends Phaser.Scene {
         d.setInteractive({ useHandCursor: true });
 
         const setItemHover = (isHover) => {
-          btnBg.setFillStyle(isHover ? (item.isEpilogue ? 0x2b220d : 0x194254) : (item.isEpilogue ? 0x141006 : 0x0d222b));
-          btnBg.setStrokeStyle(1, isHover ? 0xffd166 : (item.isEpilogue ? 0x886622 : 0x225566));
-          t.setColor(isHover ? '#ffd166' : (item.isEpilogue ? '#ffd166' : '#ffffff'));
+          btnBg.setFillStyle(isHover ? 0x194254 : 0x0d222b);
+          btnBg.setStrokeStyle(1, isHover ? 0xffd166 : 0x225566);
+          t.setColor(isHover ? '#ffd166' : '#ffffff');
           if (isHover) sound.playBlip(true);
         };
 
@@ -375,7 +364,7 @@ export default class MenuScene extends Phaser.Scene {
     });
 
     // Close button
-    const closeBtnY = startY + entries.length * spacing + 6;
+    const closeBtnY = startY + entries.length * spacing + 10;
     const closeBg = this.add.rectangle(w / 2, closeBtnY, 140, 22, 0x162c33, 0.95)
       .setStrokeStyle(1.5, 0x3d6b73)
       .setDepth(602)

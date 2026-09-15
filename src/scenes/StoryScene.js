@@ -1572,10 +1572,7 @@ export default class StoryScene extends Phaser.Scene {
         { speaker: 'SHRINE', text: '✨ "THE SHATTERED MOON IS RESTORED! Pure celestial light cascades across the entire cosmos!"' },
         { speaker: 'LUNA', text: 'We did it, Sylva... The darkness is banished, and the Silver Dawn has arrived!' }
       ], () => {
-        this.cameras.main.fade(800, 255, 255, 255);
-        this.time.delayedCall(850, () => {
-          this.scene.start('StoryEndingScene');
-        });
+        this.showVictoryBanner();
       });
     }
   }
