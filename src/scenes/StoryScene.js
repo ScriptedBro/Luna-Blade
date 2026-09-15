@@ -48,6 +48,10 @@ export default class StoryScene extends Phaser.Scene {
     this.boss = null;
     this.bossHealthBar = null;
     this.bossTriggered = false;
+    this.bossApproachTriggered = false;
+    this.bossApproachBanner = null;
+    this.bossBattleBanner = null;
+    this.bossApproachMarkers = [];
     this.arenaGateWall = null;
     this.arenaGateVisual = null;
     this.skipIntroCard = Boolean(data && data.skipIntroCard);
@@ -62,6 +66,15 @@ export default class StoryScene extends Phaser.Scene {
     this.isGameOver = false;
     this.isVictory = false;
 
+    if (this.bossApproachBanner) {
+      this.bossApproachBanner.destroy();
+      this.bossApproachBanner = null;
+    }
+    if (this.bossBattleBanner) {
+      this.bossBattleBanner.destroy();
+      this.bossBattleBanner = null;
+    }
+
     if (typeof window !== 'undefined' && window.touchController) {
       window.touchController.hide();
     }
@@ -71,6 +84,14 @@ export default class StoryScene extends Phaser.Scene {
     pauseService.updateTimer(0);
     sound.playBGM(this.chapterId >= 4 ? 'battle' : 'forest');
     this.events.once('shutdown', () => {
+      if (this.bossApproachBanner) {
+        this.bossApproachBanner.destroy();
+        this.bossApproachBanner = null;
+      }
+      if (this.bossBattleBanner) {
+        this.bossBattleBanner.destroy();
+        this.bossBattleBanner = null;
+      }
       if (this.activeGameOverCleanup) {
         this.activeGameOverCleanup();
         this.activeGameOverCleanup = null;
@@ -295,6 +316,9 @@ export default class StoryScene extends Phaser.Scene {
     this.spawnCrate(2280, 270);
     this.spawnCrate(2520, 350);
 
+    // Warning signpost and twin burning totems marking boss arena approach
+    this.createBossApproachLandmarks(2240, 380);
+
     this.obelisk = new Obelisk(this, 2720, 380, 'Shrine of Whispering Waters');
     this.obelisk.lock();
   }
@@ -349,6 +373,9 @@ export default class StoryScene extends Phaser.Scene {
     this.spawnCrate(1780, 255);
     this.spawnCrate(2200, 245);
     this.spawnCrate(2420, 350);
+
+    // Warning signpost and amber totems marking boss arena approach
+    this.createBossApproachLandmarks(2030, 380);
 
     this.obelisk = new Obelisk(this, 2520, 380, 'Golden Hive Shrine');
     this.obelisk.lock();
@@ -407,6 +434,9 @@ export default class StoryScene extends Phaser.Scene {
     this.spawnCrate(2120, 245);
     this.spawnCrate(2380, 350);
 
+    // Warning signpost and crypt flame pillars marking boss arena approach
+    this.createBossApproachLandmarks(2030, 380);
+
     // Crypt Obelisk (Locked by Vorgath)
     this.obelisk = new Obelisk(this, 2520, 380, 'Crypt Shrine of the Ancients');
     this.obelisk.lock();
@@ -462,6 +492,9 @@ export default class StoryScene extends Phaser.Scene {
     this.spawnCrate(1400, 235);
     this.spawnCrate(1840, 245);
     this.spawnCrate(2260, 235);
+
+    // Warning signpost and obsidian magma pillars marking boss arena approach
+    this.createBossApproachLandmarks(1940, 380);
 
     // Caldera Obelisk (Locked by Ignis)
     this.obelisk = new Obelisk(this, 2520, 380, 'Shrine of the Molten Core');
@@ -526,6 +559,9 @@ export default class StoryScene extends Phaser.Scene {
     this.spawnCrate(1380, 225);
     this.spawnCrate(1820, 235);
     this.spawnCrate(2240, 235);
+
+    // Warning signpost and celestial spires marking boss arena approach
+    this.createBossApproachLandmarks(1940, 380);
 
     // Final Celestial Obelisk (Locked by Umbra)
     this.obelisk = new Obelisk(this, 2520, 380, 'The Lunar Heart Obelisk');
@@ -983,9 +1019,209 @@ export default class StoryScene extends Phaser.Scene {
     return proj;
   }
 
+  createBossApproachLandmarks(x, groundY = 380) {
+    const container = this.add.container(x, groundY);
+    container.setDepth(15);
+    this.bossApproachMarkers.push(container);
+
+    // Chapter-specific styling for boundary monoliths & flames
+    const theme = {
+      1: { pillarCol: 0x243224, strokeCol: 0x4d664d, rune: '᚛ ᛟ ᚜', runeCol: '#ff5544', flameCol: 0xff6600, innerFlame: 0xffdd00 },
+      2: { pillarCol: 0x4a3418, strokeCol: 0x886022, rune: '✦ 🍯 ✦', runeCol: '#ffcc22', flameCol: 0xffaa00, innerFlame: 0xffff66 },
+      3: { pillarCol: 0x1a2228, strokeCol: 0x335566, rune: '☠ ᛉ ☠', runeCol: '#55ddff', flameCol: 0x00ccff, innerFlame: 0xccffff },
+      4: { pillarCol: 0x1e0e0e, strokeCol: 0x661818, rune: '🔥 ⚡ 🔥', runeCol: '#ff4422', flameCol: 0xff3300, innerFlame: 0xffcc00 },
+      5: { pillarCol: 0x140c24, strokeCol: 0x6622aa, rune: '✧ ☾ ✧', runeCol: '#cc88ff', flameCol: 0x9933ff, innerFlame: 0xffffff }
+    }[this.chapterId] || { pillarCol: 0x222222, strokeCol: 0x555555, rune: '⚠️', runeCol: '#ffaa00', flameCol: 0xff6600, innerFlame: 0xffdd00 };
+
+    // 1. Carved Wooden/Stone Warning Signpost at x - 32
+    const postX = -32;
+    const post = this.add.rectangle(postX, -14, 4, 28, 0x382012).setStrokeStyle(1, 0x201008);
+    const board = this.add.rectangle(postX, -28, 42, 18, 0x2a160a).setStrokeStyle(1.5, 0x552c16);
+    const skullIcon = this.add.text(postX - 11, -28, '☠️', { fontSize: '8px' }).setOrigin(0.5);
+    const boardText = this.add.text(postX + 7, -28, 'BOSS', {
+      fontFamily: 'Press Start 2P',
+      fontSize: '5px',
+      color: '#ff4444'
+    }).setOrigin(0.5);
+
+    // Floating pulsing beacon over signpost
+    const beacon = this.add.text(postX, -44, '!', {
+      fontFamily: 'Press Start 2P',
+      fontSize: '8px',
+      color: '#ffcc00'
+    }).setOrigin(0.5);
+    this.tweens.add({
+      targets: beacon,
+      y: -48,
+      alpha: { from: 1, to: 0.35 },
+      duration: 500,
+      yoyo: true,
+      repeat: -1,
+      ease: 'Sine.easeInOut'
+    });
+
+    // 2. Twin Boundary Monoliths / Totems flanking the entrance (Left: -12, Right: 18)
+    const createPillar = (px) => {
+      const pRect = this.add.rectangle(px, -20, 14, 40, theme.pillarCol).setStrokeStyle(1.5, theme.strokeCol);
+      const runeText = this.add.text(px, -20, theme.rune, {
+        fontFamily: 'Press Start 2P',
+        fontSize: '4.5px',
+        color: theme.runeCol
+      }).setOrigin(0.5);
+
+      // Brazier cup on top
+      const cup = this.add.rectangle(px, -42, 18, 6, 0x111111).setStrokeStyle(1, theme.strokeCol);
+
+      // Flickering flame
+      const outerFlame = this.add.ellipse(px, -48, 10, 14, theme.flameCol, 0.9);
+      const innerFlame = this.add.ellipse(px, -47, 5, 8, theme.innerFlame, 0.95);
+
+      this.tweens.add({
+        targets: [outerFlame, innerFlame],
+        scaleY: { from: 1, to: 1.3 },
+        scaleX: { from: 1, to: 0.85 },
+        duration: 250 + Math.random() * 100,
+        yoyo: true,
+        repeat: -1,
+        ease: 'Sine.easeInOut'
+      });
+
+      // Ambient rising sparks
+      this.time.addEvent({
+        delay: 350 + Math.random() * 200,
+        loop: true,
+        callback: () => {
+          if (!this.scene || !this.scene.isActive()) return;
+          const spark = this.add.circle(x + px + Phaser.Math.Between(-4, 4), groundY - 50, Phaser.Math.Between(1, 2.5), theme.flameCol, 0.85);
+          spark.setDepth(16);
+          this.tweens.add({
+            targets: spark,
+            y: spark.y - Phaser.Math.Between(14, 30),
+            x: spark.x + Phaser.Math.Between(-6, 6),
+            alpha: 0,
+            duration: 400,
+            onComplete: () => spark.destroy()
+          });
+        }
+      });
+
+      return [pRect, runeText, cup, outerFlame, innerFlame];
+    };
+
+    const leftPillar = createPillar(-12);
+    const rightPillar = createPillar(18);
+
+    container.add([post, board, skullIcon, boardText, beacon, ...leftPillar, ...rightPillar]);
+  }
+
+  triggerBossApproachWarning() {
+    if (this.bossApproachTriggered || this.bossTriggered || this.isGameOver || this.isVictory) return;
+    this.bossApproachTriggered = true;
+
+    // 1. Audio tension rumble & camera micro-shake
+    sound.playRumble();
+    this.cameras.main.shake(380, 0.007);
+
+    // 2. Chapter boss approach info
+    const bossInfo = {
+      1: { name: 'CHIEFTAIN GORGOK', title: 'Armored War Boar Colossus', color: '#ff6644', border: 0xaa3322 },
+      2: { name: 'ARCHMAGE MALAKOR', title: 'Sorcerer of the Golden Hive', color: '#ffcc22', border: 0xaa8800 },
+      3: { name: 'VORGATH', title: 'The Fallen Bone Sovereign', color: '#55ddff', border: 0x2277aa },
+      4: { name: 'IGNIS', title: 'The Cinder Drake of the Deep', color: '#ff4422', border: 0xaa2200 },
+      5: { name: 'SOVEREIGN UMBRA', title: 'Sovereign of the Shattered Moon', color: '#dd88ff', border: 0x8822bb }
+    }[this.chapterId] || { name: 'UNKNOWN FOE', title: 'Ancient Guardian', color: '#ffffff', border: 0xaaaaaa };
+
+    // 3. Atmospheric Screen Flash / Vignette Pulse
+    const w = GAME_CONFIG.WIDTH;
+    const h = GAME_CONFIG.HEIGHT;
+    const flash = this.add.rectangle(w / 2, h / 2, w, h, bossInfo.border, 0.28)
+      .setScrollFactor(0)
+      .setDepth(440);
+    this.tweens.add({
+      targets: flash,
+      alpha: 0,
+      duration: 600,
+      ease: 'Sine.easeOut',
+      onComplete: () => flash.destroy()
+    });
+
+    // 4. Cinematic Top Warning Banner
+    if (this.bossApproachBanner) {
+      this.bossApproachBanner.destroy();
+      this.bossApproachBanner = null;
+    }
+
+    const banner = this.add.container(w / 2, -45).setScrollFactor(0).setDepth(445);
+    this.bossApproachBanner = banner;
+
+    const bg = this.add.rectangle(0, 0, 310, 34, 0x110808, 0.94)
+      .setStrokeStyle(1.5, bossInfo.border);
+    const skull = this.add.text(-135, 0, '⚠️', { fontSize: '10px' }).setOrigin(0.5);
+    const mainText = this.add.text(0, -7, '⚠️ DANGER AHEAD: BOSS LAIR ⚠️', {
+      fontFamily: 'Press Start 2P',
+      fontSize: '6.5px',
+      color: bossInfo.color
+    }).setOrigin(0.5);
+    const subText = this.add.text(0, 7, `${bossInfo.name} • ${bossInfo.title}`, {
+      fontFamily: 'Press Start 2P',
+      fontSize: '5px',
+      color: '#f0f0f0'
+    }).setOrigin(0.5);
+
+    banner.add([bg, skull, mainText, subText]);
+
+    // Slide banner in from top to clear the top HUD
+    this.tweens.add({
+      targets: banner,
+      y: 58,
+      duration: 350,
+      ease: 'Back.easeOut'
+    });
+
+    // Auto-dismiss after 4.5s
+    this.time.delayedCall(4500, () => {
+      this.dismissBossApproachWarning();
+    });
+
+    // 5. Sylva Fairy Companion Alert
+    if (this.player && this.player.pet) {
+      const pet = this.player.pet;
+      this.showFloatingText(pet.x, pet.y - 18, '⚠️ POWERFUL AURA AHEAD!', '#ffffbb');
+      this.tweens.add({
+        targets: pet,
+        scaleX: 1.4,
+        scaleY: 1.4,
+        duration: 150,
+        yoyo: true,
+        repeat: 3
+      });
+    } else if (this.player) {
+      this.showFloatingText(this.player.x, this.player.y - 28, '⚠️ SENSE GREAT POWER AHEAD!', '#ffffbb');
+    }
+  }
+
+  dismissBossApproachWarning(immediate = false) {
+    if (!this.bossApproachBanner) return;
+    const b = this.bossApproachBanner;
+    this.bossApproachBanner = null;
+    if (immediate) {
+      b.destroy();
+      return;
+    }
+    this.tweens.add({
+      targets: b,
+      y: -50,
+      alpha: 0,
+      duration: 250,
+      ease: 'Sine.easeIn',
+      onComplete: () => b.destroy()
+    });
+  }
+
   triggerBossEncounter(chapter) {
     if (this.bossTriggered) return;
     this.bossTriggered = true;
+    this.dismissBossApproachWarning(true);
 
     sound.playVictory();
     this.cameras.main.shake(400, 0.02);
@@ -1171,8 +1407,14 @@ export default class StoryScene extends Phaser.Scene {
 
   showBossWarningBanner(name, subtitle) {
     sound.playBGM('boss');
+    if (this.bossBattleBanner) {
+      this.bossBattleBanner.destroy();
+      this.bossBattleBanner = null;
+    }
+
     const w = GAME_CONFIG.WIDTH;
     const banner = this.add.container(w / 2, 84).setScrollFactor(0).setDepth(480);
+    this.bossBattleBanner = banner;
 
     const bg = this.add.rectangle(0, 0, 360, 36, 0x1f0606, 0.9);
     bg.setStrokeStyle(1.5, 0xff2222);
@@ -1198,7 +1440,10 @@ export default class StoryScene extends Phaser.Scene {
       y: 64,
       delay: 2400,
       duration: 600,
-      onComplete: () => banner.destroy()
+      onComplete: () => {
+        if (this.bossBattleBanner === banner) this.bossBattleBanner = null;
+        banner.destroy();
+      }
     });
   }
 
@@ -1455,9 +1700,11 @@ export default class StoryScene extends Phaser.Scene {
       this.projectiles.clear(true, true);
     }
 
+    const currentChapter = this.chapterId;
     const box = new StoryDialogueBox(this);
     this.dialogueBox = box;
     box.startDialogue(lines, () => {
+      if (!this.scene || !this.scene.isActive() || this.chapterId !== currentChapter) return;
       this.dialogueBox = null;
       this.inDialogue = false;
       this.physics.resume();
@@ -2219,6 +2466,20 @@ export default class StoryScene extends Phaser.Scene {
 
     if (this.player) {
       this.player.update(this.cursors, touchInputs);
+
+      // Check boss approach warning zone (~200–240px before arena)
+      if (!this.bossApproachTriggered && !this.bossTriggered && !this.player.isDead) {
+        const approachX = this.chapterId === 1 ? 2060 : 1880;
+        if (this.player.x >= approachX) {
+          this.triggerBossApproachWarning();
+        }
+      }
+
+      // Immediately remove Danger Ahead approach banner the moment player reaches the boss lair
+      const arenaThresholdX = this.chapterId === 1 ? 2320 : 2120;
+      if (this.bossApproachBanner && this.player.x >= arenaThresholdX) {
+        this.dismissBossApproachWarning(true);
+      }
 
       // Check arena boss encounter triggers
       if (!this.bossTriggered && !this.player.isDead && !this.inDialogue) {
