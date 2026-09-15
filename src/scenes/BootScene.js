@@ -104,6 +104,29 @@ export default class BootScene extends Phaser.Scene {
     this.load.spritesheet('wizard_hit', 'assets/mobs/wizard/hit.png', { frameWidth: 150, frameHeight: 150 });
     this.load.spritesheet('wizard_dead', 'assets/mobs/wizard/death.png', { frameWidth: 150, frameHeight: 150 });
 
+    // Armored Skeleton Knight (Chapter 3 Boss Vorgath) Spritesheets
+    this.load.spritesheet('skeleton_idle', 'assets/mobs/skeleton/Idle.png', { frameWidth: 150, frameHeight: 150 });
+    this.load.spritesheet('skeleton_walk', 'assets/mobs/skeleton/Walk.png', { frameWidth: 150, frameHeight: 150 });
+    this.load.spritesheet('skeleton_attack', 'assets/mobs/skeleton/Attack.png', { frameWidth: 150, frameHeight: 150 });
+    this.load.spritesheet('skeleton_shield', 'assets/mobs/skeleton/Shield.png', { frameWidth: 150, frameHeight: 150 });
+    this.load.spritesheet('skeleton_hit', 'assets/mobs/skeleton/Take Hit.png', { frameWidth: 150, frameHeight: 150 });
+    this.load.spritesheet('skeleton_dead', 'assets/mobs/skeleton/Death.png', { frameWidth: 150, frameHeight: 150 });
+
+    // Fire Demon (Chapter 4 Boss Ignis) Spritesheets
+    this.load.spritesheet('demon_idle', 'assets/mobs/demon/idle.png', { frameWidth: 79, frameHeight: 69 });
+    this.load.spritesheet('demon_flying', 'assets/mobs/demon/flying.png', { frameWidth: 79, frameHeight: 69 });
+    this.load.spritesheet('demon_attack', 'assets/mobs/demon/attack.png', { frameWidth: 79, frameHeight: 69 });
+    this.load.spritesheet('demon_hit', 'assets/mobs/demon/hit.png', { frameWidth: 79, frameHeight: 69 });
+    this.load.spritesheet('demon_dead', 'assets/mobs/demon/death.png', { frameWidth: 79, frameHeight: 69 });
+    this.load.image('demon_projectile', 'assets/mobs/demon/projectile.png');
+
+    // NightBorne (Chapter 5 Final Boss Umbra) Spritesheets
+    this.load.spritesheet('nightborne_idle', 'assets/mobs/nightborne/idle.png', { frameWidth: 80, frameHeight: 80 });
+    this.load.spritesheet('nightborne_run', 'assets/mobs/nightborne/run.png', { frameWidth: 80, frameHeight: 80 });
+    this.load.spritesheet('nightborne_attack', 'assets/mobs/nightborne/attack.png', { frameWidth: 80, frameHeight: 80 });
+    this.load.spritesheet('nightborne_hit', 'assets/mobs/nightborne/hit.png', { frameWidth: 80, frameHeight: 80 });
+    this.load.spritesheet('nightborne_dead', 'assets/mobs/nightborne/death.png', { frameWidth: 80, frameHeight: 80 });
+
     // Environment & Parallax High Forest Layers
     this.load.image('env_bg', 'assets/env/forest_backdrop.png');
     this.load.image('sky_backdrop', 'assets/env/sky_backdrop.png');
@@ -112,6 +135,11 @@ export default class BootScene extends Phaser.Scene {
     this.load.image('forest_bg_p1', 'assets/env/forest_bg_p1.png');
     this.load.image('forest_bg_p2', 'assets/env/forest_bg_p2.png');
     this.load.image('forest_bg_p3', 'assets/env/forest_bg_p3.png');
+    this.load.image('bg_whispering', 'assets/env/bg_whispering.png');
+    this.load.image('bg_hive', 'assets/env/bg_hive.png');
+    this.load.image('bg_ruins', 'assets/env/bg_ruins.png');
+    this.load.image('bg_caldera', 'assets/env/bg_caldera.png');
+    this.load.image('bg_lunar_spire', 'assets/env/bg_lunar_spire.png');
     this.load.image('pine_green', 'assets/env/pine_green.png');
     this.load.image('pine_golden', 'assets/env/pine_golden.png');
     this.load.image('pine_dark', 'assets/env/pine_dark.png');
@@ -130,9 +158,13 @@ export default class BootScene extends Phaser.Scene {
     this.load.image('plat_wood', 'assets/env/plat_wood.png');
     this.load.image('plat_stone', 'assets/env/plat_stone.png');
     this.load.image('plat_branch', 'assets/env/plat_branch.png');
+    this.load.image('plat_obsidian', 'assets/env/plat_obsidian.png');
+    this.load.image('plat_crystal', 'assets/env/plat_crystal.png');
     this.load.image('bridge', 'assets/env/bridge.png');
     this.load.image('water_surface', 'assets/env/water_surface.png');
     this.load.image('water_deep', 'assets/env/water_deep.png');
+    this.load.image('lava_surface', 'assets/env/lava_surface.png');
+    this.load.image('lava_deep', 'assets/env/lava_deep.png');
     this.load.image('prop_shroom_big', 'assets/env/prop_shroom_big.png');
     this.load.image('prop_shroom_small', 'assets/env/prop_shroom_small.png');
     this.load.image('prop_flower_blue', 'assets/env/prop_flower_blue.png');
@@ -495,6 +527,121 @@ export default class BootScene extends Phaser.Scene {
       frames: this.anims.generateFrameNumbers('fairy_fly', { start: 0, end: 5 }),
       frameRate: 8,
       repeat: -1
+    });
+
+    // Armored Skeleton Knight (Boss Vorgath) Anims
+    this.anims.create({
+      key: 'skeleton_idle_anim',
+      frames: this.anims.generateFrameNumbers('skeleton_idle', { start: 0, end: 3 }),
+      frameRate: 6,
+      repeat: -1
+    });
+
+    this.anims.create({
+      key: 'skeleton_walk_anim',
+      frames: this.anims.generateFrameNumbers('skeleton_walk', { start: 0, end: 3 }),
+      frameRate: 7,
+      repeat: -1
+    });
+
+    this.anims.create({
+      key: 'skeleton_attack_anim',
+      frames: this.anims.generateFrameNumbers('skeleton_attack', { start: 0, end: 7 }),
+      frameRate: 10,
+      repeat: 0
+    });
+
+    this.anims.create({
+      key: 'skeleton_shield_anim',
+      frames: this.anims.generateFrameNumbers('skeleton_shield', { start: 0, end: 3 }),
+      frameRate: 8,
+      repeat: -1
+    });
+
+    this.anims.create({
+      key: 'skeleton_hit_anim',
+      frames: this.anims.generateFrameNumbers('skeleton_hit', { start: 0, end: 3 }),
+      frameRate: 10,
+      repeat: 0
+    });
+
+    this.anims.create({
+      key: 'skeleton_dead_anim',
+      frames: this.anims.generateFrameNumbers('skeleton_dead', { start: 0, end: 3 }),
+      frameRate: 6,
+      repeat: 0
+    });
+
+    // Fire Demon (Boss Ignis) Anims
+    this.anims.create({
+      key: 'demon_idle_anim',
+      frames: this.anims.generateFrameNumbers('demon_idle', { start: 0, end: 3 }),
+      frameRate: 7,
+      repeat: -1
+    });
+
+    this.anims.create({
+      key: 'demon_flying_anim',
+      frames: this.anims.generateFrameNumbers('demon_flying', { start: 0, end: 3 }),
+      frameRate: 8,
+      repeat: -1
+    });
+
+    this.anims.create({
+      key: 'demon_attack_anim',
+      frames: this.anims.generateFrameNumbers('demon_attack', { start: 0, end: 7 }),
+      frameRate: 10,
+      repeat: 0
+    });
+
+    this.anims.create({
+      key: 'demon_hit_anim',
+      frames: this.anims.generateFrameNumbers('demon_hit', { start: 0, end: 3 }),
+      frameRate: 9,
+      repeat: 0
+    });
+
+    this.anims.create({
+      key: 'demon_dead_anim',
+      frames: this.anims.generateFrameNumbers('demon_dead', { start: 0, end: 6 }),
+      frameRate: 8,
+      repeat: 0
+    });
+
+    // NightBorne (Boss Umbra) Anims
+    this.anims.create({
+      key: 'nightborne_idle_anim',
+      frames: this.anims.generateFrameNumbers('nightborne_idle', { start: 0, end: 8 }),
+      frameRate: 9,
+      repeat: -1
+    });
+
+    this.anims.create({
+      key: 'nightborne_run_anim',
+      frames: this.anims.generateFrameNumbers('nightborne_run', { start: 0, end: 5 }),
+      frameRate: 11,
+      repeat: -1
+    });
+
+    this.anims.create({
+      key: 'nightborne_attack_anim',
+      frames: this.anims.generateFrameNumbers('nightborne_attack', { start: 0, end: 11 }),
+      frameRate: 13,
+      repeat: 0
+    });
+
+    this.anims.create({
+      key: 'nightborne_hit_anim',
+      frames: this.anims.generateFrameNumbers('nightborne_hit', { start: 0, end: 4 }),
+      frameRate: 10,
+      repeat: 0
+    });
+
+    this.anims.create({
+      key: 'nightborne_dead_anim',
+      frames: this.anims.generateFrameNumbers('nightborne_dead', { start: 0, end: 22 }),
+      frameRate: 12,
+      repeat: 0
     });
   }
 }

@@ -78,6 +78,27 @@ export const GAME_CONFIG = {
       NAME: 'MALAKOR, CORRUPTED ARCHMAGE',
       PTS: 750,
       DAMAGE: 30,
+    },
+    BOSS_SKELETON: {
+      HP: 360,
+      NAME: 'VORGATH, THE BONE SOVEREIGN',
+      WALK_SPEED: 50,
+      PTS: 1000,
+      DAMAGE: 25,
+    },
+    BOSS_DEMON: {
+      HP: 440,
+      NAME: 'IGNIS, THE CINDER DRAKE',
+      FLY_SPEED: 75,
+      PTS: 1250,
+      DAMAGE: 25,
+    },
+    BOSS_NIGHTBORNE: {
+      HP: 520,
+      NAME: 'UMBRA, SOVEREIGN OF THE SHATTERED MOON',
+      RUN_SPEED: 110,
+      PTS: 1500,
+      DAMAGE: 30,
     }
   },
 
@@ -158,10 +179,26 @@ export const GAME_CONFIG = {
     {
       id: 3,
       title: 'The Sunken Ruins',
-      biome: 'Mossy Ruins & Caverns',
-      description: 'Ancient stone ruins buried in moss and spikes. Face elite enemy rushes and purge the Corrupted Shrine.',
+      biome: 'Crypt of the Ancients',
+      description: 'Forgotten crypts buried in moss and bone. Face Vorgath the Bone Sovereign and cleanse the Shrine.',
       targetObelisks: 1,
       bgTint: 0x99aacc
+    },
+    {
+      id: 4,
+      title: 'Obsidian Caldera',
+      biome: 'Volcanic Deep & Lava Chambers',
+      description: 'Scorching caverns flanked by bubbling magma and collapsing rock. Confront Ignis the Cinder Drake.',
+      targetObelisks: 1,
+      bgTint: 0xff6633
+    },
+    {
+      id: 5,
+      title: 'The Lunar Spire',
+      biome: 'Shattered Moon Core & Cosmic Void',
+      description: 'The pinnacle of the heavens where celestial fragments drift. Vanquish Umbra to restore the Moon.',
+      targetObelisks: 1,
+      bgTint: 0xccaaff
     }
   ],
 

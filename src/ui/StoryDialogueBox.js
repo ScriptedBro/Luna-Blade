@@ -51,6 +51,36 @@ const SPEAKER_CONFIGS = {
     spriteKey: null,
     icon: '✨',
     soundPitch: true
+  },
+  VORGATH: {
+    name: 'VORGATH, BONE SOVEREIGN',
+    color: '#e0e1dd',
+    bgColor: 0x1b263b,
+    borderColor: 0x778da9,
+    spriteKey: 'skeleton_idle',
+    scale: 0.35,
+    frame: 0,
+    soundPitch: false
+  },
+  IGNIS: {
+    name: 'IGNIS, CINDER DRAKE',
+    color: '#ff7b00',
+    bgColor: 0x3d0000,
+    borderColor: 0xff5400,
+    spriteKey: 'demon_idle',
+    scale: 0.6,
+    frame: 0,
+    soundPitch: false
+  },
+  UMBRA: {
+    name: 'UMBRA, SHATTERED SOVEREIGN',
+    color: '#b5179e',
+    bgColor: 0x10002b,
+    borderColor: 0x7209b7,
+    spriteKey: 'nightborne_idle',
+    scale: 0.55,
+    frame: 0,
+    soundPitch: false
   }
 };
 

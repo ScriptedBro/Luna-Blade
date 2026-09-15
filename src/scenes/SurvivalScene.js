@@ -1410,4 +1410,23 @@ export default class SurvivalScene extends Phaser.Scene {
       this.handleGameOver();
     }
   }
+
+  showFloatingText(x, y, text, color = '#ffffff') {
+    const txt = this.add.text(x, y, text, {
+      fontFamily: 'Press Start 2P',
+      fontSize: '7px',
+      color: color,
+      stroke: '#000000',
+      strokeThickness: 2
+    }).setOrigin(0.5).setDepth(250);
+
+    this.tweens.add({
+      targets: txt,
+      y: y - 24,
+      alpha: 0,
+      duration: 750,
+      ease: 'Cubic.easeOut',
+      onComplete: () => txt.destroy()
+    });
+  }
 }

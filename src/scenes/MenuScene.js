@@ -233,19 +233,19 @@ export default class MenuScene extends Phaser.Scene {
     modal.add(overlay);
 
     // Modal panel
-    const panel = this.add.rectangle(0, 0, 360, 204, 0x071217, 0.95);
+    const panel = this.add.rectangle(0, 0, 370, 236, 0x071217, 0.95);
     panel.setStrokeStyle(2, 0x1d4754);
     modal.add(panel);
 
     // Header
-    const title = this.add.text(0, -84, '⚔️ CHOOSE CHAPTER', {
+    const title = this.add.text(0, -100, '⚔️ CHOOSE CHAPTER', {
       fontFamily: 'Press Start 2P',
-      fontSize: '8px',
+      fontSize: '7.5px',
       color: '#ffd166'
     }).setOrigin(0.5);
     modal.add(title);
 
-    const sub = this.add.text(0, -70, 'THE SHATTERED MOON & THE BLIGHTED ROOTS', {
+    const sub = this.add.text(0, -88, 'THE SHATTERED MOON & THE BLIGHTED ROOTS', {
       fontFamily: 'Press Start 2P',
       fontSize: '4.5px',
       color: '#7ba0ab'
@@ -254,7 +254,9 @@ export default class MenuScene extends Phaser.Scene {
 
     const ch2Unlocked = storage.isChapterUnlocked(2);
     const ch3Unlocked = storage.isChapterUnlocked(3);
-    const epilogueUnlocked = !!storage.data.storyProgress?.chapter3?.completed;
+    const ch4Unlocked = storage.isChapterUnlocked(4);
+    const ch5Unlocked = storage.isChapterUnlocked(5);
+    const epilogueUnlocked = !!storage.data.storyProgress?.chapter5?.completed;
 
     const entries = [
       {
@@ -265,21 +267,33 @@ export default class MenuScene extends Phaser.Scene {
       },
       {
         title: '🌲 CHAPTER 1: WHISPERING WOODS',
-        desc: 'Cleanse the Shrine of Whispering Waters',
+        desc: 'Boss Gorgok | Whispering Waters',
         unlocked: true,
         action: () => this.scene.start('StoryScene', { chapter: 1 })
       },
       {
         title: '🍯 CHAPTER 2: THE HIVE CANOPY',
-        desc: ch2Unlocked ? 'Defeat Archmage Malakor on High Boughs' : '🔒 Complete Chapter 1 to Unlock',
+        desc: ch2Unlocked ? 'Boss Malakor | The High Boughs' : '🔒 Complete Chapter 1 to Unlock',
         unlocked: ch2Unlocked,
         action: () => this.scene.start('StoryScene', { chapter: 2 })
       },
       {
         title: '🏛️ CHAPTER 3: THE SUNKEN RUINS',
-        desc: ch3Unlocked ? 'Purge the Primordial Corrupted Obelisk' : '🔒 Complete Chapter 2 to Unlock',
+        desc: ch3Unlocked ? 'Boss Vorgath | Crypt of the Ancients' : '🔒 Complete Chapter 2 to Unlock',
         unlocked: ch3Unlocked,
         action: () => this.scene.start('StoryScene', { chapter: 3 })
+      },
+      {
+        title: '🌋 CHAPTER 4: OBSIDIAN CALDERA',
+        desc: ch4Unlocked ? 'Boss Ignis | The Molten Deep' : '🔒 Complete Chapter 3 to Unlock',
+        unlocked: ch4Unlocked,
+        action: () => this.scene.start('StoryScene', { chapter: 4 })
+      },
+      {
+        title: '🌙 CHAPTER 5: THE LUNAR SPIRE',
+        desc: ch5Unlocked ? 'Boss Umbra | Shattered Moon Core' : '🔒 Complete Chapter 4 to Unlock',
+        unlocked: ch5Unlocked,
+        action: () => this.scene.start('StoryScene', { chapter: 5 })
       }
     ];
 
@@ -292,22 +306,24 @@ export default class MenuScene extends Phaser.Scene {
       });
     }
 
+    const startY = -70;
+    const spacing = 19;
     entries.forEach((item, idx) => {
-      const ey = -46 + idx * 26;
-      const btnBg = this.add.rectangle(0, ey, 324, 22, item.unlocked ? 0x0d222b : 0x0a1417, 0.9);
+      const ey = startY + idx * spacing;
+      const btnBg = this.add.rectangle(0, ey, 340, 17, item.unlocked ? 0x0d222b : 0x0a1417, 0.9);
       btnBg.setStrokeStyle(1, item.unlocked ? 0x225566 : 0x1a2d33);
       modal.add(btnBg);
 
-      const t = this.add.text(-150, ey - 3, item.title, {
+      const t = this.add.text(-160, ey - 2, item.title, {
         fontFamily: 'Press Start 2P',
-        fontSize: '5.5px',
+        fontSize: '5px',
         color: item.unlocked ? '#ffffff' : '#556b73'
       }).setOrigin(0, 0.5);
       modal.add(t);
 
-      const d = this.add.text(-150, ey + 6, item.desc, {
+      const d = this.add.text(45, ey - 2, item.desc, {
         fontFamily: 'Press Start 2P',
-        fontSize: '4px',
+        fontSize: '3.5px',
         color: item.unlocked ? '#6ab2c4' : '#3d5259'
       }).setOrigin(0, 0.5);
       modal.add(d);
@@ -324,8 +340,7 @@ export default class MenuScene extends Phaser.Scene {
           t.setColor('#ffffff');
         });
         btnBg.on('pointerdown', () => {
-          sound.playCoin();
-          modal.destroy();
+          sound.playConfirm();
           this.storyModalContainer = null;
           item.action();
         });
@@ -333,20 +348,24 @@ export default class MenuScene extends Phaser.Scene {
     });
 
     // Close button
-    const closeBtn = this.add.text(0, 84, '[CLOSE ✕]', {
+    const closeBtnY = startY + entries.length * spacing + 4;
+    const closeBg = this.add.rectangle(0, closeBtnY, 120, 18, 0x162c33, 0.9)
+      .setStrokeStyle(1, 0x3d6b73)
+      .setInteractive({ useHandCursor: true });
+    modal.add(closeBg);
+
+    const closeText = this.add.text(0, closeBtnY, '✕ BACK', {
       fontFamily: 'Press Start 2P',
       fontSize: '6px',
-      color: '#ff6666'
-    }).setOrigin(0.5).setInteractive({ useHandCursor: true });
+      color: '#e0f0f5'
+    }).setOrigin(0.5);
+    modal.add(closeText);
 
-    closeBtn.on('pointerover', () => closeBtn.setColor('#ff9999'));
-    closeBtn.on('pointerout', () => closeBtn.setColor('#ff6666'));
-    closeBtn.on('pointerdown', () => {
-      sound.playBlip(false);
+    closeBg.on('pointerdown', () => {
+      sound.playCancel();
       modal.destroy();
       this.storyModalContainer = null;
     });
-    modal.add(closeBtn);
   }
 
   update() {

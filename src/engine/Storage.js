@@ -17,6 +17,8 @@ const DEFAULT_STATE = {
     chapter1: { completed: false, highKills: 0 },
     chapter2: { completed: false, highKills: 0 },
     chapter3: { completed: false, highKills: 0 },
+    chapter4: { completed: false, highKills: 0 },
+    chapter5: { completed: false, highKills: 0 },
   },
   dailyRecords: {}, // keyed by date string
   highScore: 0,
@@ -128,11 +130,13 @@ class StorageManager {
 
   markChapterComplete(chapterNum, kills = 0) {
     const key = `chapter${chapterNum}`;
-    if (this.data.storyProgress[key]) {
-      this.data.storyProgress[key].completed = true;
-      this.data.storyProgress[key].highKills = Math.max(this.data.storyProgress[key].highKills, kills);
-      this.save();
+    if (!this.data.storyProgress) this.data.storyProgress = {};
+    if (!this.data.storyProgress[key]) {
+      this.data.storyProgress[key] = { completed: false, highKills: 0 };
     }
+    this.data.storyProgress[key].completed = true;
+    this.data.storyProgress[key].highKills = Math.max(this.data.storyProgress[key].highKills || 0, kills);
+    this.save();
   }
 
   isChapterUnlocked(chapterNum) {
@@ -153,6 +157,12 @@ class StorageManager {
       this.data.highScore = Math.max(this.data.highScore, score);
       this.save();
     }
+  }
+
+  addScore(score) {
+    if (!score || score <= 0) return;
+    this.data.highScore = Math.max(this.data.highScore || 0, (this.data.highScore || 0) + score);
+    this.save();
   }
 
   getDailyRecord(dateStr) {
