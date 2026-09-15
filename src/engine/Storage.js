@@ -24,6 +24,10 @@ const DEFAULT_STATE = {
   highScore: 0,
   nimiqAccount: null,
   moonBlessings: 0,
+  settings: {
+    soundMuted: false,
+    musicMuted: false,
+  },
 };
 
 class StorageManager {
@@ -196,6 +200,35 @@ class StorageManager {
       return true;
     }
     return false;
+  }
+
+  isSoundMuted() {
+    if (!this.data.settings) this.data.settings = { soundMuted: false, musicMuted: false };
+    return Boolean(this.data.settings.soundMuted);
+  }
+
+  setSoundMuted(muted) {
+    if (!this.data.settings) this.data.settings = { soundMuted: false, musicMuted: false };
+    this.data.settings.soundMuted = Boolean(muted);
+    this.save();
+    return this.data.settings.soundMuted;
+  }
+
+  isMusicMuted() {
+    if (!this.data.settings) this.data.settings = { soundMuted: false, musicMuted: false };
+    return Boolean(this.data.settings.musicMuted);
+  }
+
+  setMusicMuted(muted) {
+    if (!this.data.settings) this.data.settings = { soundMuted: false, musicMuted: false };
+    this.data.settings.musicMuted = Boolean(muted);
+    this.save();
+    return this.data.settings.musicMuted;
+  }
+
+  getSettings() {
+    if (!this.data.settings) this.data.settings = { soundMuted: false, musicMuted: false };
+    return { ...this.data.settings };
   }
 }
 

@@ -645,6 +645,58 @@ html, body {
   line-height: 1.4;
 }
 
+.pause-audio-controls {
+  display: flex;
+  width: 100%;
+  gap: 10px;
+  margin-top: -2px;
+  margin-bottom: 2px;
+}
+
+.pause-audio-toggle {
+  flex: 1;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  background: #132b1a;
+  border: 1.5px solid #4ade80;
+  border-radius: 4px;
+  color: #4ade80;
+  font-family: var(--font-retro);
+  font-size: 6.5px;
+  letter-spacing: 0.5px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  user-select: none;
+  touch-action: manipulation;
+}
+
+.pause-audio-toggle:hover {
+  background: #1b3d25;
+  border-color: #86efac;
+}
+
+.pause-audio-toggle:active {
+  transform: scale(0.96);
+}
+
+.pause-audio-toggle.muted {
+  background: #2a1212;
+  border-color: #f87171;
+  color: #f87171;
+}
+
+.pause-audio-toggle.muted:hover {
+  background: #3a1818;
+  border-color: #fca5a5;
+}
+
+.pause-audio-toggle .audio-icon {
+  font-size: 11px;
+}
+
 .pause-btn-group {
   display: flex;
   flex-direction: column;

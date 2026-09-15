@@ -38,6 +38,29 @@ export class PauseService {
     const btnRetry = document.getElementById('btn-pause-retry');
     const btnMenu = document.getElementById('btn-pause-menu');
 
+    this.btnPauseSound = document.getElementById('btn-pause-sound');
+    this.txtPauseSound = document.getElementById('txt-pause-sound');
+    this.btnPauseMusic = document.getElementById('btn-pause-music');
+    this.txtPauseMusic = document.getElementById('txt-pause-music');
+
+    if (this.btnPauseSound) {
+      this.btnPauseSound.addEventListener('click', (e) => {
+        e.preventDefault();
+        const isMuted = sound.toggleSound();
+        this.updateAudioButtons();
+        if (!isMuted) sound.playBlip(true);
+      });
+    }
+
+    if (this.btnPauseMusic) {
+      this.btnPauseMusic.addEventListener('click', (e) => {
+        e.preventDefault();
+        sound.toggleMusic();
+        this.updateAudioButtons();
+        sound.playBlip(true);
+      });
+    }
+
     if (this.btnHeader) {
       this.btnHeader.addEventListener('click', (e) => {
         e.preventDefault();
@@ -176,10 +199,38 @@ export class PauseService {
     }
 
     if (this.modal) {
+      this.updateAudioButtons();
       this.modal.classList.remove('hidden');
     }
 
     sound.playSelect();
+  }
+
+  updateAudioButtons() {
+    const soundMuted = sound.isSoundMuted();
+    const musicMuted = sound.isMusicMuted();
+
+    if (this.btnPauseSound) {
+      this.btnPauseSound.classList.toggle('muted', soundMuted);
+    }
+    if (this.txtPauseSound) {
+      this.txtPauseSound.textContent = soundMuted ? 'SOUND: OFF' : 'SOUND: ON';
+    }
+    const soundIcon = this.btnPauseSound ? this.btnPauseSound.querySelector('.audio-icon') : null;
+    if (soundIcon) {
+      soundIcon.textContent = soundMuted ? '🔇' : '🔊';
+    }
+
+    if (this.btnPauseMusic) {
+      this.btnPauseMusic.classList.toggle('muted', musicMuted);
+    }
+    if (this.txtPauseMusic) {
+      this.txtPauseMusic.textContent = musicMuted ? 'MUSIC: OFF' : 'MUSIC: ON';
+    }
+    const musicIcon = this.btnPauseMusic ? this.btnPauseMusic.querySelector('.audio-icon') : null;
+    if (musicIcon) {
+      musicIcon.textContent = musicMuted ? '🔇' : '🎵';
+    }
   }
 
   resume() {

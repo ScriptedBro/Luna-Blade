@@ -118,6 +118,12 @@ export default class MenuScene extends Phaser.Scene {
         desc: 'NIM Offerings, Wallet & Run Blessings',
         action: () => nimiqModal.open(),
         shouldFade: false
+      },
+      {
+        text: '⚙️ 7. SETTINGS',
+        desc: 'Sound Effects & Background Music',
+        action: () => this.openSettingsModal(),
+        shouldFade: false
       }
     ];
 
@@ -396,6 +402,207 @@ export default class MenuScene extends Phaser.Scene {
       if (obj && obj.destroy) obj.destroy();
     });
     this.storyModalObjects = null;
+  }
+
+  openSettingsModal() {
+    if (this.settingsModalObjects) return;
+    const w = GAME_CONFIG.WIDTH;
+    const h = GAME_CONFIG.HEIGHT;
+    this.settingsModalObjects = [];
+
+    // 1. Full-screen backdrop
+    const overlay = this.add.rectangle(w / 2, h / 2, w, h, 0x000000, 0.76)
+      .setDepth(650)
+      .setInteractive();
+    overlay.on('pointerdown', () => this.closeSettingsModal());
+    this.settingsModalObjects.push(overlay);
+
+    // 2. Modal panel frame
+    const panelW = 380;
+    const panelH = 186;
+    const panel = this.add.rectangle(w / 2, h / 2, panelW, panelH, 0x07151e, 0.98)
+      .setStrokeStyle(2, 0x1d4754)
+      .setDepth(660)
+      .setInteractive();
+    this.settingsModalObjects.push(panel);
+
+    // Corner rivets
+    const rivets = [
+      { x: w / 2 - panelW / 2 + 6, y: h / 2 - panelH / 2 + 6 },
+      { x: w / 2 + panelW / 2 - 6, y: h / 2 - panelH / 2 + 6 },
+      { x: w / 2 - panelW / 2 + 6, y: h / 2 + panelH / 2 - 6 },
+      { x: w / 2 + panelW / 2 - 6, y: h / 2 + panelH / 2 - 6 }
+    ];
+    rivets.forEach(rv => {
+      const r = this.add.rectangle(rv.x, rv.y, 3, 3, 0xf6c026, 0.9).setDepth(661);
+      this.settingsModalObjects.push(r);
+    });
+
+    // 3. Header
+    const title = this.add.text(w / 2, h / 2 - 66, '⚙️ AUDIO SETTINGS', {
+      fontFamily: 'Press Start 2P',
+      fontSize: '8.5px',
+      color: '#ffd166',
+      stroke: '#000000',
+      strokeThickness: 2
+    }).setOrigin(0.5).setDepth(661);
+    this.settingsModalObjects.push(title);
+
+    const sub = this.add.text(w / 2, h / 2 - 50, 'SOUND EFFECTS & MUSIC PREFERENCES', {
+      fontFamily: 'Press Start 2P',
+      fontSize: '5px',
+      color: '#7ba0ab'
+    }).setOrigin(0.5).setDepth(661);
+    this.settingsModalObjects.push(sub);
+
+    // 4. Sound Effects Row (SFX)
+    const sfxY = h / 2 - 18;
+    const sfxRow = this.add.rectangle(w / 2, sfxY, 340, 36, 0x0b1f29, 0.9)
+      .setStrokeStyle(1, 0x1d4754)
+      .setDepth(661);
+    this.settingsModalObjects.push(sfxRow);
+
+    const sfxLabel = this.add.text(w / 2 - 155, sfxY - 6, '🔊 SOUND EFFECTS (SFX)', {
+      fontFamily: 'Press Start 2P',
+      fontSize: '6px',
+      color: '#ffffff'
+    }).setOrigin(0, 0.5).setDepth(662);
+    this.settingsModalObjects.push(sfxLabel);
+
+    const sfxDesc = this.add.text(w / 2 - 155, sfxY + 7, 'Sword slashes, enemy hits, jumps & UI', {
+      fontFamily: 'Press Start 2P',
+      fontSize: '4.5px',
+      color: '#76a0b0'
+    }).setOrigin(0, 0.5).setDepth(662);
+    this.settingsModalObjects.push(sfxDesc);
+
+    const sfxBtnBg = this.add.rectangle(w / 2 + 112, sfxY, 84, 22, 0x144a25, 0.95)
+      .setStrokeStyle(1.5, 0x4ade80)
+      .setDepth(662)
+      .setInteractive({ useHandCursor: true });
+    this.settingsModalObjects.push(sfxBtnBg);
+
+    const sfxBtnTxt = this.add.text(w / 2 + 112, sfxY, '[ ON ]', {
+      fontFamily: 'Press Start 2P',
+      fontSize: '6px',
+      color: '#4ade80'
+    }).setOrigin(0.5).setDepth(663).setInteractive({ useHandCursor: true });
+    this.settingsModalObjects.push(sfxBtnTxt);
+
+    const updateSfxUI = () => {
+      const isMuted = sound.isSoundMuted();
+      sfxBtnBg.setFillStyle(isMuted ? 0x3b1515 : 0x144a25, 0.95);
+      sfxBtnBg.setStrokeStyle(1.5, isMuted ? 0xf87171 : 0x4ade80);
+      sfxBtnTxt.setText(isMuted ? '[ MUTED ]' : '[ ON ]');
+      sfxBtnTxt.setColor(isMuted ? '#f87171' : '#4ade80');
+    };
+    updateSfxUI();
+
+    const toggleSfxAction = () => {
+      const isMuted = sound.toggleSound();
+      updateSfxUI();
+      if (!isMuted) sound.playBlip(true);
+    };
+    sfxBtnBg.on('pointerdown', toggleSfxAction);
+    sfxBtnTxt.on('pointerdown', toggleSfxAction);
+
+    // 5. Music Row (BGM)
+    const bgmY = h / 2 + 24;
+    const bgmRow = this.add.rectangle(w / 2, bgmY, 340, 36, 0x0b1f29, 0.9)
+      .setStrokeStyle(1, 0x1d4754)
+      .setDepth(661);
+    this.settingsModalObjects.push(bgmRow);
+
+    const bgmLabel = this.add.text(w / 2 - 155, bgmY - 6, '🎵 BACKGROUND MUSIC (BGM)', {
+      fontFamily: 'Press Start 2P',
+      fontSize: '6px',
+      color: '#ffffff'
+    }).setOrigin(0, 0.5).setDepth(662);
+    this.settingsModalObjects.push(bgmLabel);
+
+    const bgmDesc = this.add.text(w / 2 - 155, bgmY + 7, 'Melodic chapter soundtracks & ambient cues', {
+      fontFamily: 'Press Start 2P',
+      fontSize: '4.5px',
+      color: '#76a0b0'
+    }).setOrigin(0, 0.5).setDepth(662);
+    this.settingsModalObjects.push(bgmDesc);
+
+    const bgmBtnBg = this.add.rectangle(w / 2 + 112, bgmY, 84, 22, 0x144a25, 0.95)
+      .setStrokeStyle(1.5, 0x4ade80)
+      .setDepth(662)
+      .setInteractive({ useHandCursor: true });
+    this.settingsModalObjects.push(bgmBtnBg);
+
+    const bgmBtnTxt = this.add.text(w / 2 + 112, bgmY, '[ ON ]', {
+      fontFamily: 'Press Start 2P',
+      fontSize: '6px',
+      color: '#4ade80'
+    }).setOrigin(0.5).setDepth(663).setInteractive({ useHandCursor: true });
+    this.settingsModalObjects.push(bgmBtnTxt);
+
+    const updateMusicUI = () => {
+      const isMuted = sound.isMusicMuted();
+      bgmBtnBg.setFillStyle(isMuted ? 0x3b1515 : 0x144a25, 0.95);
+      bgmBtnBg.setStrokeStyle(1.5, isMuted ? 0xf87171 : 0x4ade80);
+      bgmBtnTxt.setText(isMuted ? '[ MUTED ]' : '[ ON ]');
+      bgmBtnTxt.setColor(isMuted ? '#f87171' : '#4ade80');
+    };
+    updateMusicUI();
+
+    const toggleMusicAction = () => {
+      sound.toggleMusic();
+      updateMusicUI();
+      sound.playBlip(true);
+    };
+    bgmBtnBg.on('pointerdown', toggleMusicAction);
+    bgmBtnTxt.on('pointerdown', toggleMusicAction);
+
+    // 6. Close Button
+    const closeBtnY = h / 2 + 68;
+    const closeBg = this.add.rectangle(w / 2, closeBtnY, 150, 22, 0x162c33, 0.95)
+      .setStrokeStyle(1.5, 0x3d6b73)
+      .setDepth(662)
+      .setInteractive({ useHandCursor: true });
+    this.settingsModalObjects.push(closeBg);
+
+    const closeText = this.add.text(w / 2, closeBtnY, '✕ BACK TO MENU', {
+      fontFamily: 'Press Start 2P',
+      fontSize: '6.5px',
+      color: '#e0f0f5'
+    }).setOrigin(0.5).setDepth(663).setInteractive({ useHandCursor: true });
+    this.settingsModalObjects.push(closeText);
+
+    const setCloseHover = (isHover) => {
+      closeBg.setFillStyle(isHover ? 0x244c59 : 0x162c33);
+      closeBg.setStrokeStyle(1.5, isHover ? 0x64dfdf : 0x3d6b73);
+      closeText.setColor(isHover ? '#ffd166' : '#e0f0f5');
+      if (isHover) sound.playBlip(true);
+    };
+
+    closeBg.on('pointerover', () => setCloseHover(true));
+    closeBg.on('pointerout', () => setCloseHover(false));
+    closeText.on('pointerover', () => setCloseHover(true));
+    closeText.on('pointerout', () => setCloseHover(false));
+
+    closeBg.on('pointerdown', () => this.closeSettingsModal());
+    closeText.on('pointerdown', () => this.closeSettingsModal());
+
+    // ESC key listener
+    this.settingsModalEscHandler = () => this.closeSettingsModal();
+    this.input.keyboard.once('keydown-ESC', this.settingsModalEscHandler);
+  }
+
+  closeSettingsModal() {
+    if (!this.settingsModalObjects) return;
+    sound.playCancel();
+    if (this.settingsModalEscHandler) {
+      this.input.keyboard.off('keydown-ESC', this.settingsModalEscHandler);
+      this.settingsModalEscHandler = null;
+    }
+    this.settingsModalObjects.forEach(obj => {
+      if (obj && obj.destroy) obj.destroy();
+    });
+    this.settingsModalObjects = null;
   }
 
   update() {

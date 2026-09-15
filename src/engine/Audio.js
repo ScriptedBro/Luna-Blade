@@ -1,3 +1,5 @@
+import { storage } from './Storage.js';
+
 const BGM_TRACKS = {
   title: '/assets/audio/bgm_title.mp3',
   forest: '/assets/audio/bgm_forest.mp3',
@@ -10,6 +12,8 @@ class SoundEngine {
   constructor() {
     this.ctx = null;
     this.muted = false;
+    this.soundMuted = false;
+    this.musicMuted = false;
     this.bgmPlaying = false;
     this.currentTrack = null;
     this.currentAudio = null;
@@ -22,17 +26,27 @@ class SoundEngine {
   }
 
   init() {
+    if (!this.unlocked) {
+      try {
+        this.soundMuted = storage.isSoundMuted();
+        this.musicMuted = storage.isMusicMuted();
+      } catch (e) {
+        this.soundMuted = false;
+        this.musicMuted = false;
+      }
+    }
+
     if (this.ctx) return;
     try {
       const AudioContext = window.AudioContext || window.webkitAudioContext;
       this.ctx = new AudioContext();
       
       this.masterGain = this.ctx.createGain();
-      this.masterGain.gain.setValueAtTime(1.0, this.ctx.currentTime);
+      this.masterGain.gain.setValueAtTime(this.muted ? 0 : 1.0, this.ctx.currentTime);
       this.masterGain.connect(this.ctx.destination);
 
       this.sfxGain = this.ctx.createGain();
-      this.sfxGain.gain.setValueAtTime(0.7, this.ctx.currentTime);
+      this.sfxGain.gain.setValueAtTime((this.muted || this.soundMuted) ? 0 : 0.7, this.ctx.currentTime);
       this.sfxGain.connect(this.masterGain);
 
       this.bgmGain = this.ctx.createGain();
@@ -45,7 +59,7 @@ class SoundEngine {
     if (typeof window !== 'undefined' && !this.unlocked) {
       const unlock = () => {
         this.resume();
-        if (this.currentAudio && this.currentAudio.paused && !this.muted && this.currentTrack) {
+        if (this.currentAudio && this.currentAudio.paused && !this.muted && !this.musicMuted && this.currentTrack) {
           this.currentAudio.play().catch(() => {});
         }
         this.unlocked = true;
@@ -68,6 +82,49 @@ class SoundEngine {
     }
   }
 
+  isSoundMuted() {
+    return Boolean(this.soundMuted);
+  }
+
+  isMusicMuted() {
+    return Boolean(this.musicMuted);
+  }
+
+  setSoundMuted(muted) {
+    this.init();
+    this.soundMuted = Boolean(muted);
+    try {
+      storage.setSoundMuted(this.soundMuted);
+    } catch (e) {}
+    if (this.sfxGain && this.ctx) {
+      this.sfxGain.gain.setValueAtTime((this.muted || this.soundMuted) ? 0 : 0.7, this.ctx.currentTime);
+    }
+    return this.soundMuted;
+  }
+
+  setMusicMuted(muted) {
+    this.init();
+    this.musicMuted = Boolean(muted);
+    try {
+      storage.setMusicMuted(this.musicMuted);
+    } catch (e) {}
+    if (this.currentAudio) {
+      this.currentAudio.volume = (this.muted || this.musicMuted) ? 0 : this.bgmVolume;
+      if (!this.muted && !this.musicMuted && this.currentAudio.paused && this.currentTrack) {
+        this.currentAudio.play().catch(() => {});
+      }
+    }
+    return this.musicMuted;
+  }
+
+  toggleSound() {
+    return this.setSoundMuted(!this.soundMuted);
+  }
+
+  toggleMusic() {
+    return this.setMusicMuted(!this.musicMuted);
+  }
+
   toggleMute() {
     this.init();
     this.muted = !this.muted;
@@ -75,13 +132,13 @@ class SoundEngine {
       this.masterGain.gain.setValueAtTime(this.muted ? 0 : 1.0, this.ctx.currentTime);
     }
     if (this.currentAudio) {
-      this.currentAudio.volume = this.muted ? 0 : this.bgmVolume;
+      this.currentAudio.volume = (this.muted || this.musicMuted) ? 0 : this.bgmVolume;
     }
     return this.muted;
   }
 
   playSlash(combo = 1) {
-    if (this.muted || !this.ctx) return;
+    if (this.muted || this.soundMuted || !this.ctx) return;
     this.resume();
     const t = this.ctx.currentTime;
     
@@ -129,7 +186,7 @@ class SoundEngine {
   }
 
   playUpwardSlash() {
-    if (this.muted || !this.ctx) return;
+    if (this.muted || this.soundMuted || !this.ctx) return;
     this.resume();
     const t = this.ctx.currentTime;
     const osc = this.ctx.createOscillator();
@@ -154,7 +211,7 @@ class SoundEngine {
   }
 
   playJump(doubleJump = false) {
-    if (this.muted || !this.ctx) return;
+    if (this.muted || this.soundMuted || !this.ctx) return;
     this.resume();
     const t = this.ctx.currentTime;
     const osc = this.ctx.createOscillator();
@@ -177,7 +234,7 @@ class SoundEngine {
   }
 
   playWallSlide() {
-    if (this.muted || !this.ctx) return;
+    if (this.muted || this.soundMuted || !this.ctx) return;
     this.resume();
     const t = this.ctx.currentTime;
     const osc = this.ctx.createOscillator();
@@ -193,7 +250,7 @@ class SoundEngine {
   }
 
   playHit() {
-    if (this.muted || !this.ctx) return;
+    if (this.muted || this.soundMuted || !this.ctx) return;
     this.resume();
     const t = this.ctx.currentTime;
     const osc = this.ctx.createOscillator();
@@ -212,7 +269,7 @@ class SoundEngine {
   }
 
   playEnemyDeath() {
-    if (this.muted || !this.ctx) return;
+    if (this.muted || this.soundMuted || !this.ctx) return;
     this.resume();
     const t = this.ctx.currentTime;
     const osc = this.ctx.createOscillator();
@@ -231,7 +288,7 @@ class SoundEngine {
   }
 
   playShellKick() {
-    if (this.muted || !this.ctx) return;
+    if (this.muted || this.soundMuted || !this.ctx) return;
     this.resume();
     const t = this.ctx.currentTime;
     
@@ -250,7 +307,7 @@ class SoundEngine {
   }
 
   playRicochet() {
-    if (this.muted || !this.ctx) return;
+    if (this.muted || this.soundMuted || !this.ctx) return;
     this.resume();
     const t = this.ctx.currentTime;
     const osc = this.ctx.createOscillator();
@@ -267,7 +324,7 @@ class SoundEngine {
   }
 
   playCoin() {
-    if (this.muted || !this.ctx) return;
+    if (this.muted || this.soundMuted || !this.ctx) return;
     this.resume();
     const t = this.ctx.currentTime;
     const osc = this.ctx.createOscillator();
@@ -284,7 +341,7 @@ class SoundEngine {
   }
 
   playObelisk() {
-    if (this.muted || !this.ctx) return;
+    if (this.muted || this.soundMuted || !this.ctx) return;
     this.resume();
     const t = this.ctx.currentTime;
     [440, 554.37, 659.25, 880].forEach((freq, idx) => {
@@ -302,7 +359,7 @@ class SoundEngine {
   }
 
   playVictory() {
-    if (this.muted || !this.ctx) return;
+    if (this.muted || this.soundMuted || !this.ctx) return;
     this.resume();
     const t = this.ctx.currentTime;
     const notes = [523.25, 659.25, 783.99, 1046.50]; // C E G C
@@ -321,7 +378,7 @@ class SoundEngine {
   }
 
   playGameOver() {
-    if (this.muted || !this.ctx) return;
+    if (this.muted || this.soundMuted || !this.ctx) return;
     this.resume();
     const t = this.ctx.currentTime;
     const notes = [440, 415.30, 392, 349.23];
@@ -340,7 +397,7 @@ class SoundEngine {
   }
 
   playBlip(high = false) {
-    if (this.muted || !this.ctx) return;
+    if (this.muted || this.soundMuted || !this.ctx) return;
     this.resume();
     const t = this.ctx.currentTime;
     const osc = this.ctx.createOscillator();
@@ -356,7 +413,7 @@ class SoundEngine {
   }
 
   playSelect() {
-    if (this.muted || !this.ctx) return;
+    if (this.muted || this.soundMuted || !this.ctx) return;
     this.resume();
     const t = this.ctx.currentTime;
     const osc = this.ctx.createOscillator();
@@ -373,7 +430,7 @@ class SoundEngine {
   }
 
   playBack() {
-    if (this.muted || !this.ctx) return;
+    if (this.muted || this.soundMuted || !this.ctx) return;
     this.resume();
     const t = this.ctx.currentTime;
     const osc = this.ctx.createOscillator();
@@ -398,7 +455,7 @@ class SoundEngine {
   }
 
   playLevelUp() {
-    if (this.muted || !this.ctx) return;
+    if (this.muted || this.soundMuted || !this.ctx) return;
     this.resume();
     const t = this.ctx.currentTime;
     [523.25, 659.25, 783.99, 1046.50].forEach((freq, i) => {
@@ -433,7 +490,7 @@ class SoundEngine {
   }
 
   playEnemyAttack() {
-    if (this.muted || !this.ctx) return;
+    if (this.muted || this.soundMuted || !this.ctx) return;
     this.resume();
     const t = this.ctx.currentTime;
     const osc = this.ctx.createOscillator();
@@ -445,13 +502,13 @@ class SoundEngine {
     gain.gain.exponentialRampToValueAtTime(0.01, t + 0.18);
 
     osc.connect(gain);
-    gain.connect(this.masterGain);
+    gain.connect(this.sfxGain);
     osc.start(t);
     osc.stop(t + 0.18);
   }
 
   playRumble() {
-    if (this.muted || !this.ctx) return;
+    if (this.muted || this.soundMuted || !this.ctx) return;
     this.resume();
     const t = this.ctx.currentTime;
     const osc = this.ctx.createOscillator();
@@ -508,7 +565,7 @@ class SoundEngine {
     }
 
     audio.currentTime = 0;
-    audio.volume = this.muted ? 0 : this.bgmVolume;
+    audio.volume = (this.muted || this.musicMuted) ? 0 : this.bgmVolume;
 
     const playPromise = audio.play();
     if (playPromise !== undefined) {
