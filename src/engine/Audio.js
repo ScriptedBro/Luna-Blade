@@ -389,6 +389,14 @@ class SoundEngine {
     osc.stop(t + 0.07);
   }
 
+  playCancel() {
+    this.playBack();
+  }
+
+  playConfirm() {
+    this.playSelect();
+  }
+
   playLevelUp() {
     if (this.muted || !this.ctx) return;
     this.resume();

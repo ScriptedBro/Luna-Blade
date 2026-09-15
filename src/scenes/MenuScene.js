@@ -221,36 +221,41 @@ export default class MenuScene extends Phaser.Scene {
   }
 
   openStoryModal() {
-    if (this.storyModalContainer) return;
+    if (this.storyModalObjects) return;
     const w = GAME_CONFIG.WIDTH;
     const h = GAME_CONFIG.HEIGHT;
+    this.storyModalObjects = [];
 
-    const modal = this.add.container(w / 2, h / 2).setDepth(600);
-    this.storyModalContainer = modal;
+    // 1. Dim full-screen overlay backdrop (captures any clicks outside panel)
+    const overlay = this.add.rectangle(w / 2, h / 2, w, h, 0x000000, 0.72)
+      .setDepth(590)
+      .setInteractive();
+    overlay.on('pointerdown', () => this.closeStoryModal());
+    this.storyModalObjects.push(overlay);
 
-    // Dim overlay
-    const overlay = this.add.rectangle(0, 0, w, h, 0x000000, 0.65).setInteractive();
-    modal.add(overlay);
+    // 2. Modal panel frame
+    const panelW = 426;
+    const panelH = 250;
+    const panel = this.add.rectangle(w / 2, h / 2, panelW, panelH, 0x071317, 0.96)
+      .setStrokeStyle(2, 0x1d4754)
+      .setDepth(600)
+      .setInteractive(); // Blocks clicks from hitting overlay underneath
+    this.storyModalObjects.push(panel);
 
-    // Modal panel
-    const panel = this.add.rectangle(0, 0, 370, 236, 0x071217, 0.95);
-    panel.setStrokeStyle(2, 0x1d4754);
-    modal.add(panel);
-
-    // Header
-    const title = this.add.text(0, -100, '⚔️ CHOOSE CHAPTER', {
+    // 3. Header
+    const title = this.add.text(w / 2, h / 2 - 108, '⚔️ CHOOSE CHAPTER', {
       fontFamily: 'Press Start 2P',
-      fontSize: '7.5px',
+      fontSize: '8px',
       color: '#ffd166'
-    }).setOrigin(0.5);
-    modal.add(title);
+    }).setOrigin(0.5).setDepth(601);
+    this.storyModalObjects.push(title);
 
-    const sub = this.add.text(0, -88, 'THE SHATTERED MOON & THE BLIGHTED ROOTS', {
+    const sub = this.add.text(w / 2, h / 2 - 96, 'THE SHATTERED MOON & THE BLIGHTED ROOTS', {
       fontFamily: 'Press Start 2P',
       fontSize: '4.5px',
       color: '#7ba0ab'
-    }).setOrigin(0.5);
-    modal.add(sub);
+    }).setOrigin(0.5).setDepth(601);
+    this.storyModalObjects.push(sub);
 
     const ch2Unlocked = storage.isChapterUnlocked(2);
     const ch3Unlocked = storage.isChapterUnlocked(3);
@@ -261,37 +266,37 @@ export default class MenuScene extends Phaser.Scene {
     const entries = [
       {
         title: '📜 PROLOGUE: THE SHATTERED MOON',
-        desc: 'Illustrated Origin of the Pale Blight',
+        desc: 'Origin of the Pale Blight',
         unlocked: true,
         action: () => this.scene.start('StoryIntroScene')
       },
       {
         title: '🌲 CHAPTER 1: WHISPERING WOODS',
-        desc: 'Boss Gorgok | Whispering Waters',
+        desc: 'Boss Gorgok • Whispering Waters',
         unlocked: true,
         action: () => this.scene.start('StoryScene', { chapter: 1 })
       },
       {
         title: '🍯 CHAPTER 2: THE HIVE CANOPY',
-        desc: ch2Unlocked ? 'Boss Malakor | The High Boughs' : '🔒 Complete Chapter 1 to Unlock',
+        desc: ch2Unlocked ? 'Boss Malakor • High Boughs' : '🔒 Complete Ch. 1 to Unlock',
         unlocked: ch2Unlocked,
         action: () => this.scene.start('StoryScene', { chapter: 2 })
       },
       {
         title: '🏛️ CHAPTER 3: THE SUNKEN RUINS',
-        desc: ch3Unlocked ? 'Boss Vorgath | Crypt of the Ancients' : '🔒 Complete Chapter 2 to Unlock',
+        desc: ch3Unlocked ? 'Boss Vorgath • Ancient Crypt' : '🔒 Complete Ch. 2 to Unlock',
         unlocked: ch3Unlocked,
         action: () => this.scene.start('StoryScene', { chapter: 3 })
       },
       {
         title: '🌋 CHAPTER 4: OBSIDIAN CALDERA',
-        desc: ch4Unlocked ? 'Boss Ignis | The Molten Deep' : '🔒 Complete Chapter 3 to Unlock',
+        desc: ch4Unlocked ? 'Boss Ignis • Molten Deep' : '🔒 Complete Ch. 3 to Unlock',
         unlocked: ch4Unlocked,
         action: () => this.scene.start('StoryScene', { chapter: 4 })
       },
       {
         title: '🌙 CHAPTER 5: THE LUNAR SPIRE',
-        desc: ch5Unlocked ? 'Boss Umbra | Shattered Moon Core' : '🔒 Complete Chapter 4 to Unlock',
+        desc: ch5Unlocked ? 'Boss Umbra • Shattered Core' : '🔒 Complete Ch. 4 to Unlock',
         unlocked: ch5Unlocked,
         action: () => this.scene.start('StoryScene', { chapter: 5 })
       }
@@ -300,72 +305,121 @@ export default class MenuScene extends Phaser.Scene {
     if (epilogueUnlocked) {
       entries.push({
         title: '✨ EPILOGUE: THE SILVER DAWN',
-        desc: 'Watch the Forest Restoration Cinematic',
+        desc: 'Restoration Cinematic',
         unlocked: true,
+        isEpilogue: true,
         action: () => this.scene.start('StoryEndingScene')
       });
     }
 
-    const startY = -70;
-    const spacing = 19;
+    const startY = 56;
+    const spacing = 21;
+    const btnW = 398;
+    const btnH = 18;
+
     entries.forEach((item, idx) => {
       const ey = startY + idx * spacing;
-      const btnBg = this.add.rectangle(0, ey, 340, 17, item.unlocked ? 0x0d222b : 0x0a1417, 0.9);
-      btnBg.setStrokeStyle(1, item.unlocked ? 0x225566 : 0x1a2d33);
-      modal.add(btnBg);
+      const btnBg = this.add.rectangle(w / 2, ey, btnW, btnH, item.unlocked ? 0x0d222b : 0x0a1417, 0.9)
+        .setStrokeStyle(1, item.unlocked ? (item.isEpilogue ? 0x554422 : 0x225566) : 0x1a2d33)
+        .setDepth(601);
+      this.storyModalObjects.push(btnBg);
 
-      const t = this.add.text(-160, ey - 2, item.title, {
+      // Title left-anchored
+      const leftX = (w / 2) - (btnW / 2) + 10;
+      const t = this.add.text(leftX, ey, item.title, {
         fontFamily: 'Press Start 2P',
         fontSize: '5px',
-        color: item.unlocked ? '#ffffff' : '#556b73'
-      }).setOrigin(0, 0.5);
-      modal.add(t);
+        color: item.unlocked ? (item.isEpilogue ? '#ffd166' : '#ffffff') : '#556b73'
+      }).setOrigin(0, 0.5).setDepth(602);
+      this.storyModalObjects.push(t);
 
-      const d = this.add.text(45, ey - 2, item.desc, {
+      // Description/Status right-anchored to prevent any overflow
+      const rightX = (w / 2) + (btnW / 2) - 10;
+      const d = this.add.text(rightX, ey, item.desc, {
         fontFamily: 'Press Start 2P',
-        fontSize: '3.5px',
-        color: item.unlocked ? '#6ab2c4' : '#3d5259'
-      }).setOrigin(0, 0.5);
-      modal.add(d);
+        fontSize: '4.5px',
+        color: item.unlocked ? (item.isEpilogue ? '#ffea75' : '#64dfdf') : '#667b84'
+      }).setOrigin(1, 0.5).setDepth(602);
+      this.storyModalObjects.push(d);
 
       if (item.unlocked) {
         btnBg.setInteractive({ useHandCursor: true });
-        btnBg.on('pointerover', () => {
-          btnBg.setFillStyle(0x194254);
-          t.setColor('#ffd166');
-          sound.playBlip(true);
-        });
-        btnBg.on('pointerout', () => {
-          btnBg.setFillStyle(0x0d222b);
-          t.setColor('#ffffff');
-        });
-        btnBg.on('pointerdown', () => {
+        t.setInteractive({ useHandCursor: true });
+        d.setInteractive({ useHandCursor: true });
+
+        const setItemHover = (isHover) => {
+          btnBg.setFillStyle(isHover ? (item.isEpilogue ? 0x2b220d : 0x194254) : (item.isEpilogue ? 0x141006 : 0x0d222b));
+          btnBg.setStrokeStyle(1, isHover ? 0xffd166 : (item.isEpilogue ? 0x886622 : 0x225566));
+          t.setColor(isHover ? '#ffd166' : (item.isEpilogue ? '#ffd166' : '#ffffff'));
+          if (isHover) sound.playBlip(true);
+        };
+
+        const onAction = () => {
           sound.playConfirm();
-          this.storyModalContainer = null;
+          this.closeStoryModal();
           item.action();
-        });
+        };
+
+        btnBg.on('pointerover', () => setItemHover(true));
+        btnBg.on('pointerout', () => setItemHover(false));
+        btnBg.on('pointerdown', onAction);
+
+        t.on('pointerover', () => setItemHover(true));
+        t.on('pointerout', () => setItemHover(false));
+        t.on('pointerdown', onAction);
+
+        d.on('pointerover', () => setItemHover(true));
+        d.on('pointerout', () => setItemHover(false));
+        d.on('pointerdown', onAction);
       }
     });
 
     // Close button
-    const closeBtnY = startY + entries.length * spacing + 4;
-    const closeBg = this.add.rectangle(0, closeBtnY, 120, 18, 0x162c33, 0.9)
-      .setStrokeStyle(1, 0x3d6b73)
+    const closeBtnY = startY + entries.length * spacing + 6;
+    const closeBg = this.add.rectangle(w / 2, closeBtnY, 140, 22, 0x162c33, 0.95)
+      .setStrokeStyle(1.5, 0x3d6b73)
+      .setDepth(602)
       .setInteractive({ useHandCursor: true });
-    modal.add(closeBg);
+    this.storyModalObjects.push(closeBg);
 
-    const closeText = this.add.text(0, closeBtnY, '✕ BACK', {
+    const closeText = this.add.text(w / 2, closeBtnY, '✕ BACK TO MENU', {
       fontFamily: 'Press Start 2P',
-      fontSize: '6px',
+      fontSize: '6.5px',
       color: '#e0f0f5'
-    }).setOrigin(0.5);
-    modal.add(closeText);
+    }).setOrigin(0.5).setDepth(603).setInteractive({ useHandCursor: true });
+    this.storyModalObjects.push(closeText);
 
-    closeBg.on('pointerdown', () => {
-      sound.playCancel();
-      modal.destroy();
-      this.storyModalContainer = null;
+    const setCloseHover = (isHover) => {
+      closeBg.setFillStyle(isHover ? 0x244c59 : 0x162c33);
+      closeBg.setStrokeStyle(1.5, isHover ? 0x64dfdf : 0x3d6b73);
+      closeText.setColor(isHover ? '#ffd166' : '#e0f0f5');
+      if (isHover) sound.playBlip(true);
+    };
+
+    closeBg.on('pointerover', () => setCloseHover(true));
+    closeBg.on('pointerout', () => setCloseHover(false));
+    closeText.on('pointerover', () => setCloseHover(true));
+    closeText.on('pointerout', () => setCloseHover(false));
+
+    closeBg.on('pointerdown', () => this.closeStoryModal());
+    closeText.on('pointerdown', () => this.closeStoryModal());
+
+    // ESC key listener
+    this.storyModalEscHandler = () => this.closeStoryModal();
+    this.input.keyboard.once('keydown-ESC', this.storyModalEscHandler);
+  }
+
+  closeStoryModal() {
+    if (!this.storyModalObjects) return;
+    sound.playCancel();
+    if (this.storyModalEscHandler) {
+      this.input.keyboard.off('keydown-ESC', this.storyModalEscHandler);
+      this.storyModalEscHandler = null;
+    }
+    this.storyModalObjects.forEach(obj => {
+      if (obj && obj.destroy) obj.destroy();
     });
+    this.storyModalObjects = null;
   }
 
   update() {
