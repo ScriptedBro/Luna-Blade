@@ -146,7 +146,8 @@ export default class BossDemon extends Phaser.Physics.Arcade.Sprite {
     // Player collision
     const collider = this.scene.physics.add.overlap(this.scene.player, fireball, () => {
       if (this.scene.player && !this.scene.player.isDead) {
-        this.scene.player.takeDamage(18, fireball.x);
+        const kDir = fireball.x < this.scene.player.x ? 1 : -1;
+        this.scene.player.takeDamage(18, kDir);
         trailTimer.destroy();
         fireball.destroy();
         collider.destroy();
@@ -185,7 +186,8 @@ export default class BossDemon extends Phaser.Physics.Arcade.Sprite {
         if (p && !p.isDead) {
           const dist = Phaser.Math.Distance.Between(this.x, this.y, p.x, p.y);
           if (dist < 50) {
-            p.takeDamage(GAME_CONFIG.MOBS.BOSS_DEMON.DAMAGE, this.x);
+            const kDir = this.x < p.x ? 1 : -1;
+            p.takeDamage(GAME_CONFIG.MOBS.BOSS_DEMON.DAMAGE, kDir);
             this.scene.cameras.main.shake(120, 0.015);
           }
         }

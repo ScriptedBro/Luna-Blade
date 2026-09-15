@@ -424,6 +424,24 @@ class SoundEngine {
     this.playHit();
   }
 
+  playEnemyAttack() {
+    if (this.muted || !this.ctx) return;
+    this.resume();
+    const t = this.ctx.currentTime;
+    const osc = this.ctx.createOscillator();
+    const gain = this.ctx.createGain();
+    osc.type = 'triangle';
+    osc.frequency.setValueAtTime(140, t);
+    osc.frequency.exponentialRampToValueAtTime(55, t + 0.18);
+    gain.gain.setValueAtTime(0.3, t);
+    gain.gain.exponentialRampToValueAtTime(0.01, t + 0.18);
+
+    osc.connect(gain);
+    gain.connect(this.masterGain);
+    osc.start(t);
+    osc.stop(t + 0.18);
+  }
+
   playRumble() {
     if (this.muted || !this.ctx) return;
     this.resume();

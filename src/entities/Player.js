@@ -356,12 +356,22 @@ export default class Player extends Phaser.Physics.Arcade.Sprite {
   takeDamage(amount = 20, knockbackDir = 0) {
     if (this.isDead || this.scene.time.now < this.invulnerableUntil) return false;
 
+    // Normalize knockback direction: if a world X coordinate was passed, determine direction relative to player
+    let dir = 0;
+    if (Math.abs(knockbackDir) > 2) {
+      dir = knockbackDir < this.x ? 1 : -1;
+    } else if (knockbackDir > 0) {
+      dir = 1;
+    } else if (knockbackDir < 0) {
+      dir = -1;
+    }
+
     this.health = Math.max(0, this.health - amount);
     this.invulnerableUntil = this.scene.time.now + GAME_CONFIG.PLAYER.INVULNERABILITY_MS;
     sound.playHit();
 
     // Knockback
-    this.setVelocityX(knockbackDir * 160);
+    this.setVelocityX(dir * 160);
     this.setVelocityY(-180);
 
     // Screen shake

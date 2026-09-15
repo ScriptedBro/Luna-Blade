@@ -852,6 +852,7 @@ export default class StoryScene extends Phaser.Scene {
     this.cameras.main.shake(400, 0.02);
 
     if (chapter === 1) {
+      if (this.player && this.player.x < 2330) this.player.x = 2330;
       // Restrict camera to Chapter 1 Boss Arena
       this.cameras.main.setBounds(2300, 0, 500, this.levelHeight);
 
@@ -888,6 +889,7 @@ export default class StoryScene extends Phaser.Scene {
         this.showBossWarningBanner(GAME_CONFIG.MOBS.BOSS_GORGOK.NAME, 'ARMORED WAR BOAR COLOSSUS');
       });
     } else if (chapter === 2) {
+      if (this.player && this.player.x < 2120) this.player.x = 2120;
       // Restrict camera to Chapter 2 Boss Arena
       this.cameras.main.setBounds(2080, 0, 520, this.levelHeight);
 
@@ -923,6 +925,7 @@ export default class StoryScene extends Phaser.Scene {
         this.showBossWarningBanner(GAME_CONFIG.MOBS.BOSS_WIZARD.NAME, 'WIELDER OF TWILIGHT ARCANA');
       });
     } else if (chapter === 3) {
+      if (this.player && this.player.x < 2120) this.player.x = 2120;
       // Restrict camera to Chapter 3 Vorgath Arena
       this.cameras.main.setBounds(2080, 0, 520, this.levelHeight);
 
@@ -956,6 +959,7 @@ export default class StoryScene extends Phaser.Scene {
         this.showBossWarningBanner(GAME_CONFIG.MOBS.BOSS_SKELETON.NAME, 'ANCIENT MONARCH OF THE CRYPT');
       });
     } else if (chapter === 4) {
+      if (this.player && this.player.x < 2120) this.player.x = 2120;
       // Restrict camera to Chapter 4 Ignis Arena
       this.cameras.main.setBounds(2080, 0, 520, this.levelHeight);
 
@@ -989,6 +993,7 @@ export default class StoryScene extends Phaser.Scene {
         this.showBossWarningBanner(GAME_CONFIG.MOBS.BOSS_DEMON.NAME, 'PYROMANCER OF THE OBSIDIAN DEEP');
       });
     } else if (chapter === 5) {
+      if (this.player && this.player.x < 2120) this.player.x = 2120;
       // Restrict camera to Chapter 5 Umbra Pinnacle Arena
       this.cameras.main.setBounds(2080, 0, 520, this.levelHeight);
 
@@ -1490,14 +1495,14 @@ export default class StoryScene extends Phaser.Scene {
 
   handleHazardHit(player, hazard) {
     if (player.isDead) return;
-    player.takeDamage(20, player.flipX ? 1 : -1);
-    this.updateHearts();
-
-    // Respawn slightly back on platform
-    player.setVelocityY(-200);
-    player.x -= 40;
-    if (player.isDead) {
-      this.handlePlayerGameOver();
+    const damaged = player.takeDamage(20, player.flipX ? 1 : -1);
+    if (damaged) {
+      this.updateHearts();
+      player.setVelocityY(-240);
+      player.setVelocityX(player.flipX ? 160 : -160);
+      if (player.isDead) {
+        this.handlePlayerGameOver();
+      }
     }
   }
 
@@ -2007,13 +2012,13 @@ export default class StoryScene extends Phaser.Scene {
       if (!this.bossTriggered && !this.player.isDead && !this.inDialogue) {
         if (this.chapterId === 1 && this.player.x >= 2320) {
           this.triggerBossEncounter(1);
-        } else if (this.chapterId === 2 && this.player.x >= 2100) {
+        } else if (this.chapterId === 2 && this.player.x >= 2120) {
           this.triggerBossEncounter(2);
-        } else if (this.chapterId === 3 && this.player.x >= 2080) {
+        } else if (this.chapterId === 3 && this.player.x >= 2120) {
           this.triggerBossEncounter(3);
-        } else if (this.chapterId === 4 && this.player.x >= 2080) {
+        } else if (this.chapterId === 4 && this.player.x >= 2120) {
           this.triggerBossEncounter(4);
-        } else if (this.chapterId === 5 && this.player.x >= 2080) {
+        } else if (this.chapterId === 5 && this.player.x >= 2120) {
           this.triggerBossEncounter(5);
         }
       }

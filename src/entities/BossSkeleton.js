@@ -140,7 +140,8 @@ export default class BossSkeleton extends Phaser.Physics.Arcade.Sprite {
         const pDist = Phaser.Math.Distance.Between(this.x, this.y, p.x, p.y);
         const facingPlayer = (this.flipX && p.x < this.x) || (!this.flipX && p.x > this.x);
         if (pDist < attackRange && facingPlayer) {
-          p.takeDamage(GAME_CONFIG.MOBS.BOSS_SKELETON.DAMAGE, this.x);
+          const kDir = this.x < p.x ? 1 : -1;
+          p.takeDamage(GAME_CONFIG.MOBS.BOSS_SKELETON.DAMAGE, kDir);
           this.scene.cameras.main.shake(120, 0.012);
         }
       }

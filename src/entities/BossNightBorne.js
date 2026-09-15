@@ -96,7 +96,8 @@ export default class BossNightBorne extends Phaser.Physics.Arcade.Sprite {
         const pDist = Phaser.Math.Distance.Between(this.x, this.y, p.x, p.y);
         const facing = (this.flipX && p.x < this.x) || (!this.flipX && p.x > this.x);
         if (pDist < 85 && facing) {
-          p.takeDamage(GAME_CONFIG.MOBS.BOSS_NIGHTBORNE.DAMAGE, this.x);
+          const kDir = this.x < p.x ? 1 : -1;
+          p.takeDamage(GAME_CONFIG.MOBS.BOSS_NIGHTBORNE.DAMAGE, kDir);
           this.scene.cameras.main.shake(150, 0.018);
         }
       }
@@ -123,7 +124,8 @@ export default class BossNightBorne extends Phaser.Physics.Arcade.Sprite {
 
     const waveHit = this.scene.physics.add.overlap(this.scene.player, wave, () => {
       if (this.scene.player && !this.scene.player.isDead) {
-        this.scene.player.takeDamage(20, wave.x);
+        const kDir = wave.x < this.scene.player.x ? 1 : -1;
+        this.scene.player.takeDamage(20, kDir);
         waveHit.destroy();
         wave.destroy();
       }
