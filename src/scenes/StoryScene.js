@@ -364,9 +364,9 @@ export default class StoryScene extends Phaser.Scene {
     this.createHazard(930, 400, 100, 'ANCIENT SPIKES ⚡');
     this.createGround(1030, 380, 460);
     this.createHazard(1490, 400, 100, 'ANCIENT SPIKES ⚡');
-    this.createGround(1590, 380, 460);
-    this.createHazard(2050, 400, 100, 'ANCIENT SPIKES ⚡');
-    this.createGround(2150, 380, 450);
+    this.createGround(1590, 380, 400);
+    this.createHazard(1990, 400, 90, 'ANCIENT SPIKES ⚡');
+    this.createGround(2080, 380, 520);
 
     // Stepping stone platforms
     this.createPlatform(140, 280, 80);
@@ -422,9 +422,9 @@ export default class StoryScene extends Phaser.Scene {
     this.createHazard(1020, 400, 160, 'MOLTEN LAVA 🔥');
     this.createGround(1180, 380, 420);
     this.createHazard(1600, 400, 160, 'MOLTEN LAVA 🔥');
-    this.createGround(1760, 380, 300);
-    this.createHazard(2060, 400, 100, 'MOLTEN LAVA 🔥');
-    this.createGround(2160, 380, 440);
+    this.createGround(1760, 380, 230);
+    this.createHazard(1990, 400, 90, 'MOLTEN LAVA 🔥');
+    this.createGround(2080, 380, 520);
 
     // Obsidian platforms over lava chasms
     this.createPlatform(180, 290, 96);
@@ -478,9 +478,9 @@ export default class StoryScene extends Phaser.Scene {
     this.createHazard(980, 400, 160, 'ASTRAL CHASM 🌌');
     this.createGround(1140, 380, 420);
     this.createHazard(1560, 400, 160, 'ASTRAL CHASM 🌌');
-    this.createGround(1720, 380, 320);
-    this.createHazard(2040, 400, 100, 'ASTRAL CHASM 🌌');
-    this.createGround(2140, 380, 460);
+    this.createGround(1720, 380, 270);
+    this.createHazard(1990, 400, 90, 'ASTRAL CHASM 🌌');
+    this.createGround(2080, 380, 520);
 
     // Celestial crystal steps
     this.createPlatform(160, 280, 96);
@@ -1013,6 +1013,7 @@ export default class StoryScene extends Phaser.Scene {
       this.bossHealthBar = new BossHealthBar(this, GAME_CONFIG.MOBS.BOSS_NIGHTBORNE.NAME, GAME_CONFIG.MOBS.BOSS_NIGHTBORNE.HP);
       this.boss = new BossNightBorne(this, 2400, 340, this.bossHealthBar);
       this.enemies.add(this.boss);
+      this.physics.add.collider(this.boss, this.platforms);
       this.boss.nextActionTime = this.time.now + 999999;
 
       this.startDialogue([
