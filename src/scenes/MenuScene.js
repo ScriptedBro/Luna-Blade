@@ -125,19 +125,6 @@ export default class MenuScene extends Phaser.Scene {
       this.createMenuButton(w / 2, startY + idx * spacing, opt.text, opt.desc, opt.action, opt.shouldFade);
     });
 
-    // Footer Info
-    const footBox = this.add.rectangle(w / 2, h - 12, 430, 16, 0x091409, 0.85);
-    footBox.setStrokeStyle(1, 0x1d3d1d);
-    const controlsHint = 'CONTROLS: ◀ ▶ MOVE • JUMP • SLASH • UP ATTK • ⏸ PAUSE';
-
-    this.add.text(w / 2, h - 12, controlsHint, {
-      fontFamily: 'Press Start 2P',
-      fontSize: '5.5px',
-      color: '#a0c4a0',
-      stroke: '#000000',
-      strokeThickness: 2
-    }).setOrigin(0.5);
-
     // Animated warrior on menu
     const hero = this.add.sprite(46, h - 38, 'char_idle').setScale(1.1);
     hero.play('player_idle');

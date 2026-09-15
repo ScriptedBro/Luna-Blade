@@ -196,6 +196,8 @@ export default class BootScene extends Phaser.Scene {
       this.scene.start('ForgeScene');
     } else if (targetScene === 'leaderboard') {
       this.scene.start('LeaderboardScene');
+    } else if (targetScene === 'prologue' || targetScene === 'intro') {
+      this.scene.start('StoryIntroScene');
     } else {
       this.scene.start('MenuScene');
     }

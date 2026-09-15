@@ -411,11 +411,20 @@ export default class StoryIntroScene extends Phaser.Scene {
     canvas.refresh();
   }
 
+  init() {
+    this.currentSlide = 0;
+    this.isTransitioning = false;
+    this.tutorialPromptOpen = false;
+    this.lastAdvanceTime = 0;
+  }
+
   create() {
     const w = GAME_CONFIG.WIDTH;
     const h = GAME_CONFIG.HEIGHT;
     this.currentSlide = 0;
     this.isTransitioning = false;
+    this.tutorialPromptOpen = false;
+    this.lastAdvanceTime = 0;
 
     pauseService.detachScene();
 
@@ -532,9 +541,14 @@ export default class StoryIntroScene extends Phaser.Scene {
       fontFamily: "Press Start 2P",
       fontSize: "5.5px",
       color: "#ffd166"
-    }).setOrigin(0.5);
+    }).setOrigin(0.5).setInteractive({ useHandCursor: true });
 
-    this.nextPill.on("pointerdown", () => this.advanceSlide());
+    const onNextClick = (pointer, localX, localY, event) => {
+      if (event && event.stopPropagation) event.stopPropagation();
+      this.advanceSlide();
+    };
+    this.nextPill.on("pointerdown", onNextClick);
+    this.txtPrompt.on("pointerdown", onNextClick);
 
     this.tweens.add({
       targets: [this.nextPill, this.txtPrompt],
@@ -568,8 +582,8 @@ export default class StoryIntroScene extends Phaser.Scene {
     });
     this.input.on("pointerdown", (pointer) => {
       if (this.tutorialPromptOpen) return;
-      // Avoid conflict if tapping skip pill
-      if (pointer.x < 130 && pointer.y > 190) return;
+      // Ignore clicks in the bottom control bar area (handled by dedicated buttons)
+      if (pointer.y > 185) return;
       this.advanceSlide();
     });
 
@@ -653,6 +667,12 @@ export default class StoryIntroScene extends Phaser.Scene {
   advanceSlide() {
     if (this.isTransitioning || this.tutorialPromptOpen) return;
 
+    const now = Date.now();
+    if (this.lastAdvanceTime && (now - this.lastAdvanceTime < 350)) {
+      return;
+    }
+    this.lastAdvanceTime = now;
+
     if (this.currentSlide < PROLOGUE_SLIDES.length - 1) {
       this.currentSlide++;
       this.renderSlide(this.currentSlide);
@@ -663,6 +683,13 @@ export default class StoryIntroScene extends Phaser.Scene {
 
   skipPrologue() {
     if (this.isTransitioning || this.tutorialPromptOpen) return;
+
+    const now = Date.now();
+    if (this.lastAdvanceTime && (now - this.lastAdvanceTime < 350)) {
+      return;
+    }
+    this.lastAdvanceTime = now;
+
     this.promptTutorialChoice();
   }
 
@@ -681,52 +708,71 @@ export default class StoryIntroScene extends Phaser.Scene {
 
     const card = this.add.container(w / 2, h / 2).setDepth(501);
 
-    // Modal background card
-    const cardBg = this.add.rectangle(0, 0, 360, 168, 0x06181e, 0.97);
-    cardBg.setStrokeStyle(1.5, 0x00ffcc);
+    // Modal background card frame
+    const cardBg = this.add.rectangle(0, 0, 380, 184, 0x06151e, 0.98);
+    cardBg.setStrokeStyle(1.5, 0x00e5ff);
     card.add(cardBg);
 
-    // Inner subtle glow panel
-    const innerPanel = this.add.rectangle(0, -20, 336, 88, 0x0c252f, 0.9);
-    innerPanel.setStrokeStyle(1, 0x1a4656);
+    // Corner decorative rivets
+    const rivets = [
+      { x: -184, y: -86 },
+      { x: 184, y: -86 },
+      { x: -184, y: 86 },
+      { x: 184, y: 86 }
+    ];
+    rivets.forEach(rv => {
+      card.add(this.add.rectangle(rv.x, rv.y, 3, 3, 0xf6c026, 0.9));
+    });
+
+    // Inner subtle glow panel for Sylva & Dialogue
+    const innerPanel = this.add.rectangle(0, -36, 356, 72, 0x0c242e, 0.85);
+    innerPanel.setStrokeStyle(1, 0x1d4754);
     card.add(innerPanel);
 
     // Sylva Avatar frame
-    const avatarRing = this.add.circle(-128, -28, 20, 0x082e38);
+    const avatarRing = this.add.circle(-134, -36, 22, 0x082e38);
     avatarRing.setStrokeStyle(1.5, 0x00ffcc);
-    const sylvaAvatar = this.add.image(-128, -28, 'fairy_portrait').setScale(0.65);
+    const sylvaAvatar = this.add.image(-134, -36, 'fairy_portrait').setScale(0.72);
     card.add([avatarRing, sylvaAvatar]);
 
     // Title
-    const title = this.add.text(-96, -42, 'PLAY COMBAT TUTORIAL?', {
+    const title = this.add.text(-96, -56, '⚔️ PLAY COMBAT TUTORIAL?', {
       fontFamily: 'Press Start 2P',
-      fontSize: '8px',
+      fontSize: '7.5px',
       color: '#ffd166',
       stroke: '#000000',
       strokeThickness: 2
-    });
+    }).setOrigin(0, 0.5);
     card.add(title);
 
-    // Subtitle / Dialogue from Sylva
-    const sylvaText = this.add.text(-96, -26, 'Sylva: "Before entering Whispering\nWoods, would you like to practice\nsword slashes, combos & jumps?"', {
+    // Subtitle / Dialogue from Sylva (clean 2 lines)
+    const sylvaText = this.add.text(-96, -40, '"Master your blade before the woods!\nPractice slashes, aerial jumps & combos."', {
       fontFamily: 'Press Start 2P',
       fontSize: '5px',
-      color: '#c8f0ea',
-      lineSpacing: 4
+      color: '#d2f4ee',
+      lineSpacing: 5
     });
     card.add(sylvaText);
 
-    // Feature bullet checklist
-    const bulletText = this.add.text(0, 9, '• Mobile Touch Controls     • Ground Cleaves & Combos\n• Upward Air Slashes        • Stomp Bounce on Shells', {
+    // Feature highlights badges
+    const pill1Bg = this.add.rectangle(-85, 3, 150, 16, 0x07151c, 0.95);
+    pill1Bg.setStrokeStyle(1, 0x1d4754);
+    const pill1Txt = this.add.text(-85, 3, '🎮 Touch Controls', {
       fontFamily: 'Press Start 2P',
       fontSize: '4.5px',
-      color: '#80e2d5',
-      align: 'center',
-      lineSpacing: 3
+      color: '#64dfdf'
     }).setOrigin(0.5);
-    card.add(bulletText);
 
-    const createBtn = (bx, by, bw, bh, bgCol, borderCol, textCol, label, action) => {
+    const pill2Bg = this.add.rectangle(85, 3, 150, 16, 0x07151c, 0.95);
+    pill2Bg.setStrokeStyle(1, 0x1d4754);
+    const pill2Txt = this.add.text(85, 3, '🗡️ Combos & Air Jumps', {
+      fontFamily: 'Press Start 2P',
+      fontSize: '4.5px',
+      color: '#64dfdf'
+    }).setOrigin(0.5);
+    card.add([pill1Bg, pill1Txt, pill2Bg, pill2Txt]);
+
+    const createBtn = (bx, by, bw, bh, bgCol, borderCol, hoverBg, hoverBorder, textCol, label, action) => {
       const rect = this.add.rectangle(bx, by, bw, bh, bgCol)
         .setStrokeStyle(1.5, borderCol)
         .setInteractive({ useHandCursor: true });
@@ -737,9 +783,10 @@ export default class StoryIntroScene extends Phaser.Scene {
       }).setOrigin(0.5).setInteractive({ useHandCursor: true });
 
       const setHover = (hover) => {
-        const s = hover ? 1.03 : 1.0;
-        rect.setScale(s);
-        txt.setScale(s);
+        rect.setFillStyle(hover ? hoverBg : bgCol);
+        rect.setStrokeStyle(1.5, hover ? hoverBorder : borderCol);
+        txt.setColor(hover ? '#ffd166' : textCol);
+        if (hover) sound.playBlip(true);
       };
 
       rect.on('pointerover', () => setHover(true));
@@ -777,10 +824,18 @@ export default class StoryIntroScene extends Phaser.Scene {
     this.onChooseSkipTutorial = chooseSkipTutorial;
 
     // Button 1: PLAY TUTORIAL (Recommended)
-    createBtn(0, 38, 336, 24, 0x164e22, 0x4ade80, '#ffffff', '⚔️ PLAY TUTORIAL (RECOMMENDED)', choosePlayTutorial);
+    createBtn(0, 30, 340, 26, 0x134e2c, 0x4ade80, 0x1d7040, 0x86efac, '#ffffff', '⚔️ PLAY TUTORIAL (RECOMMENDED)', choosePlayTutorial);
 
     // Button 2: SKIP TO CHAPTER 1
-    createBtn(0, 64, 336, 20, 0x1e293b, 0x64748b, '#cbd5e1', '⏩ SKIP TO CHAPTER 1', chooseSkipTutorial);
+    createBtn(0, 62, 340, 22, 0x162432, 0x334d65, 0x223548, 0x64dfdf, '#cbd5e1', '⏩ SKIP TO CHAPTER 1 (WHISPERING WOODS)', chooseSkipTutorial);
+
+    // Keyboard shortcut hint
+    const keyHint = this.add.text(0, 80, '[ENTER / SPACE] Play  •  [ESC] Skip', {
+      fontFamily: 'Press Start 2P',
+      fontSize: '4.5px',
+      color: '#527588'
+    }).setOrigin(0.5);
+    card.add(keyHint);
 
     // Card entrance animation
     card.setScale(0.85);
