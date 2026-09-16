@@ -26,8 +26,8 @@ export default class TutorialScene extends Phaser.Scene {
     this.cameras.main.resetFX();
     this.cameras.main.setBackgroundColor('#050e08');
 
-    // Attach pause service with clean mode label
-    pauseService.attachScene(this, '🎓 COMBAT TUTORIAL: PRACTICE GLADE');
+    // Attach pause service with clean mode label (hide timer badge)
+    pauseService.attachScene(this, '🎓 COMBAT TUTORIAL: PRACTICE GLADE', { showTimer: false });
     sound.playBGM('forest');
 
     // Enable touch controls
@@ -46,7 +46,7 @@ export default class TutorialScene extends Phaser.Scene {
     for (let i = 0; i < 4; i++) {
       const tx = 60 + i * 110;
       const treeKey = (i % 2 === 0) ? 'pine_green' : 'pine_dark';
-      const tree = this.add.image(tx, 234, treeKey).setOrigin(0.5, 1.0).setScale(0.8).setDepth(4);
+      const tree = this.add.image(tx, 210, treeKey).setOrigin(0.5, 1.0).setScale(0.8).setDepth(4);
       this.tweens.add({
         targets: tree,
         angle: { from: -0.8, to: 0.8 },
@@ -59,22 +59,22 @@ export default class TutorialScene extends Phaser.Scene {
 
     // Bushes along the glade
     for (let bx = 40; bx < w; bx += 100) {
-      this.add.image(bx, 234, 'bush_green').setOrigin(0.5, 1.0).setDepth(5).setScale(0.8);
+      this.add.image(bx, 210, 'bush_green').setOrigin(0.5, 1.0).setDepth(5).setScale(0.8);
     }
 
     // Static physics platforms group
     this.platforms = this.physics.add.staticGroup();
 
-    // Solid cliff grass ground across the glade
-    this.createGround(0, 234, w);
+    // Solid cliff grass ground across the glade (Y=210 for 60px bottom clearance, matching Survival/Story)
+    this.createGround(0, 210, w);
 
     // Elevated practice wooden platform (for jump training)
-    this.createPlatform(190, 165, 100);
+    this.createPlatform(190, 145, 100);
 
     // Ambient floating spores/pollen
     this.add.particles(0, 0, 'spark', {
       x: { min: 0, max: w },
-      y: { min: 40, max: 220 },
+      y: { min: 25, max: 195 },
       quantity: 1,
       frequency: 300,
       lifespan: 3500,
@@ -87,9 +87,9 @@ export default class TutorialScene extends Phaser.Scene {
       blendMode: 'ADD'
     }).setDepth(15);
 
-    // Player instance
+    // Player instance (spawn at X=160 clear of touch D-Pad)
     this.physics.world.setBounds(0, 0, w, h);
-    this.player = new Player(this, 90, 200);
+    this.player = new Player(this, 160, 180);
     this.player.body.setCollideWorldBounds(true);
     this.physics.add.collider(this.player, this.platforms);
 
@@ -98,11 +98,11 @@ export default class TutorialScene extends Phaser.Scene {
     this.cursors.keys = this.input.keyboard.addKeys('W,A,S,D,J,K,Z,X,E,R,ENTER,ESC');
 
     // Animated Sylva the Moon Sprite trainer hovering beside player
-    this.sylva = this.add.sprite(130, 170, 'fairy_fly').setScale(0.95).setDepth(30);
+    this.sylva = this.add.sprite(200, 150, 'fairy_fly').setScale(0.95).setDepth(30);
     this.sylva.play('fairy_fly_anim');
     this.tweens.add({
       targets: this.sylva,
-      y: 162,
+      y: 142,
       duration: 1200,
       yoyo: true,
       loop: -1,
@@ -167,7 +167,7 @@ export default class TutorialScene extends Phaser.Scene {
       let topKey = (i % 2 === 0) ? 'tile_cliff_top_mid1' : 'tile_cliff_top_mid2';
       this.add.image(tileX, y - 10, topKey).setOrigin(0, 0).setDepth(depth);
 
-      for (let cy = y + 6; cy <= y + 38; cy += 16) {
+      for (let cy = y + 6; cy <= y + 68; cy += 16) {
         this.add.image(tileX, cy, 'tile_cliff_body_mid').setOrigin(0, 0).setDepth(depth - 1);
       }
     }
@@ -198,57 +198,59 @@ export default class TutorialScene extends Phaser.Scene {
   }
 
   createTutorialHUD(w) {
-    this.hudContainer = this.add.container(w / 2, 38).setDepth(400);
+    // HUD Card centered at X=185, width 340 (leaves 125px on right for pause/wallet buttons)
+    this.hudContainer = this.add.container(185, 34).setDepth(400);
 
     // Card background
-    this.hudBg = this.add.rectangle(0, 0, 440, 56, 0x07150c, 0.92);
+    this.hudBg = this.add.rectangle(0, 0, 340, 50, 0x07150c, 0.92);
     this.hudBg.setStrokeStyle(1.5, 0x225530);
     this.hudContainer.add(this.hudBg);
 
-    // Step tag pill
-    this.stepPill = this.add.rectangle(-132, -18, 86, 14, 0x16381e, 0.9);
+    // Sylva Avatar Frame with fairy_portrait (left side)
+    this.avatarBg = this.add.rectangle(-146, -1, 24, 24, 0x102818, 0.95);
+    this.avatarBg.setStrokeStyle(1.5, 0x4ade80);
+    this.hudContainer.add(this.avatarBg);
+
+    this.avatarSylva = this.add.image(-146, -1, 'fairy_portrait').setScale(0.5);
+    this.hudContainer.add(this.avatarSylva);
+
+    // Step tag pill (top row)
+    this.stepPill = this.add.rectangle(-88, -16, 76, 12, 0x16381e, 0.9);
     this.stepPill.setStrokeStyle(1, 0x4ade80);
     this.hudContainer.add(this.stepPill);
 
-    this.txtStep = this.add.text(-132, -18, 'LESSON 1 / 6', {
+    this.txtStep = this.add.text(-88, -16, 'LESSON 1 / 6', {
       fontFamily: 'Press Start 2P',
-      fontSize: '5.5px',
+      fontSize: '5px',
       color: '#4ade80'
     }).setOrigin(0.5);
     this.hudContainer.add(this.txtStep);
 
-    // Title / Action instruction
-    this.txtTitle = this.add.text(18, -18, '1. RUNNING & TRAVERSAL', {
+    // Title / Action instruction (top row)
+    this.txtTitle = this.add.text(32, -16, '1. RUNNING & TRAVERSAL', {
       fontFamily: 'Press Start 2P',
-      fontSize: '7px',
+      fontSize: '6px',
       color: '#ffd166',
       stroke: '#000000',
       strokeThickness: 2
     }).setOrigin(0.5);
     this.hudContainer.add(this.txtTitle);
 
-    // Sylva Avatar Frame with fairy_portrait
-    this.avatarBg = this.add.rectangle(-196, -1, 24, 24, 0x102818, 0.95);
-    this.avatarBg.setStrokeStyle(1.5, 0x4ade80);
-    this.hudContainer.add(this.avatarBg);
-
-    this.avatarSylva = this.add.image(-196, -1, 'fairy_portrait').setScale(0.5);
-    this.hudContainer.add(this.avatarSylva);
-
-    // Sylva dialogue quote
-    this.txtDialogue = this.add.text(-178, -1, 'Sylva: "Tap the ◀ and ▶ buttons on the left D-Pad to run."', {
+    // Sylva dialogue quote (middle row)
+    this.txtDialogue = this.add.text(-126, 0, 'Sylva: "Tap the ◀ and ▶ buttons on the left D-Pad to run."', {
       fontFamily: 'Press Start 2P',
-      fontSize: '5px',
+      fontSize: '4.5px',
       color: '#c8eed4',
-      wordWrap: { width: 385 },
+      wordWrap: { width: 286 },
+      lineSpacing: 3,
       align: 'left'
     }).setOrigin(0, 0.5);
     this.hudContainer.add(this.txtDialogue);
 
-    // Task checklist badge
-    this.txtProgress = this.add.text(0, 17, '[ ◀ RUN LEFT: ⭕ ]   [ ▶ RUN RIGHT: ⭕ ]', {
+    // Task checklist badge (bottom row)
+    this.txtProgress = this.add.text(14, 16, '[ ◀ RUN LEFT: ⭕ ]   [ ▶ RUN RIGHT: ⭕ ]', {
       fontFamily: 'Press Start 2P',
-      fontSize: '5px',
+      fontSize: '4.5px',
       color: '#a0c4a0'
     }).setOrigin(0.5);
     this.hudContainer.add(this.txtProgress);
@@ -329,7 +331,7 @@ export default class TutorialScene extends Phaser.Scene {
         if (window.touchController) {
           window.touchController.setTutorialHighlight(['touch-attack']);
         }
-        this.spawnTrainingCrate(250, 220);
+        this.spawnTrainingCrate(260, 190);
         this.lessonState = { crateShattered: false };
         break;
 
@@ -342,7 +344,7 @@ export default class TutorialScene extends Phaser.Scene {
         if (window.touchController) {
           window.touchController.setTutorialHighlight(['touch-upslash']);
         }
-        this.spawnTutorialBee(310, 100);
+        this.spawnTutorialBee(310, 95);
         this.lessonState = { beeSliced: false };
         break;
 
@@ -355,7 +357,7 @@ export default class TutorialScene extends Phaser.Scene {
         if (window.touchController) {
           window.touchController.setTutorialHighlight(['touch-jump']);
         }
-        this.spawnTrainingShell(360, 220);
+        this.spawnTrainingShell(360, 190);
         this.lessonState = { stomped: false };
         break;
 
@@ -368,7 +370,7 @@ export default class TutorialScene extends Phaser.Scene {
         if (window.touchController) {
           window.touchController.clearTutorialHighlights();
         }
-        this.spawnSparringDummy(350, 195);
+        this.spawnSparringDummy(350, 175);
         this.lessonState = { dummyDefeated: false };
         break;
 

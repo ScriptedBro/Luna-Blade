@@ -1,6 +1,8 @@
 export const GAME_CONFIG = {
   WIDTH: 480,
   HEIGHT: 270,
+  BASE_WIDTH: 480,
+  BASE_HEIGHT: 270,
   GRAVITY: 650,
   
   PLAYER: {
@@ -215,3 +217,13 @@ export const GAME_CONFIG = {
     ENDLESS_HP_ADD: 0.4,
   }
 };
+
+/**
+ * Authoritative base canvas dimensions for Luna Blade.
+ * All Phaser scenes are designed for a 480x270 coordinate space.
+ * Phaser Scale.FIT manages scaling cleanly to any screen aspect ratio.
+ */
+export function computeAdaptiveSize() {
+  return { width: GAME_CONFIG.BASE_WIDTH, height: GAME_CONFIG.BASE_HEIGHT };
+}
+

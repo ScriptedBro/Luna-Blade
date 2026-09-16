@@ -137,11 +137,12 @@ export class PauseService {
     return true;
   }
 
-  attachScene(scene, modeName = '') {
+  attachScene(scene, modeName = '', { showTimer = true } = {}) {
     this.initDOM();
     this.activeScene = scene;
     this.modeName = modeName;
     this.isPaused = false;
+    this.showTimer = showTimer;
     this.showButtons();
   }
 
@@ -151,6 +152,7 @@ export class PauseService {
     }
     this.activeScene = null;
     this.modeName = '';
+    this.showTimer = true;
     this.hideButtons();
   }
 
@@ -164,7 +166,13 @@ export class PauseService {
     this.buttonsVisible = true;
     if (this.landscapeGroup) this.landscapeGroup.classList.remove('hidden');
     if (this.btnHeader) this.btnHeader.classList.remove('hidden');
-    if (this.headerTimerBadge) this.headerTimerBadge.classList.remove('hidden');
+    if (this.showTimer !== false) {
+      if (this.landscapeTimerBadge) this.landscapeTimerBadge.classList.remove('hidden');
+      if (this.headerTimerBadge) this.headerTimerBadge.classList.remove('hidden');
+    } else {
+      if (this.landscapeTimerBadge) this.landscapeTimerBadge.classList.add('hidden');
+      if (this.headerTimerBadge) this.headerTimerBadge.classList.add('hidden');
+    }
   }
 
   hideButtons() {

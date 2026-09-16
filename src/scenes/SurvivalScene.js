@@ -16,6 +16,7 @@ import { sound } from '../engine/Audio.js';
 import { storage } from '../engine/Storage.js';
 import { getTodaySeedString, generateDailySurvivalSpec } from '../engine/PRNG.js';
 import { pauseService } from '../engine/PauseService.js';
+import { nimiqService } from '../engine/NimiqService.js';
 import confetti from 'canvas-confetti';
 
 export default class SurvivalScene extends Phaser.Scene {
@@ -33,7 +34,7 @@ export default class SurvivalScene extends Phaser.Scene {
       window.touchController.show();
     }
 
-    pauseService.attachScene(this, 'DAILY SURVIVAL TRIAL');
+    pauseService.attachScene(this, 'SURVIVAL TRIAL');
     pauseService.showButtons();
     pauseService.updateTimer(0);
     sound.playBGM('battle');
@@ -44,9 +45,10 @@ export default class SurvivalScene extends Phaser.Scene {
 
     this.physics.world.setBounds(0, 0, this.arenaWidth, this.arenaHeight);
 
-    // Load today's deterministic seed & spec
-    this.seedString = getTodaySeedString();
-    this.spec = generateDailySurvivalSpec(this.seedString);
+    // Classic fixed arena (identical for every player). The date only keys the
+    // daily record — the arena layout itself never changes.
+    this.dayKey = getTodaySeedString();
+    this.spec = generateDailySurvivalSpec();
 
     // Arena Lush Forest Background & Atmosphere
     this.createArenaForestBackground();
@@ -905,8 +907,8 @@ export default class SurvivalScene extends Phaser.Scene {
     bar.setStrokeStyle(1, 0x3d5c3d);
     this.hudContainer.add(bar);
 
-    // Mode title & Seed
-    this.add.text(12, 6, `DAILY TRIAL: ${this.seedString}`, {
+    // Mode title
+    this.add.text(12, 6, 'SURVIVAL TRIAL', {
       fontFamily: 'Press Start 2P',
       fontSize: '6px',
       color: '#e9b213'
@@ -1121,26 +1123,63 @@ export default class SurvivalScene extends Phaser.Scene {
     const timeBonus = this.secondsSurvived * GAME_CONFIG.SURVIVAL.PTS_PER_SECOND;
     this.totalScore += timeBonus;
 
-    // Generate cryptographic anti-cheat proof
     const runData = {
-      seed: this.seedString,
+      seed: this.dayKey,
       duration: this.secondsSurvived,
       kills: this.killCount.total,
       score: this.totalScore,
       timestamp: Date.now()
     };
-    const proofHash = `RUN-${Date.now().toString(36).toUpperCase()}-${Math.floor(Math.random()*8999+1000)}`;
 
-    // Save locally
-    storage.recordDailyTrial(this.seedString, this.totalScore, {
-      ...runData,
-      proofHash
+    // Verified submission is best-effort: never block the game-over screen.
+    this.submitRunProof(runData).then((proofInfo) => {
+      if (this.isGameOver) this.showGameOverModal(proofInfo);
     });
-
-    this.showGameOverModal(proofHash);
   }
 
-  showGameOverModal(proofHash) {
+  async submitRunProof(runData) {
+    const proof = {
+      verified: false,
+      signature: `RUN-${Date.now().toString(36).toUpperCase()}-${Math.floor(Math.random() * 8999 + 1000)}`,
+      offline: false,
+      notConnected: false,
+    };
+
+    try {
+      const status = nimiqService.getStatus();
+      if (!status.connected) {
+        proof.notConnected = true;
+        proof.label = 'Run Not Verified — Sign In to Compete';
+        return proof;
+      }
+      const res = await Promise.race([
+        nimiqService.signScoreProof(runData.score, 'SURVIVAL', {
+          durationMs: runData.duration * 1000,
+          kills: runData.kills,
+        }),
+        new Promise((_, reject) => setTimeout(() => reject(Object.assign(new Error('Server unreachable — run not verified on-chain'), { timedOut: true })), 9000)),
+      ]);
+      proof.verified = true;
+      proof.rank = res.rank;
+      proof.isNewBest = res.isNewBest;
+      proof.label = `Verified On-Chain — Rank #${res.rank}${res.isNewBest ? ' (New Best)' : ''}`;
+    } catch (err) {
+      proof.offline = err.timedOut || String(err?.message || '').includes('Server unreachable');
+      proof.label = proof.offline ? 'Run Not Verified (Offline)' : `Run Not Verified — ${err?.message || 'error'}`;
+    }
+
+    // Save locally either way; keep the server result for review.
+    storage.recordDailyTrial(this.dayKey, runData.score, {
+      ...runData,
+      proofId: proof.signature,
+      verified: proof.verified,
+      rank: proof.rank || null,
+      status: proof.label,
+    });
+    return proof;
+  }
+
+  showGameOverModal(proof) {
     const w = GAME_CONFIG.WIDTH;
     const h = GAME_CONFIG.HEIGHT;
 
@@ -1169,10 +1208,9 @@ export default class SurvivalScene extends Phaser.Scene {
     }).setOrigin(0.5).setScrollFactor(0).setDepth(501);
 
     const details = this.add.text(w / 2, h / 2 - 14, [
-      `Date: ${this.seedString} (UTC)`,
       `Time Survived: ${this.secondsSurvived}s (+${this.secondsSurvived * 10} pts)`,
       `Kills: 🐗${this.killCount.boar || 0} 🐌${this.killCount.snail || 0} 🐝${this.killCount.bee || 0} 🍄${this.killCount.mushroom || 0} 👁️${this.killCount.flying_eye || 0} 👺${this.killCount.goblin || 0}`,
-      `Anti-Cheat Proof: ${proofHash}`
+      `${proof.label}`
     ].join('\n'), {
       fontFamily: 'Press Start 2P',
       fontSize: '6px',

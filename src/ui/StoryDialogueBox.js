@@ -88,7 +88,7 @@ export default class StoryDialogueBox extends Phaser.GameObjects.Container {
   constructor(scene) {
     const w = GAME_CONFIG.WIDTH;
     const h = GAME_CONFIG.HEIGHT;
-    super(scene, w / 2, h - 42);
+    super(scene, w / 2, h - 54);
     scene.add.existing(this);
 
     this.scene = scene;
@@ -103,12 +103,12 @@ export default class StoryDialogueBox extends Phaser.GameObjects.Container {
     this.setDepth(600);
 
     const boxW = 444;
-    const boxH = 68;
+    const boxH = 62;
     this.boxW = boxW;
     this.boxH = boxH;
 
     // Dark backdrop overlay behind dialogue to dim the world slightly
-    this.dimOverlay = scene.add.rectangle(-w / 2, -h + 42, w, h, 0x000000, 0.35)
+    this.dimOverlay = scene.add.rectangle(-w / 2, -h + 54, w, h, 0x000000, 0.35)
       .setOrigin(0, 0)
       .setInteractive();
     this.add(this.dimOverlay);
@@ -124,46 +124,46 @@ export default class StoryDialogueBox extends Phaser.GameObjects.Container {
     this.add(this.innerTrim);
 
     // Portrait frame on left
-    this.portraitBg = scene.add.rectangle(-boxW / 2 + 34, 0, 48, 48, 0x0a161c, 1);
+    this.portraitBg = scene.add.rectangle(-boxW / 2 + 32, 0, 44, 44, 0x0a161c, 1);
     this.portraitBg.setStrokeStyle(1.5, 0x3a5a6b);
     this.add(this.portraitBg);
 
     // Portrait sprite container
-    this.portraitSprite = scene.add.sprite(-boxW / 2 + 34, 0, 'char_idle').setVisible(false);
+    this.portraitSprite = scene.add.sprite(-boxW / 2 + 32, 0, 'char_idle').setVisible(false);
     this.add(this.portraitSprite);
 
-    this.portraitIcon = scene.add.text(-boxW / 2 + 34, 0, '✨', {
-      fontSize: '22px'
+    this.portraitIcon = scene.add.text(-boxW / 2 + 32, 0, '✨', {
+      fontSize: '20px'
     }).setOrigin(0.5).setVisible(false);
     this.add(this.portraitIcon);
 
     // Speaker Nameplate Container (top-left above text)
-    this.nameplateBg = scene.add.rectangle(-boxW / 2 + 68, -boxH / 2, 140, 16, 0x032830, 0.95)
+    this.nameplateBg = scene.add.rectangle(-boxW / 2 + 62, -boxH / 2, 130, 15, 0x032830, 0.95)
       .setOrigin(0, 0.5);
     this.nameplateBg.setStrokeStyle(1, 0x00b4d8);
     this.add(this.nameplateBg);
 
-    this.nameplateText = scene.add.text(-boxW / 2 + 76, -boxH / 2, 'LUNA', {
+    this.nameplateText = scene.add.text(-boxW / 2 + 70, -boxH / 2, 'LUNA', {
       fontFamily: 'Press Start 2P',
-      fontSize: '6px',
+      fontSize: '5.5px',
       color: '#48cae4'
     }).setOrigin(0, 0.5);
     this.add(this.nameplateText);
 
     // Dialogue Body Text
-    this.dialogueText = scene.add.text(-boxW / 2 + 72, -boxH / 2 + 18, '', {
+    this.dialogueText = scene.add.text(-boxW / 2 + 64, -boxH / 2 + 15, '', {
       fontFamily: 'Press Start 2P',
-      fontSize: '6px',
+      fontSize: '5.5px',
       color: '#e0f0f5',
-      lineSpacing: 5,
-      wordWrap: { width: boxW - 90 }
+      lineSpacing: 4,
+      wordWrap: { width: boxW - 85 }
     });
     this.add(this.dialogueText);
 
     // Prompt to advance [TAP TO CONTINUE ▼]
-    this.promptArrow = scene.add.text(boxW / 2 - 12, boxH / 2 - 10, 'TAP TO CONTINUE ▼', {
+    this.promptArrow = scene.add.text(boxW / 2 - 12, boxH / 2 - 8, 'TAP TO CONTINUE ▼', {
       fontFamily: 'Press Start 2P',
-      fontSize: '5.5px',
+      fontSize: '5px',
       color: '#ffd166',
       stroke: '#000000',
       strokeThickness: 2
@@ -172,21 +172,21 @@ export default class StoryDialogueBox extends Phaser.GameObjects.Container {
 
     this.arrowTween = scene.tweens.add({
       targets: this.promptArrow,
-      y: boxH / 2 - 7,
+      y: boxH / 2 - 5,
       duration: 400,
       yoyo: true,
       loop: -1
     });
 
     // Skip Button in upper right (prominent pill button)
-    this.skipBtnBg = scene.add.rectangle(boxW / 2 - 40, -boxH / 2 + 4, 68, 18, 0x162c1e, 0.95);
+    this.skipBtnBg = scene.add.rectangle(boxW / 2 - 38, -boxH / 2 + 4, 64, 16, 0x162c1e, 0.95);
     this.skipBtnBg.setStrokeStyle(1.5, 0x48e4b6);
     this.skipBtnBg.setOrigin(0.5, 0.5);
     this.add(this.skipBtnBg);
 
-    this.btnSkip = scene.add.text(boxW / 2 - 40, -boxH / 2 + 4, 'SKIP ⏭', {
+    this.btnSkip = scene.add.text(boxW / 2 - 38, -boxH / 2 + 4, 'SKIP ⏭', {
       fontFamily: 'Press Start 2P',
-      fontSize: '6px',
+      fontSize: '5.5px',
       color: '#ffd166',
       stroke: '#000000',
       strokeThickness: 2
@@ -199,8 +199,11 @@ export default class StoryDialogueBox extends Phaser.GameObjects.Container {
     });
 
     this.lastActionTime = 0;
+    this.isClosing = false;
+    this.closeTween = null;
 
     const triggerAction = (isSkip = false) => {
+      if (this.isClosing || !this.active || !this.visible) return;
       const now = performance.now();
       if (now - this.lastActionTime < 180) return;
       this.lastActionTime = now;
@@ -215,7 +218,7 @@ export default class StoryDialogueBox extends Phaser.GameObjects.Container {
     this.scenePointerListener = (pointer) => {
       if (!this.active || !this.visible) return;
       // Skip button bounding area (with generous touch padding for mobile thumbs)
-      const isSkip = (pointer.x >= 360 && pointer.x <= 475 && pointer.y >= 170 && pointer.y <= 230);
+      const isSkip = (pointer.x >= 350 && pointer.x <= 475 && pointer.y >= 150 && pointer.y <= 215);
       triggerAction(isSkip);
     };
     scene.input.on('pointerdown', this.scenePointerListener);
@@ -231,7 +234,7 @@ export default class StoryDialogueBox extends Phaser.GameObjects.Container {
         const clientY = e.clientY || (e.touches && e.touches[0] ? e.touches[0].clientY : 0);
         const touchX = (clientX - rect.left) * (GAME_CONFIG.WIDTH / rect.width);
         const touchY = (clientY - rect.top) * (GAME_CONFIG.HEIGHT / rect.height);
-        const isSkip = (touchX >= 360 && touchX <= 475 && touchY >= 170 && touchY <= 230);
+        const isSkip = (touchX >= 350 && touchX <= 475 && touchY >= 150 && touchY <= 215);
         triggerAction(isSkip);
       };
       canvas.addEventListener('pointerdown', this.canvasPointerListener);
@@ -365,6 +368,7 @@ export default class StoryDialogueBox extends Phaser.GameObjects.Container {
   }
 
   skipAll() {
+    if (this.isClosing) return;
     if (this.typingTimer) this.typingTimer.remove();
     this.close();
   }
@@ -390,6 +394,10 @@ export default class StoryDialogueBox extends Phaser.GameObjects.Container {
       this.scene.events.off('update', this.touchListener);
       this.touchListener = null;
     }
+    if (this.skipBtnBg && this.skipBtnBg.disableInteractive) this.skipBtnBg.disableInteractive();
+    if (this.btnSkip && this.btnSkip.disableInteractive) this.btnSkip.disableInteractive();
+    if (this.bgBox && this.bgBox.disableInteractive) this.bgBox.disableInteractive();
+    if (this.dimOverlay && this.dimOverlay.disableInteractive) this.dimOverlay.disableInteractive();
     if (this.arrowTween) {
       this.arrowTween.stop();
       this.arrowTween = null;
@@ -398,25 +406,34 @@ export default class StoryDialogueBox extends Phaser.GameObjects.Container {
       this.typingTimer.remove();
       this.typingTimer = null;
     }
+    if (this.closeTween) {
+      this.closeTween.stop();
+      this.closeTween = null;
+    }
   }
 
   close() {
+    if (this.isClosing) return;
+    this.isClosing = true;
     this.cleanUpListeners();
 
     if (!this.scene || !this.scene.tweens) {
       const cb = this.onCompleteCallback;
+      this.onCompleteCallback = null;
       this.destroy();
       if (cb) cb();
       return;
     }
 
-    this.scene.tweens.add({
+    this.closeTween = this.scene.tweens.add({
       targets: this,
       alpha: 0,
       y: this.y + 15,
       duration: 250,
       onComplete: () => {
+        this.closeTween = null;
         const cb = this.onCompleteCallback;
+        this.onCompleteCallback = null;
         this.destroy();
         if (cb) cb();
       }
@@ -424,6 +441,7 @@ export default class StoryDialogueBox extends Phaser.GameObjects.Container {
   }
 
   destroy() {
+    this.isClosing = true;
     this.cleanUpListeners();
     super.destroy();
   }

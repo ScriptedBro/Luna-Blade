@@ -2,8 +2,6 @@ import Phaser from 'phaser';
 import { GAME_CONFIG } from '../config.js';
 import { sound } from '../engine/Audio.js';
 import { storage } from '../engine/Storage.js';
-import { getTodaySeedString } from '../engine/PRNG.js';
-import { nimiqModal } from '../ui/NimiqModal.js';
 import { nimiqService } from '../engine/NimiqService.js';
 import { pauseService } from '../engine/PauseService.js';
 
@@ -55,18 +53,20 @@ export default class MenuScene extends Phaser.Scene {
       letterSpacing: 2
     }).setOrigin(0.5);
 
-    // Date & Seed & Status Combined Banner Line
-    const todaySeed = getTodaySeedString();
+    // Connection status badge (tap to connect after skipping the gate)
     const status = nimiqService.getStatus();
-    const blessingActive = storage.hasMoonBlessing();
-    const statusBadge = blessingActive ? '🌙 BLESSING ACTIVE' : (status.connected ? `⚡ ${status.shortAddress}` : '⚡ NIMIQ READY');
-    this.add.text(w / 2, 45, `SEED: ${todaySeed} • ${statusBadge}`, {
+    const statusBadge = status.connected ? `⚡ ${status.shortAddress}` : (status.offline ? '⚡ API OFFLINE' : '⚡ NOT CONNECTED');
+    const badge = this.add.text(w / 2, 45, statusBadge, {
       fontFamily: 'Press Start 2P',
       fontSize: '4.5px',
-      color: blessingActive ? '#64dfdf' : '#a0c4a0',
+      color: '#a0c4a0',
       stroke: '#000000',
       strokeThickness: 2
     }).setOrigin(0.5);
+    badge.setInteractive({ useHandCursor: true });
+    badge.on('pointerdown', () => {
+      if (!status.connected && window.__lunaGate) window.__lunaGate.show().then(() => {});
+    });
 
     // Pulse animation on title
     this.tweens.add({
@@ -96,8 +96,8 @@ export default class MenuScene extends Phaser.Scene {
         shouldFade: true
       },
       {
-        text: '🏆 3. DAILY LUNA TRIAL',
-        desc: 'Seeded Survival • 3 Lives • Daily Tournament',
+        text: '🏆 3. SURVIVAL TRIAL',
+        desc: 'Endless Arena • On-Chain Leaderboard',
         action: () => this.scene.start('SurvivalScene'),
         shouldFade: true
       },
@@ -108,19 +108,13 @@ export default class MenuScene extends Phaser.Scene {
         shouldFade: true
       },
       {
-        text: '💰 5. DAILY LEADERBOARD',
-        desc: 'Top Scores & Champion Rankings',
+        text: '💰 5. LEADERBOARD',
+        desc: 'All-Time & Daily Rankings',
         action: () => this.scene.start('LeaderboardScene'),
         shouldFade: true
       },
       {
-        text: '⚡ 6. NIMIQ MOON SHRINE',
-        desc: 'NIM Offerings, Wallet & Run Blessings',
-        action: () => nimiqModal.open(),
-        shouldFade: false
-      },
-      {
-        text: '⚙️ 7. SETTINGS',
+        text: '⚙️ 6. SETTINGS',
         desc: 'Sound Effects & Background Music',
         action: () => this.openSettingsModal(),
         shouldFade: false

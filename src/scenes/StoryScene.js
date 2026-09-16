@@ -38,7 +38,7 @@ export default class StoryScene extends Phaser.Scene {
     this.comboCount = 0;
     this.comboTimer = 0;
     this.levelWidth = this.chapterId === 1 ? 2800 : 2600;
-    this.levelHeight = 420;
+    this.levelHeight = 440;
     this.victoryAdvanceCallback = null;
     this.gameOverRetryCallback = null;
     this.activeGameOverCleanup = null;
@@ -120,14 +120,16 @@ export default class StoryScene extends Phaser.Scene {
     // Build the Level Geometry & Spawns
     this.buildChapterLevel();
 
-    // Spawn Player
-    this.player = new Player(this, 60, 240);
+    // Spawn Player standing on ground (Y=380)
+    this.player = new Player(this, 60, 346);
     this.physics.add.collider(this.player, this.platforms);
 
     // Camera follow
     this.cameras.main.setBounds(0, 0, this.levelWidth, this.levelHeight);
-    this.cameras.main.startFollow(this.player, true, 0.08, 0.08);
+    this.cameras.main.startFollow(this.player, true, 0.08, 0.08, 0, -28);
     this.cameras.main.setZoom(1);
+    this.cameras.main.scrollX = 0;
+    this.cameras.main.scrollY = 170;
 
     // Collisions
     this.physics.add.collider(this.enemies, this.platforms);
@@ -715,7 +717,7 @@ export default class StoryScene extends Phaser.Scene {
       if (this.chapterId === 4) topImg.setTint(0x774433);
       else if (this.chapterId === 5) topImg.setTint(0x7788aa);
 
-      for (let cy = y + 6; cy <= y + 38; cy += 16) {
+      for (let cy = y + 6; cy <= y + 68; cy += 16) {
         let bodyKey = 'tile_cliff_body_mid';
         if (i === 0 && x > 0) bodyKey = 'tile_cliff_body_left';
         else if (i === numTiles - 1 && (x + width < this.levelWidth)) bodyKey = 'tile_cliff_body_right';

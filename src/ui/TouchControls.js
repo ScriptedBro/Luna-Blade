@@ -1,7 +1,6 @@
 import { sound } from '../engine/Audio.js';
 import { storage } from '../engine/Storage.js';
 import { nimiqService } from '../engine/NimiqService.js';
-import { nimiqModal } from './NimiqModal.js';
 
 export class TouchController {
   constructor(game) {
@@ -71,14 +70,8 @@ export class TouchController {
         this.game.scale.refresh();
       }
 
-      if (typeof window !== 'undefined' && window.visualViewport && this.touchContainer) {
-        const isLandscape = window.innerWidth > window.innerHeight;
-        if (isLandscape) {
-          const bottomOffset = Math.max(0, window.innerHeight - window.visualViewport.height - (window.visualViewport.offsetTop || 0));
-          this.touchContainer.style.setProperty('--keyboard-or-bar-offset', `${Math.round(bottomOffset)}px`);
-        } else {
-          this.touchContainer.style.removeProperty('--keyboard-or-bar-offset');
-        }
+      if (typeof window !== 'undefined' && this.touchContainer) {
+        this.touchContainer.style.removeProperty('--keyboard-or-bar-offset');
       }
     };
 
@@ -362,7 +355,8 @@ export class TouchController {
     const dotNimiqLand = document.getElementById('nimiq-dot-landscape');
 
     const openAltar = () => {
-      nimiqModal.open();
+      if (nimiqService.getStatus().connected) return;
+      if (window.__lunaGate) window.__lunaGate.show().then(() => {});
     };
 
     if (btnNimiq) btnNimiq.addEventListener('click', openAltar);

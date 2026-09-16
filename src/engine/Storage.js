@@ -23,7 +23,6 @@ const DEFAULT_STATE = {
   dailyRecords: {}, // keyed by date string
   highScore: 0,
   nimiqAccount: null,
-  moonBlessings: 0,
   settings: {
     soundMuted: false,
     musicMuted: false,
@@ -181,25 +180,6 @@ class StorageManager {
   setNimiqAccount(account) {
     this.data.nimiqAccount = account;
     this.save();
-  }
-
-  addMoonBlessing(nimAmount = 10) {
-    this.data.moonBlessings = (this.data.moonBlessings || 0) + Math.max(1, Math.floor(nimAmount / 10));
-    this.save();
-    return this.data.moonBlessings;
-  }
-
-  hasMoonBlessing() {
-    return (this.data.moonBlessings || 0) > 0;
-  }
-
-  consumeMoonBlessing() {
-    if ((this.data.moonBlessings || 0) > 0) {
-      this.data.moonBlessings -= 1;
-      this.save();
-      return true;
-    }
-    return false;
   }
 
   isSoundMuted() {

@@ -40,7 +40,14 @@ export function getTodaySeedString() {
   return `${y}-${m}-${d}`;
 }
 
-export function generateDailySurvivalSpec(seedStr = getTodaySeedString()) {
+/**
+ * Fixed arena layout for every player so leaderboard scores are comparable
+ * (no per-day randomization). Survival is still a daily contest by date for
+ * scoring/payouts, but the arena itself never changes.
+ */
+export const CLASSIC_ARENA_SEED = 'luna-blade-classic-arena-v1';
+
+export function generateDailySurvivalSpec(seedStr = CLASSIC_ARENA_SEED) {
   const prng = createMulberry32(seedStr);
   
   // Deterministic Arena Platform Layout

@@ -5,8 +5,11 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
+    "dev:all": "concurrently -k -n api,web -c green,cyan \"npm run dev --prefix server\" \"vite\"",
     "build": "vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "test": "npm test --prefix server",
+    "start:server": "npm start --prefix server"
   },
   "keywords": [
     "phaser",
@@ -18,8 +21,11 @@
   "author": "",
   "license": "MIT",
   "dependencies": {
+    "@nimiq/hub-api": "^1.15.0",
+    "@nimiq/identicons": "^1.6.2",
     "@nimiq/mini-app-sdk": "^0.1.0",
     "canvas-confetti": "^1.9.4",
+    "concurrently": "^10.0.5",
     "phaser": "^4.2.1",
     "vite": "^8.3.0"
   }

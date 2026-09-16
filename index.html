@@ -34,7 +34,7 @@
         </button>
 
         <!-- Nimiq Wallet Connect Status Button -->
-        <button id="btn-nimiq" class="pixel-wallet-btn" title="Nimiq Altar & Wallet">
+        <button id="btn-nimiq" class="pixel-wallet-btn" title="Nimiq Wallet">
           <span class="nimiq-bolt">⚡</span>
           <span id="nimiq-btn-text">NIMIQ</span>
           <span id="nimiq-dot" class="nimiq-dot offline"></span>
@@ -42,22 +42,23 @@
       </div>
     </header>
 
-    <!-- Floating Landscape Timer & Pause Icon Group (very close to timer) -->
-    <div id="landscape-pause-group" class="landscape-pause-group hidden">
-      <div id="landscape-timer-badge" class="landscape-timer-badge" title="Battle Elapsed Time">
-        <span id="landscape-timer-text">TIME: 0s</span>
+    <!-- Floating Landscape Header Bar (Timer, Pause, and Nimiq Status) -->
+    <div id="landscape-top-bar" class="landscape-top-bar">
+      <div id="landscape-pause-group" class="landscape-pause-group hidden">
+        <div id="landscape-timer-badge" class="landscape-timer-badge" title="Battle Elapsed Time">
+          <span id="landscape-timer-text">TIME: 0s</span>
+        </div>
+        <button id="btn-pause-landscape" class="landscape-pause-btn" title="Pause Game" aria-label="Pause">
+          <span class="pause-icon">⏸</span>
+        </button>
       </div>
-      <button id="btn-pause-landscape" class="landscape-pause-btn" title="Pause Game" aria-label="Pause">
-        <span class="pause-icon">⏸</span>
+
+      <button id="btn-nimiq-landscape" class="landscape-nimiq-btn" title="Nimiq Wallet" aria-label="Nimiq Wallet">
+        <span class="nimiq-bolt">⚡</span>
+        <span id="nimiq-btn-text-landscape">NIMIQ</span>
+        <span id="nimiq-dot-landscape" class="nimiq-dot offline"></span>
       </button>
     </div>
-
-    <!-- Floating Landscape Nimiq Status/Wallet Button (only visible in landscape mode) -->
-    <button id="btn-nimiq-landscape" class="landscape-nimiq-btn" title="Nimiq Altar & Wallet" aria-label="Nimiq Wallet">
-      <span class="nimiq-bolt">⚡</span>
-      <span id="nimiq-btn-text-landscape">NIMIQ</span>
-      <span id="nimiq-dot-landscape" class="nimiq-dot offline"></span>
-    </button>
 
     <!-- Main Game Canvas Container -->
     <main id="game-wrapper">
@@ -86,7 +87,7 @@
               "🌲 Awakening ancient forest spirits...",
               "⚔️ Sharpening celestial moon blades...",
               "🌙 Gathering radiant lunar shards...",
-              "⚡ Syncing Nimiq cryptographic altars...",
+              "⚡ Syncing Nimiq cryptographic signatures...",
               "✨ Sylva is preparing your satchel...",
               "🐗 Calming wild forest boars...",
               "🍄 Harvesting glowing spore lanterns...",
