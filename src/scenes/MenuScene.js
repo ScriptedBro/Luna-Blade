@@ -58,12 +58,14 @@ export default class MenuScene extends Phaser.Scene {
     // Title banner container
     const isTall = h > 300;
     const titleY = isTall ? 50 : 33;
-    const titleBox = this.add.rectangle(w / 2, titleY, 310, 42, 0x0a140a, 0.85).setDepth(10);
-    titleBox.setStrokeStyle(1, 0x2e4e2e);
+    const titleBoxW = isTall ? 340 : 310;
+    const titleBoxH = isTall ? 50 : 42;
+    const titleBox = this.add.rectangle(w / 2, titleY, titleBoxW, titleBoxH, 0x0a140a, 0.88).setDepth(10);
+    titleBox.setStrokeStyle(1.5, 0x2e4e2e);
 
-    const titleText = this.add.text(w / 2, titleY - 12, 'LUNA BLADE', {
+    const titleText = this.add.text(w / 2, titleY - (isTall ? 14 : 12), 'LUNA BLADE', {
       fontFamily: 'Press Start 2P',
-      fontSize: '13px',
+      fontSize: isTall ? '14px' : '13px',
       color: '#f6c026',
       stroke: '#000000',
       strokeThickness: 3
@@ -71,7 +73,7 @@ export default class MenuScene extends Phaser.Scene {
 
     const subText = this.add.text(w / 2, titleY + 1, 'THE HIGH FOREST', {
       fontFamily: 'Press Start 2P',
-      fontSize: '6.5px',
+      fontSize: isTall ? '7.5px' : '6.5px',
       color: '#98ff20',
       stroke: '#000000',
       strokeThickness: 2,
@@ -81,9 +83,9 @@ export default class MenuScene extends Phaser.Scene {
     // Connection status badge (tap to connect after skipping the gate)
     const status = nimiqService.getStatus();
     const statusBadge = status.connected ? `⚡ ${status.shortAddress}` : (status.offline ? '⚡ API OFFLINE' : '⚡ NOT CONNECTED');
-    const badge = this.add.text(w / 2, titleY + 12, statusBadge, {
+    const badge = this.add.text(w / 2, titleY + (isTall ? 14 : 12), statusBadge, {
       fontFamily: 'Press Start 2P',
-      fontSize: '4.5px',
+      fontSize: isTall ? '5.5px' : '4.5px',
       color: '#a0c4a0',
       stroke: '#000000',
       strokeThickness: 2
@@ -103,9 +105,11 @@ export default class MenuScene extends Phaser.Scene {
       ease: 'Sine.easeInOut'
     });
 
-    // Menu Buttons Container
-    const startY = isTall ? 96 : 66;
-    const spacing = isTall ? 28 : 22;
+    // Menu Buttons Container - properly spaced across the viewport height
+    const startY = isTall ? 114 : 66;
+    const spacing = isTall ? 45 : 22;
+    const btnW = isTall ? 340 : 310;
+    const btnH = isTall ? 33 : 20;
 
     const options = [
       {
@@ -121,7 +125,7 @@ export default class MenuScene extends Phaser.Scene {
         shouldFade: true
       },
       {
-        text: '🏆 3. SURVIVAL TRIAL',
+        text: '🏆 3. ENDLESS MODE',
         desc: 'Endless Arena • On-Chain Leaderboard',
         action: () => this.scene.start('SurvivalScene'),
         shouldFade: true
@@ -147,7 +151,7 @@ export default class MenuScene extends Phaser.Scene {
     ];
 
     options.forEach((opt, idx) => {
-      this.createMenuButton(w / 2, startY + idx * spacing, opt.text, opt.desc, opt.action, opt.shouldFade);
+      this.createMenuButton(w / 2, startY + idx * spacing, btnW, btnH, opt.text, opt.desc, opt.action, opt.shouldFade, isTall);
     });
 
     // Animated warrior on menu
@@ -166,33 +170,33 @@ export default class MenuScene extends Phaser.Scene {
     boar.setFlipX(true);
   }
 
-  createMenuButton(x, y, label, subtitle, callback, shouldFade = false) {
-    const btnBg = this.add.rectangle(x, y, 310, 20, 0x142814, 0.85).setDepth(10);
-    btnBg.setStrokeStyle(1, 0x3c6e3c);
+  createMenuButton(x, y, width, height, label, subtitle, callback, shouldFade = false, isTall = false) {
+    const btnBg = this.add.rectangle(x, y, width, height, 0x142814, 0.88).setDepth(10);
+    btnBg.setStrokeStyle(1.5, 0x3c6e3c);
     btnBg.setInteractive({ useHandCursor: true });
 
-    const txt = this.add.text(x, y - 3, label, {
+    const txt = this.add.text(x, y - (isTall ? 5 : 3), label, {
       fontFamily: 'Press Start 2P',
-      fontSize: '7px',
+      fontSize: isTall ? '8.5px' : '7px',
       color: '#ffffff'
     }).setOrigin(0.5).setDepth(11);
 
-    const sub = this.add.text(x, y + 5, subtitle, {
+    const sub = this.add.text(x, y + (isTall ? 6 : 5), subtitle, {
       fontFamily: 'Press Start 2P',
-      fontSize: '4.5px',
-      color: '#7da57d'
+      fontSize: isTall ? '5.5px' : '4.5px',
+      color: '#86b886'
     }).setOrigin(0.5).setDepth(11);
 
     btnBg.on('pointerover', () => {
       btnBg.setFillStyle(0x285028, 0.95);
-      btnBg.setStrokeStyle(1, 0x98ff20);
+      btnBg.setStrokeStyle(1.5, 0x98ff20);
       txt.setColor('#f6c026');
       sound.playSlash(1);
     });
 
     btnBg.on('pointerout', () => {
-      btnBg.setFillStyle(0x142814, 0.85);
-      btnBg.setStrokeStyle(1, 0x3c6e3c);
+      btnBg.setFillStyle(0x142814, 0.88);
+      btnBg.setStrokeStyle(1.5, 0x3c6e3c);
       txt.setColor('#ffffff');
     });
 
@@ -643,6 +647,10 @@ export default class MenuScene extends Phaser.Scene {
     }
     if (this.cameras && this.cameras.main) {
       this.cameras.main.setSize(w, h);
+    }
+    // Re-layout menu on viewport orientation change if no modal open
+    if (!this.storyModalObjects && !this.settingsModalObjects) {
+      this.scene.restart();
     }
   }
 

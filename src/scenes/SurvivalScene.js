@@ -34,7 +34,7 @@ export default class SurvivalScene extends Phaser.Scene {
       window.touchController.show();
     }
 
-    pauseService.attachScene(this, 'SURVIVAL TRIAL');
+    pauseService.attachScene(this, 'ENDLESS MODE');
     pauseService.showButtons();
     pauseService.updateTimer(0);
     sound.playBGM('battle');
@@ -934,7 +934,7 @@ export default class SurvivalScene extends Phaser.Scene {
     this.hudContainer.add(bar);
 
     // Mode title
-    this.add.text(12, 6, 'SURVIVAL TRIAL', {
+    this.add.text(12, 6, 'ENDLESS MODE', {
       fontFamily: 'Press Start 2P',
       fontSize: '6px',
       color: '#e9b213'
@@ -1221,7 +1221,7 @@ export default class SurvivalScene extends Phaser.Scene {
       .setScrollFactor(0)
       .setDepth(500);
 
-    const title = this.add.text(w / 2, h / 2 - 76, 'DAILY TRIAL LOCKED IN', {
+    const title = this.add.text(w / 2, h / 2 - 76, 'ENDLESS RUN LOCKED IN', {
       fontFamily: 'Press Start 2P',
       fontSize: '10px',
       color: '#f6c026'

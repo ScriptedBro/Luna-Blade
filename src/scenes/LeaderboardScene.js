@@ -226,7 +226,7 @@ export default class LeaderboardScene extends Phaser.Scene {
     });
 
     const playBtn = this.add.rectangle(155, h - 18, 95, 20, 0x224422).setStrokeStyle(1, 0x98ff20).setInteractive({ useHandCursor: true });
-    this.add.text(155, h - 18, 'PLAY TRIAL', { fontFamily: 'Press Start 2P', fontSize: '5.5px', color: '#f6c026' }).setOrigin(0.5);
+    this.add.text(155, h - 18, 'PLAY ENDLESS', { fontFamily: 'Press Start 2P', fontSize: '5.5px', color: '#f6c026' }).setOrigin(0.5);
     playBtn.on('pointerdown', () => {
       sound.playCoin();
       this.scene.start('SurvivalScene');

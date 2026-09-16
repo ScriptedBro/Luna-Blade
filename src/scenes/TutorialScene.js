@@ -117,7 +117,7 @@ export default class TutorialScene extends Phaser.Scene {
     });
 
     // Tutorial HUD & Guidance Card (top center)
-    this.createTutorialHUD(w);
+    this.createTutorialHUD(w, h);
 
     // Groups for interactive targets
     this.crates = this.physics.add.group();
@@ -182,6 +182,18 @@ export default class TutorialScene extends Phaser.Scene {
     if (this.cameras && this.cameras.main) {
       this.cameras.main.setSize(w, h);
     }
+    if (this.hudContainer) {
+      const curStep = this.txtStep?.text || 'LESSON 1 / 6';
+      const curTitle = this.txtTitle?.text || '1. RUNNING & TRAVERSAL';
+      const curDiag = this.txtDialogue?.text || '';
+      const curProg = this.txtProgress?.text || '';
+      this.hudContainer.destroy();
+      this.createTutorialHUD(w, h);
+      this.txtStep.setText(curStep);
+      this.txtTitle.setText(curTitle);
+      this.txtDialogue.setText(curDiag);
+      this.txtProgress.setText(curProg);
+    }
   }
 
   createGround(x, y, width) {
@@ -227,62 +239,89 @@ export default class TutorialScene extends Phaser.Scene {
     }
   }
 
-  createTutorialHUD(w) {
-    // HUD Card centered at X=185, width 340 (leaves 125px on right for pause/wallet buttons)
-    this.hudContainer = this.add.container(185, 34).setDepth(400);
+  createTutorialHUD(w, h) {
+    const isTall = (h || this.cameras?.main?.height || 270) > 300;
+    const hudW = isTall ? 450 : 340;
+    const hudH = isTall ? 76 : 54;
+    const hudX = isTall ? (w / 2) : 175;
+    const hudY = isTall ? 46 : 33;
+
+    this.hudContainer = this.add.container(hudX, hudY).setDepth(400);
 
     // Card background
-    this.hudBg = this.add.rectangle(0, 0, 340, 50, 0x07150c, 0.92);
-    this.hudBg.setStrokeStyle(1.5, 0x225530);
+    this.hudBg = this.add.rectangle(0, 0, hudW, hudH, 0x06140b, 0.94);
+    this.hudBg.setStrokeStyle(1.5, 0x2e6e3e);
     this.hudContainer.add(this.hudBg);
 
+    // Inner framing
+    const inner = this.add.rectangle(0, 0, hudW - 6, hudH - 6, 0x000000, 0);
+    inner.setStrokeStyle(1, 0x183b22, 0.6);
+    this.hudContainer.add(inner);
+
     // Sylva Avatar Frame with fairy_portrait (left side)
-    this.avatarBg = this.add.rectangle(-146, -1, 24, 24, 0x102818, 0.95);
+    const avatarX = isTall ? -(hudW / 2) + 26 : -146;
+    const avatarSize = isTall ? 32 : 24;
+    this.avatarBg = this.add.rectangle(avatarX, 0, avatarSize, avatarSize, 0x102818, 0.95);
     this.avatarBg.setStrokeStyle(1.5, 0x4ade80);
     this.hudContainer.add(this.avatarBg);
 
-    this.avatarSylva = this.add.image(-146, -1, 'fairy_portrait').setScale(0.5);
+    this.avatarSylva = this.add.image(avatarX, 0, 'fairy_portrait').setScale(isTall ? 0.65 : 0.5);
     this.hudContainer.add(this.avatarSylva);
 
     // Step tag pill (top row)
-    this.stepPill = this.add.rectangle(-88, -16, 76, 12, 0x16381e, 0.9);
+    const row1Y = isTall ? -22 : -16;
+    const pillW = isTall ? 88 : 74;
+    const pillH = isTall ? 16 : 12;
+    const pillX = isTall ? -(hudW / 2) + 50 + pillW / 2 : -88;
+
+    this.stepPill = this.add.rectangle(pillX, row1Y, pillW, pillH, 0x16381e, 0.95);
     this.stepPill.setStrokeStyle(1, 0x4ade80);
     this.hudContainer.add(this.stepPill);
 
-    this.txtStep = this.add.text(-88, -16, 'LESSON 1 / 6', {
+    this.txtStep = this.add.text(pillX, row1Y, 'LESSON 1 / 6', {
       fontFamily: 'Press Start 2P',
-      fontSize: '5px',
+      fontSize: isTall ? '6px' : '5px',
       color: '#4ade80'
     }).setOrigin(0.5);
     this.hudContainer.add(this.txtStep);
 
     // Title / Action instruction (top row)
-    this.txtTitle = this.add.text(32, -16, '1. RUNNING & TRAVERSAL', {
+    const titleX = isTall ? (pillX + pillW / 2 + 10) : 32;
+    this.txtTitle = this.add.text(titleX, row1Y, '1. RUNNING & TRAVERSAL', {
       fontFamily: 'Press Start 2P',
-      fontSize: '6px',
+      fontSize: isTall ? '8px' : '6px',
       color: '#ffd166',
       stroke: '#000000',
       strokeThickness: 2
-    }).setOrigin(0.5);
+    }).setOrigin(isTall ? 0 : 0.5, 0.5);
     this.hudContainer.add(this.txtTitle);
 
     // Sylva dialogue quote (middle row)
-    this.txtDialogue = this.add.text(-126, 0, 'Sylva: "Tap the ◀ and ▶ buttons on the left D-Pad to run."', {
+    const row2Y = isTall ? -3 : 0;
+    const dialogueX = isTall ? -(hudW / 2) + 50 : -126;
+    const dialogueWrap = isTall ? (hudW - 60) : 286;
+
+    this.txtDialogue = this.add.text(dialogueX, row2Y, 'Sylva: "Tap the ◀ and ▶ buttons on the left D-Pad to run."', {
       fontFamily: 'Press Start 2P',
-      fontSize: '4.5px',
-      color: '#c8eed4',
-      wordWrap: { width: 286 },
-      lineSpacing: 3,
+      fontSize: isTall ? '6.5px' : '4.5px',
+      color: '#e4faec',
+      wordWrap: { width: dialogueWrap },
+      lineSpacing: isTall ? 4 : 2,
       align: 'left'
     }).setOrigin(0, 0.5);
     this.hudContainer.add(this.txtDialogue);
 
     // Task checklist badge (bottom row)
-    this.txtProgress = this.add.text(14, 16, '[ ◀ RUN LEFT: ⭕ ]   [ ▶ RUN RIGHT: ⭕ ]', {
+    const row3Y = isTall ? 21 : 16;
+    const progressX = isTall ? dialogueX : 14;
+
+    this.txtProgress = this.add.text(progressX, row3Y, '[ ◀ RUN LEFT: ⭕ ]   [ ▶ RUN RIGHT: ⭕ ]', {
       fontFamily: 'Press Start 2P',
-      fontSize: '4.5px',
-      color: '#a0c4a0'
-    }).setOrigin(0.5);
+      fontSize: isTall ? '6.5px' : '4.5px',
+      color: '#98ff20',
+      stroke: '#000000',
+      strokeThickness: 1.5
+    }).setOrigin(isTall ? 0 : 0.5, 0.5);
     this.hudContainer.add(this.txtProgress);
   }
 
