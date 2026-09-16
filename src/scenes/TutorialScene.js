@@ -20,8 +20,8 @@ export default class TutorialScene extends Phaser.Scene {
   }
 
   create() {
-    const w = GAME_CONFIG.WIDTH;
-    const h = GAME_CONFIG.HEIGHT;
+    const w = this.cameras.main.width || GAME_CONFIG.WIDTH;
+    const h = this.cameras.main.height || GAME_CONFIG.HEIGHT;
 
     this.cameras.main.resetFX();
     this.cameras.main.setBackgroundColor('#050e08');
@@ -38,15 +38,22 @@ export default class TutorialScene extends Phaser.Scene {
 
     // Parallax High Forest Background Layers
     this.bgSky = this.add.tileSprite(0, 0, w, h, 'sky_backdrop').setOrigin(0, 0).setScrollFactor(0).setDepth(0);
-    this.bgMountains = this.add.tileSprite(0, 20, w, 200, 'sky_mountains').setOrigin(0, 0).setScrollFactor(0).setDepth(1);
-    this.bgFogPines = this.add.tileSprite(0, 50, w, 220, 'forest_bg_p0').setOrigin(0, 0).setScrollFactor(0).setDepth(2);
-    this.bgMidPines = this.add.tileSprite(0, 80, w, 220, 'forest_bg_p1').setOrigin(0, 0).setScrollFactor(0).setDepth(3);
+    if (h > 270) this.bgSky.tileScaleY = h / 270;
+    this.bgMountains = this.add.tileSprite(0, 20, w, Math.max(200, h - 20), 'sky_mountains').setOrigin(0, 0).setScrollFactor(0).setDepth(1);
+    if (h > 270) this.bgMountains.tileScaleY = Math.max(1, (h - 20) / 250);
+    this.bgFogPines = this.add.tileSprite(0, 50, w, Math.max(220, h - 50), 'forest_bg_p0').setOrigin(0, 0).setScrollFactor(0).setDepth(2);
+    if (h > 270) this.bgFogPines.tileScaleY = Math.max(1, (h - 50) / 206);
+    this.bgMidPines = this.add.tileSprite(0, 80, w, Math.max(220, h - 80), 'forest_bg_p1').setOrigin(0, 0).setScrollFactor(0).setDepth(3);
+    if (h > 270) this.bgMidPines.tileScaleY = Math.max(1, (h - 80) / 176);
+
+    const groundY = h > 300 ? h - 70 : 210;
+    this.groundY = groundY;
 
     // Decorative background pine trees
     for (let i = 0; i < 4; i++) {
       const tx = 60 + i * 110;
       const treeKey = (i % 2 === 0) ? 'pine_green' : 'pine_dark';
-      const tree = this.add.image(tx, 210, treeKey).setOrigin(0.5, 1.0).setScale(0.8).setDepth(4);
+      const tree = this.add.image(tx, groundY, treeKey).setOrigin(0.5, 1.0).setScale(0.8).setDepth(4);
       this.tweens.add({
         targets: tree,
         angle: { from: -0.8, to: 0.8 },
@@ -59,22 +66,22 @@ export default class TutorialScene extends Phaser.Scene {
 
     // Bushes along the glade
     for (let bx = 40; bx < w; bx += 100) {
-      this.add.image(bx, 210, 'bush_green').setOrigin(0.5, 1.0).setDepth(5).setScale(0.8);
+      this.add.image(bx, groundY, 'bush_green').setOrigin(0.5, 1.0).setDepth(5).setScale(0.8);
     }
 
     // Static physics platforms group
     this.platforms = this.physics.add.staticGroup();
 
-    // Solid cliff grass ground across the glade (Y=210 for 60px bottom clearance, matching Survival/Story)
-    this.createGround(0, 210, w);
+    // Solid cliff grass ground across the glade
+    this.createGround(0, groundY, w);
 
     // Elevated practice wooden platform (for jump training)
-    this.createPlatform(190, 145, 100);
+    this.createPlatform(190, groundY - 65, 100);
 
     // Ambient floating spores/pollen
     this.add.particles(0, 0, 'spark', {
       x: { min: 0, max: w },
-      y: { min: 25, max: 195 },
+      y: { min: 25, max: groundY - 15 },
       quantity: 1,
       frequency: 300,
       lifespan: 3500,
@@ -89,7 +96,7 @@ export default class TutorialScene extends Phaser.Scene {
 
     // Player instance (spawn at X=160 clear of touch D-Pad)
     this.physics.world.setBounds(0, 0, w, h);
-    this.player = new Player(this, 160, 180);
+    this.player = new Player(this, 160, groundY - 30);
     this.player.body.setCollideWorldBounds(true);
     this.physics.add.collider(this.player, this.platforms);
 
@@ -98,11 +105,11 @@ export default class TutorialScene extends Phaser.Scene {
     this.cursors.keys = this.input.keyboard.addKeys('W,A,S,D,J,K,Z,X,E,R,ENTER,ESC');
 
     // Animated Sylva the Moon Sprite trainer hovering beside player
-    this.sylva = this.add.sprite(200, 150, 'fairy_fly').setScale(0.95).setDepth(30);
+    this.sylva = this.add.sprite(200, groundY - 60, 'fairy_fly').setScale(0.95).setDepth(30);
     this.sylva.play('fairy_fly_anim');
     this.tweens.add({
       targets: this.sylva,
-      y: 142,
+      y: groundY - 68,
       duration: 1200,
       yoyo: true,
       loop: -1,
@@ -155,6 +162,28 @@ export default class TutorialScene extends Phaser.Scene {
     });
   }
 
+  onViewportResize(w, h) {
+    if (this.bgSky) {
+      this.bgSky.setSize(w, h);
+      this.bgSky.tileScaleY = h > 270 ? h / 270 : 1;
+    }
+    if (this.bgMountains) {
+      this.bgMountains.setSize(w, Math.max(200, h - 20));
+      this.bgMountains.tileScaleY = h > 270 ? Math.max(1, (h - 20) / 250) : 1;
+    }
+    if (this.bgFogPines) {
+      this.bgFogPines.setSize(w, Math.max(220, h - 50));
+      this.bgFogPines.tileScaleY = h > 270 ? Math.max(1, (h - 50) / 206) : 1;
+    }
+    if (this.bgMidPines) {
+      this.bgMidPines.setSize(w, Math.max(220, h - 80));
+      this.bgMidPines.tileScaleY = h > 270 ? Math.max(1, (h - 80) / 176) : 1;
+    }
+    if (this.cameras && this.cameras.main) {
+      this.cameras.main.setSize(w, h);
+    }
+  }
+
   createGround(x, y, width) {
     const depth = 10;
     const body = this.add.rectangle(x + width / 2, y + 20, width, 40, 0x000000, 0);
@@ -162,12 +191,13 @@ export default class TutorialScene extends Phaser.Scene {
     this.platforms.add(body);
 
     const numTiles = Math.ceil(width / 16);
+    const maxBottom = Math.max(y + 68, (this.cameras?.main?.height || GAME_CONFIG.PORTRAIT_HEIGHT || 380) + 20);
     for (let i = 0; i < numTiles; i++) {
       const tileX = x + i * 16;
       let topKey = (i % 2 === 0) ? 'tile_cliff_top_mid1' : 'tile_cliff_top_mid2';
       this.add.image(tileX, y - 10, topKey).setOrigin(0, 0).setDepth(depth);
 
-      for (let cy = y + 6; cy <= y + 68; cy += 16) {
+      for (let cy = y + 6; cy <= maxBottom; cy += 16) {
         this.add.image(tileX, cy, 'tile_cliff_body_mid').setOrigin(0, 0).setDepth(depth - 1);
       }
     }
@@ -331,7 +361,7 @@ export default class TutorialScene extends Phaser.Scene {
         if (window.touchController) {
           window.touchController.setTutorialHighlight(['touch-attack']);
         }
-        this.spawnTrainingCrate(260, 190);
+        this.spawnTrainingCrate(260, (this.groundY || 210) - 20);
         this.lessonState = { crateShattered: false };
         break;
 
@@ -344,7 +374,7 @@ export default class TutorialScene extends Phaser.Scene {
         if (window.touchController) {
           window.touchController.setTutorialHighlight(['touch-upslash']);
         }
-        this.spawnTutorialBee(310, 95);
+        this.spawnTutorialBee(310, (this.groundY || 210) - 115);
         this.lessonState = { beeSliced: false };
         break;
 
@@ -357,7 +387,7 @@ export default class TutorialScene extends Phaser.Scene {
         if (window.touchController) {
           window.touchController.setTutorialHighlight(['touch-jump']);
         }
-        this.spawnTrainingShell(360, 190);
+        this.spawnTrainingShell(360, (this.groundY || 210) - 20);
         this.lessonState = { stomped: false };
         break;
 
@@ -370,7 +400,7 @@ export default class TutorialScene extends Phaser.Scene {
         if (window.touchController) {
           window.touchController.clearTutorialHighlights();
         }
-        this.spawnSparringDummy(350, 175);
+        this.spawnSparringDummy(350, (this.groundY || 210) - 35);
         this.lessonState = { dummyDefeated: false };
         break;
 
@@ -812,8 +842,8 @@ export default class TutorialScene extends Phaser.Scene {
       });
     } catch {}
 
-    const w = GAME_CONFIG.WIDTH;
-    const h = GAME_CONFIG.HEIGHT;
+    const w = this.cameras.main.width || GAME_CONFIG.WIDTH;
+    const h = this.cameras.main.height || GAME_CONFIG.HEIGHT;
 
     this.add.rectangle(w / 2, h / 2, w, h, 0x000000, 0.75).setDepth(600).setInteractive();
 

@@ -28,7 +28,7 @@ export default class SurvivalScene extends Phaser.Scene {
     const w = GAME_CONFIG.WIDTH;
     const h = GAME_CONFIG.HEIGHT;
     this.arenaWidth = 840;
-    this.arenaHeight = 380;
+    this.arenaHeight = 440;
 
     if (typeof window !== 'undefined' && window.touchController) {
       window.touchController.show();
@@ -174,20 +174,24 @@ export default class SurvivalScene extends Phaser.Scene {
   }
 
   createArenaForestBackground() {
-    const w = GAME_CONFIG.WIDTH;
-    const h = GAME_CONFIG.HEIGHT;
+    const w = this.cameras.main.width || GAME_CONFIG.WIDTH;
+    const h = this.cameras.main.height || GAME_CONFIG.HEIGHT;
 
     // 1. Sky
     this.bgSky = this.add.tileSprite(0, 0, w, h, 'sky_backdrop').setOrigin(0, 0).setScrollFactor(0).setDepth(0);
+    if (h > 270) this.bgSky.tileScaleY = h / 270;
 
     // 2. Mountains
-    this.bgMountains = this.add.tileSprite(0, 20, w, 200, 'sky_mountains').setOrigin(0, 0).setScrollFactor(0).setDepth(1);
+    this.bgMountains = this.add.tileSprite(0, 20, w, Math.max(200, h - 20), 'sky_mountains').setOrigin(0, 0).setScrollFactor(0).setDepth(1);
+    if (h > 270) this.bgMountains.tileScaleY = Math.max(1, (h - 20) / 250);
 
     // 3. Fog pines
-    this.bgFogPines = this.add.tileSprite(0, 50, w, 220, 'forest_bg_p0').setOrigin(0, 0).setScrollFactor(0).setDepth(2);
+    this.bgFogPines = this.add.tileSprite(0, 50, w, Math.max(220, h - 50), 'forest_bg_p0').setOrigin(0, 0).setScrollFactor(0).setDepth(2);
+    if (h > 270) this.bgFogPines.tileScaleY = Math.max(1, (h - 50) / 206);
 
     // 4. Midground pines
-    this.bgMidPines = this.add.tileSprite(0, 80, w, 220, 'forest_bg_p1').setOrigin(0, 0).setScrollFactor(0).setDepth(3);
+    this.bgMidPines = this.add.tileSprite(0, 80, w, Math.max(220, h - 80), 'forest_bg_p1').setOrigin(0, 0).setScrollFactor(0).setDepth(3);
+    if (h > 270) this.bgMidPines.tileScaleY = Math.max(1, (h - 80) / 176);
 
     // 5. Tall Forest Pines in Arena
     const treePositions = [
@@ -241,6 +245,28 @@ export default class SurvivalScene extends Phaser.Scene {
     }).setDepth(15);
   }
 
+  onViewportResize(w, h) {
+    if (this.bgSky) {
+      this.bgSky.setSize(w, h);
+      this.bgSky.tileScaleY = h > 270 ? h / 270 : 1;
+    }
+    if (this.bgMountains) {
+      this.bgMountains.setSize(w, Math.max(200, h - 20));
+      this.bgMountains.tileScaleY = h > 270 ? Math.max(1, (h - 20) / 250) : 1;
+    }
+    if (this.bgFogPines) {
+      this.bgFogPines.setSize(w, Math.max(220, h - 50));
+      this.bgFogPines.tileScaleY = h > 270 ? Math.max(1, (h - 50) / 206) : 1;
+    }
+    if (this.bgMidPines) {
+      this.bgMidPines.setSize(w, Math.max(220, h - 80));
+      this.bgMidPines.tileScaleY = h > 270 ? Math.max(1, (h - 80) / 176) : 1;
+    }
+    if (this.cameras && this.cameras.main) {
+      this.cameras.main.setSize(w, h);
+    }
+  }
+
   buildSeededArena() {
     const depth = 10;
 
@@ -275,7 +301,7 @@ export default class SurvivalScene extends Phaser.Scene {
 
           this.add.image(tileX, topY - 10, topKey).setOrigin(0, 0).setDepth(depth);
 
-          for (let cy = topY + 6; cy <= topY + 50; cy += 16) {
+          for (let cy = topY + 6; cy <= Math.max(topY + 50, this.arenaHeight + 20); cy += 16) {
             this.add.image(tileX, cy, 'tile_cliff_body_mid').setOrigin(0, 0).setDepth(depth - 1);
           }
         }

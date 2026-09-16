@@ -27,42 +27,67 @@ export default class MenuScene extends Phaser.Scene {
     }
 
     // Parallax background
-    this.bg = this.add.tileSprite(0, 0, w, h, 'env_bg').setOrigin(0, 0);
+    // Layered forest background matching the realm
+    this.bgSky = this.add.tileSprite(0, 0, w, h, 'sky_backdrop').setOrigin(0, 0).setDepth(0);
+    if (h > 270) this.bgSky.tileScaleY = h / 270;
+    this.bgMountains = this.add.tileSprite(0, 20, w, Math.max(200, h - 20), 'sky_mountains').setOrigin(0, 0).setDepth(1);
+    if (h > 270) this.bgMountains.tileScaleY = Math.max(1, (h - 20) / 250);
+    this.bgFogPines = this.add.tileSprite(0, 50, w, Math.max(220, h - 50), 'forest_bg_p0').setOrigin(0, 0).setDepth(2);
+    if (h > 270) this.bgFogPines.tileScaleY = Math.max(1, (h - 50) / 206);
+    this.bgMidPines = this.add.tileSprite(0, 80, w, Math.max(220, h - 80), 'forest_bg_p1').setOrigin(0, 0).setDepth(3);
+    if (h > 270) this.bgMidPines.tileScaleY = Math.max(1, (h - 80) / 176);
+
+    // Decorative background pine trees and grass cliff along bottom
+    const treeSpacing = 120;
+    for (let i = 0; i < Math.ceil(w / treeSpacing); i++) {
+      const tx = 40 + i * treeSpacing;
+      const treeKey = (i % 2 === 0) ? 'pine_green' : 'pine_dark';
+      this.add.image(tx, h - 20, treeKey).setOrigin(0.5, 1.0).setScale(0.85).setDepth(4);
+    }
+    const numTiles = Math.ceil(w / 16);
+    for (let i = 0; i < numTiles; i++) {
+      const tileX = i * 16;
+      let topKey = (i % 2 === 0) ? 'tile_cliff_top_mid1' : 'tile_cliff_top_mid2';
+      this.add.image(tileX, h - 24, topKey).setOrigin(0, 0).setDepth(5);
+      this.add.image(tileX, h - 8, 'tile_cliff_body_mid').setOrigin(0, 0).setDepth(5);
+    }
 
     // Ambient floating leaves/embers
     this.createAmbientLeaves(w, h);
 
     // Title banner container
-    const titleBox = this.add.rectangle(w / 2, 33, 310, 42, 0x0a140a, 0.85);
+    const isTall = h > 300;
+    const titleY = isTall ? 50 : 33;
+    const titleBox = this.add.rectangle(w / 2, titleY, 310, 42, 0x0a140a, 0.85).setDepth(10);
     titleBox.setStrokeStyle(1, 0x2e4e2e);
 
-    const titleText = this.add.text(w / 2, 21, 'LUNA BLADE', {
+    const titleText = this.add.text(w / 2, titleY - 12, 'LUNA BLADE', {
       fontFamily: 'Press Start 2P',
       fontSize: '13px',
       color: '#f6c026',
       stroke: '#000000',
       strokeThickness: 3
-    }).setOrigin(0.5);
+    }).setOrigin(0.5).setDepth(11);
 
-    const subText = this.add.text(w / 2, 34, 'THE HIGH FOREST', {
+    const subText = this.add.text(w / 2, titleY + 1, 'THE HIGH FOREST', {
       fontFamily: 'Press Start 2P',
       fontSize: '6.5px',
       color: '#98ff20',
       stroke: '#000000',
       strokeThickness: 2,
       letterSpacing: 2
-    }).setOrigin(0.5);
+    }).setOrigin(0.5).setDepth(11);
 
     // Connection status badge (tap to connect after skipping the gate)
     const status = nimiqService.getStatus();
     const statusBadge = status.connected ? `⚡ ${status.shortAddress}` : (status.offline ? '⚡ API OFFLINE' : '⚡ NOT CONNECTED');
-    const badge = this.add.text(w / 2, 45, statusBadge, {
+    const badge = this.add.text(w / 2, titleY + 12, statusBadge, {
       fontFamily: 'Press Start 2P',
       fontSize: '4.5px',
       color: '#a0c4a0',
       stroke: '#000000',
       strokeThickness: 2
-    }).setOrigin(0.5);
+    }).setOrigin(0.5).setDepth(11);
     badge.setInteractive({ useHandCursor: true });
     badge.on('pointerdown', () => {
       if (!status.connected && window.__lunaGate) window.__lunaGate.show().then(() => {});
@@ -79,8 +104,8 @@ export default class MenuScene extends Phaser.Scene {
     });
 
     // Menu Buttons Container
-    const startY = 66;
-    const spacing = 22;
+    const startY = isTall ? 96 : 66;
+    const spacing = isTall ? 28 : 22;
 
     const options = [
       {
@@ -126,23 +151,23 @@ export default class MenuScene extends Phaser.Scene {
     });
 
     // Animated warrior on menu
-    const hero = this.add.sprite(46, h - 38, 'char_idle').setScale(1.1);
+    const hero = this.add.sprite(46, h - 38, 'char_idle').setScale(1.1).setDepth(10);
     hero.play('player_idle');
 
     // Tiny companion pet hovering if active
     if (storage.isCompanionActive()) {
-      const pet = this.add.sprite(hero.x - 14, hero.y - 20, 'fairy_fly').setScale(0.7);
+      const pet = this.add.sprite(hero.x - 14, hero.y - 20, 'fairy_fly').setScale(0.7).setDepth(10);
       pet.play('fairy_fly_anim');
     }
 
     // Peaceful boar grazing on right
-    const boar = this.add.sprite(w - 52, h - 28, 'boar_idle');
+    const boar = this.add.sprite(w - 52, h - 32, 'boar_idle').setDepth(10);
     boar.play('boar_idle_anim');
     boar.setFlipX(true);
   }
 
   createMenuButton(x, y, label, subtitle, callback, shouldFade = false) {
-    const btnBg = this.add.rectangle(x, y, 310, 20, 0x142814, 0.85);
+    const btnBg = this.add.rectangle(x, y, 310, 20, 0x142814, 0.85).setDepth(10);
     btnBg.setStrokeStyle(1, 0x3c6e3c);
     btnBg.setInteractive({ useHandCursor: true });
 
@@ -150,13 +175,13 @@ export default class MenuScene extends Phaser.Scene {
       fontFamily: 'Press Start 2P',
       fontSize: '7px',
       color: '#ffffff'
-    }).setOrigin(0.5);
+    }).setOrigin(0.5).setDepth(11);
 
     const sub = this.add.text(x, y + 5, subtitle, {
       fontFamily: 'Press Start 2P',
       fontSize: '4.5px',
       color: '#7da57d'
-    }).setOrigin(0.5);
+    }).setOrigin(0.5).setDepth(11);
 
     btnBg.on('pointerover', () => {
       btnBg.setFillStyle(0x285028, 0.95);
@@ -599,9 +624,31 @@ export default class MenuScene extends Phaser.Scene {
     this.settingsModalObjects = null;
   }
 
-  update() {
-    if (this.bg) {
-      this.bg.tilePositionX += 0.2;
+  onViewportResize(w, h) {
+    if (this.bgSky) {
+      this.bgSky.setSize(w, h);
+      this.bgSky.tileScaleY = h > 270 ? h / 270 : 1;
     }
+    if (this.bgMountains) {
+      this.bgMountains.setSize(w, Math.max(200, h - 20));
+      this.bgMountains.tileScaleY = h > 270 ? Math.max(1, (h - 20) / 250) : 1;
+    }
+    if (this.bgFogPines) {
+      this.bgFogPines.setSize(w, Math.max(220, h - 50));
+      this.bgFogPines.tileScaleY = h > 270 ? Math.max(1, (h - 50) / 206) : 1;
+    }
+    if (this.bgMidPines) {
+      this.bgMidPines.setSize(w, Math.max(220, h - 80));
+      this.bgMidPines.tileScaleY = h > 270 ? Math.max(1, (h - 80) / 176) : 1;
+    }
+    if (this.cameras && this.cameras.main) {
+      this.cameras.main.setSize(w, h);
+    }
+  }
+
+  update() {
+    if (this.bgMountains) this.bgMountains.tilePositionX += 0.05;
+    if (this.bgFogPines) this.bgFogPines.tilePositionX += 0.12;
+    if (this.bgMidPines) this.bgMidPines.tilePositionX += 0.22;
   }
 }

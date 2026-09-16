@@ -571,8 +571,8 @@ export default class StoryScene extends Phaser.Scene {
   }
 
   createForestBackground() {
-    const w = GAME_CONFIG.WIDTH;
-    const h = GAME_CONFIG.HEIGHT;
+    const w = this.cameras.main.width || GAME_CONFIG.WIDTH;
+    const h = this.cameras.main.height || GAME_CONFIG.HEIGHT;
 
     let bgKey = 'bg_whispering';
     if (this.chapterId === 2) bgKey = 'bg_hive';
@@ -582,16 +582,22 @@ export default class StoryScene extends Phaser.Scene {
 
     // 1. Sky Gradient / Main Backdrop
     this.bgSky = this.add.tileSprite(0, 0, w, h, bgKey).setOrigin(0, 0).setScrollFactor(0).setDepth(0);
+    if (h > 270) {
+      this.bgSky.tileScaleY = h / 270;
+    }
 
     if (this.chapterId <= 3) {
       // 2. Distant Mountains (very slow parallax)
-      this.bgMountains = this.add.tileSprite(0, 20, w, 200, 'sky_mountains').setOrigin(0, 0).setScrollFactor(0).setDepth(1);
+      this.bgMountains = this.add.tileSprite(0, 20, w, Math.max(200, h - 20), 'sky_mountains').setOrigin(0, 0).setScrollFactor(0).setDepth(1);
+      if (h > 270) this.bgMountains.tileScaleY = Math.max(1, (h - 20) / 250);
 
       // 3. Foggy Distant Mountain Pines (slow parallax)
-      this.bgFogPines = this.add.tileSprite(0, 50, w, 220, 'forest_bg_p0').setOrigin(0, 0).setScrollFactor(0).setDepth(2);
+      this.bgFogPines = this.add.tileSprite(0, 50, w, Math.max(220, h - 50), 'forest_bg_p0').setOrigin(0, 0).setScrollFactor(0).setDepth(2);
+      if (h > 270) this.bgFogPines.tileScaleY = Math.max(1, (h - 50) / 206);
 
       // 4. Midground Forest Silhouettes
-      this.bgMidPines = this.add.tileSprite(0, 80, w, 220, 'forest_bg_p1').setOrigin(0, 0).setScrollFactor(0).setDepth(3);
+      this.bgMidPines = this.add.tileSprite(0, 80, w, Math.max(220, h - 80), 'forest_bg_p1').setOrigin(0, 0).setScrollFactor(0).setDepth(3);
+      if (h > 270) this.bgMidPines.tileScaleY = Math.max(1, (h - 80) / 176);
 
       // 5. Standalone Tall Pine Trees placed along the level
       const treeSpacing = 140;
@@ -693,6 +699,28 @@ export default class StoryScene extends Phaser.Scene {
       tint: tint,
       blendMode: 'ADD'
     }).setDepth(15);
+  }
+
+  onViewportResize(w, h) {
+    if (this.bgSky) {
+      this.bgSky.setSize(w, h);
+      this.bgSky.tileScaleY = h > 270 ? h / 270 : 1;
+    }
+    if (this.bgMountains) {
+      this.bgMountains.setSize(w, Math.max(200, h - 20));
+      this.bgMountains.tileScaleY = h > 270 ? Math.max(1, (h - 20) / 250) : 1;
+    }
+    if (this.bgFogPines) {
+      this.bgFogPines.setSize(w, Math.max(220, h - 50));
+      this.bgFogPines.tileScaleY = h > 270 ? Math.max(1, (h - 50) / 206) : 1;
+    }
+    if (this.bgMidPines) {
+      this.bgMidPines.setSize(w, Math.max(220, h - 80));
+      this.bgMidPines.tileScaleY = h > 270 ? Math.max(1, (h - 80) / 176) : 1;
+    }
+    if (this.cameras && this.cameras.main) {
+      this.cameras.main.setSize(w, h);
+    }
   }
 
   createGround(x, y, width) {

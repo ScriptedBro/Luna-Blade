@@ -1,5 +1,6 @@
 import Phaser from 'phaser';
 import { GAME_CONFIG } from './config.js';
+import { ViewportManager } from './engine/ViewportManager.js';
 import BootScene from './scenes/BootScene.js';
 import MenuScene from './scenes/MenuScene.js';
 import StoryIntroScene from './scenes/StoryIntroScene.js';
@@ -17,11 +18,16 @@ import { ConnectGate } from './ui/ConnectGate.js';
 import { getAddress } from './nimiq/session.js';
 import { setupImmersiveLayout } from './nimiq/immersive.js';
 
+function isPortraitInitial() {
+  if (typeof window === 'undefined') return false;
+  return (window.innerHeight || 0) > (window.innerWidth || 0);
+}
+
 // Phaser 3 Game Configuration
 const phaserConfig = {
   type: Phaser.AUTO,
   width: GAME_CONFIG.WIDTH,
-  height: GAME_CONFIG.HEIGHT,
+  height: isPortraitInitial() ? (GAME_CONFIG.PORTRAIT_HEIGHT || 380) : GAME_CONFIG.HEIGHT,
   parent: 'game-container',
   pixelArt: true,
   autoFocus: true,
@@ -54,6 +60,9 @@ function startGame() {
   const game = new Phaser.Game(phaserConfig);
   window.game = game;
   window.__GAME__ = game;
+
+  // Initialize ViewportManager for dynamic portrait/landscape aspect ratio
+  window.viewportManager = new ViewportManager(game);
 
   // Initialize Virtual Touch Controls & Header Actions
   window.touchController = new TouchController(game);

@@ -86,8 +86,8 @@ const SPEAKER_CONFIGS = {
 
 export default class StoryDialogueBox extends Phaser.GameObjects.Container {
   constructor(scene) {
-    const w = GAME_CONFIG.WIDTH;
-    const h = GAME_CONFIG.HEIGHT;
+    const w = scene.cameras?.main?.width || scene.scale?.width || GAME_CONFIG.WIDTH;
+    const h = scene.cameras?.main?.height || scene.scale?.height || GAME_CONFIG.HEIGHT;
     super(scene, w / 2, h - 54);
     scene.add.existing(this);
 
@@ -218,7 +218,8 @@ export default class StoryDialogueBox extends Phaser.GameObjects.Container {
     this.scenePointerListener = (pointer) => {
       if (!this.active || !this.visible) return;
       // Skip button bounding area (with generous touch padding for mobile thumbs)
-      const isSkip = (pointer.x >= 350 && pointer.x <= 475 && pointer.y >= 150 && pointer.y <= 215);
+      const curH = scene.cameras?.main?.height || scene.scale?.height || GAME_CONFIG.HEIGHT;
+      const isSkip = (pointer.x >= 350 && pointer.x <= 475 && pointer.y >= curH - 120 && pointer.y <= curH - 55);
       triggerAction(isSkip);
     };
     scene.input.on('pointerdown', this.scenePointerListener);
@@ -232,9 +233,11 @@ export default class StoryDialogueBox extends Phaser.GameObjects.Container {
         if (rect.width <= 0 || rect.height <= 0) return;
         const clientX = e.clientX || (e.touches && e.touches[0] ? e.touches[0].clientX : 0);
         const clientY = e.clientY || (e.touches && e.touches[0] ? e.touches[0].clientY : 0);
-        const touchX = (clientX - rect.left) * (GAME_CONFIG.WIDTH / rect.width);
-        const touchY = (clientY - rect.top) * (GAME_CONFIG.HEIGHT / rect.height);
-        const isSkip = (touchX >= 350 && touchX <= 475 && touchY >= 150 && touchY <= 215);
+        const curW = scene.cameras?.main?.width || scene.scale?.width || GAME_CONFIG.WIDTH;
+        const curH = scene.cameras?.main?.height || scene.scale?.height || GAME_CONFIG.HEIGHT;
+        const touchX = (clientX - rect.left) * (curW / rect.width);
+        const touchY = (clientY - rect.top) * (curH / rect.height);
+        const isSkip = (touchX >= 350 && touchX <= 475 && touchY >= curH - 120 && touchY <= curH - 55);
         triggerAction(isSkip);
       };
       canvas.addEventListener('pointerdown', this.canvasPointerListener);
