@@ -406,6 +406,16 @@ html, body {
   display: none !important;
 }
 
+/* In portrait mode, keep the arcade touch deck active throughout to eliminate bottom empty void */
+@media (orientation: portrait) {
+  .touch-controls {
+    display: flex !important;
+  }
+  .touch-controls.hidden {
+    display: flex !important;
+  }
+}
+
 .touch-btn {
   pointer-events: auto;
   touch-action: none;

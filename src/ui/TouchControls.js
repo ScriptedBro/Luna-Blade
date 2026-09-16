@@ -17,7 +17,12 @@ export class TouchController {
 
     this.touchContainer = document.getElementById('touch-controls');
     this.isVisible = false;
-    this.hide();
+    const isPortrait = typeof window !== 'undefined' && window.innerHeight > window.innerWidth;
+    if (isPortrait) {
+      this.show();
+    } else {
+      this.hide();
+    }
     this.initTouchButtons();
     this.initHeaderButtons();
     this.initNimiqIntegration();
@@ -31,7 +36,13 @@ export class TouchController {
     }
   }
 
-  hide() {
+  hide(force = false) {
+    const isPortrait = typeof window !== 'undefined' && window.innerHeight > window.innerWidth;
+    if (isPortrait && !force) {
+      // In portrait mode, keep touch controls active throughout to prevent lower area from looking empty
+      this.show();
+      return;
+    }
     this.isVisible = false;
     if (this.touchContainer) {
       this.touchContainer.classList.add('hidden');

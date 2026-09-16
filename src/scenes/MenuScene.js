@@ -19,7 +19,11 @@ export default class MenuScene extends Phaser.Scene {
     sound.playBGM('title');
 
     if (typeof window !== 'undefined' && window.touchController) {
-      window.touchController.hide();
+      if (h > 300) {
+        window.touchController.show();
+      } else {
+        window.touchController.hide();
+      }
     }
 
     if (typeof window !== 'undefined' && typeof window.__dismissGameLoader === 'function') {
@@ -157,11 +161,14 @@ export default class MenuScene extends Phaser.Scene {
     // Animated warrior on menu
     const hero = this.add.sprite(46, h - 38, 'char_idle').setScale(1.1).setDepth(10);
     hero.play('player_idle');
+    this.menuHero = hero;
+    this.heroGroundY = h - 38;
 
     // Tiny companion pet hovering if active
     if (storage.isCompanionActive()) {
       const pet = this.add.sprite(hero.x - 14, hero.y - 20, 'fairy_fly').setScale(0.7).setDepth(10);
       pet.play('fairy_fly_anim');
+      this.menuPet = pet;
     }
 
     // Peaceful boar grazing on right
@@ -658,5 +665,63 @@ export default class MenuScene extends Phaser.Scene {
     if (this.bgMountains) this.bgMountains.tilePositionX += 0.05;
     if (this.bgFogPines) this.bgFogPines.tilePositionX += 0.12;
     if (this.bgMidPines) this.bgMidPines.tilePositionX += 0.22;
+
+    // Active gameplay buttons on Menu
+    if (typeof window !== 'undefined' && window.touchController && this.menuHero) {
+      const tc = window.touchController;
+      const triggers = tc.consumeTriggers();
+      const speed = 2.0;
+      let isMoving = false;
+
+      if (tc.state.left) {
+        this.menuHero.x = Math.max(28, this.menuHero.x - speed);
+        this.menuHero.setFlipX(true);
+        if (!this.heroAttacking) this.menuHero.anims.play('player_run', true);
+        isMoving = true;
+      } else if (tc.state.right) {
+        const w = this.cameras.main.width || 480;
+        this.menuHero.x = Math.min(w - 28, this.menuHero.x + speed);
+        this.menuHero.setFlipX(false);
+        if (!this.heroAttacking) this.menuHero.anims.play('player_run', true);
+        isMoving = true;
+      }
+
+      if (this.menuPet) {
+        const targetPetX = this.menuHero.x + (this.menuHero.flipX ? 16 : -16);
+        this.menuPet.x = Phaser.Math.Linear(this.menuPet.x, targetPetX, 0.15);
+        this.menuPet.setFlipX(this.menuHero.flipX);
+      }
+
+      if (triggers.justAttack) {
+        this.heroAttacking = true;
+        this.menuHero.anims.play('player_attack', true);
+        sound.playSlash(1);
+        this.time.delayedCall(300, () => { this.heroAttacking = false; });
+      } else if (triggers.justUpSlash) {
+        this.heroAttacking = true;
+        this.menuHero.anims.play('player_upslash', true);
+        sound.playSlash(2);
+        this.time.delayedCall(300, () => { this.heroAttacking = false; });
+      } else if (triggers.justJump) {
+        if (!this.heroJumping) {
+          this.heroJumping = true;
+          sound.playJump();
+          const baseY = this.heroGroundY || this.menuHero.y;
+          this.tweens.add({
+            targets: this.menuHero,
+            y: baseY - 24,
+            duration: 200,
+            yoyo: true,
+            ease: 'Quad.easeOut',
+            onComplete: () => {
+              this.heroJumping = false;
+              this.menuHero.y = baseY;
+            }
+          });
+        }
+      } else if (!isMoving && !this.heroAttacking && !this.heroJumping) {
+        this.menuHero.anims.play('player_idle', true);
+      }
+    }
   }
 }

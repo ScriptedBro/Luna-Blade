@@ -419,8 +419,8 @@ export default class StoryIntroScene extends Phaser.Scene {
   }
 
   create() {
-    const w = GAME_CONFIG.WIDTH;
-    const h = GAME_CONFIG.HEIGHT;
+    const w = this.cameras?.main?.width || this.scale?.width || GAME_CONFIG.WIDTH;
+    const h = this.cameras?.main?.height || this.scale?.height || (typeof window !== 'undefined' && window.innerHeight > window.innerWidth ? (GAME_CONFIG.PORTRAIT_HEIGHT || 440) : GAME_CONFIG.HEIGHT);
     this.currentSlide = 0;
     this.isTransitioning = false;
     this.tutorialPromptOpen = false;
@@ -429,38 +429,45 @@ export default class StoryIntroScene extends Phaser.Scene {
     pauseService.detachScene();
 
     if (typeof window !== "undefined" && window.touchController) {
-      window.touchController.hide();
+      if (h > 300) {
+        window.touchController.show();
+      } else {
+        window.touchController.hide();
+      }
     }
 
     // Outer Background
     this.bgRect = this.add.rectangle(w / 2, h / 2, w, h, 0x05131d);
 
-    // Slide Illustration Container (middle of screen)
-    this.illustrationContainer = this.add.container(0, 0);
+    const isTall = h > 300;
 
-    // Atmospheric Sky Gradient / Backdrop Container
-    // Fullscreen borderless canvas for maximum cinematic immersion
+    // Slide Illustration Container (vertically centered in upper canvas)
+    const illustrationOffsetY = isTall ? 65 : 0;
+    this.illustrationContainer = this.add.container(0, illustrationOffsetY);
 
     // Top Header tags
-    this.txtChapterTag = this.add.text(w / 2, 18, "", {
+    const chapterTagY = isTall ? 28 : 18;
+    const titleTagY = isTall ? 46 : 32;
+
+    this.txtChapterTag = this.add.text(w / 2, chapterTagY, "", {
       fontFamily: "Press Start 2P",
-      fontSize: "6.5px",
+      fontSize: isTall ? "7px" : "6.5px",
       color: "#00f0ff",
       letterSpacing: 1
     }).setOrigin(0.5);
 
-    this.txtTitle = this.add.text(w / 2, 32, "", {
+    this.txtTitle = this.add.text(w / 2, titleTagY, "", {
       fontFamily: "Press Start 2P",
-      fontSize: "9px",
+      fontSize: isTall ? "11px" : "9px",
       color: "#ffd166",
       stroke: "#000",
       strokeThickness: 3
     }).setOrigin(0.5);
 
     // Bottom Story Narration Interface Box
-    const boxW = w - 40;
-    const boxH = 50;
-    const boxY = 166;
+    const boxW = isTall ? (w - 30) : (w - 40);
+    const boxH = isTall ? 88 : 50;
+    const boxY = isTall ? (h - 78) : 166;
 
     // Dual-layer RPG Dialogue Frame
     this.textBoxOuter = this.add.rectangle(w / 2, boxY, boxW, boxH, 0x07111a, 0.92);
@@ -482,34 +489,37 @@ export default class StoryIntroScene extends Phaser.Scene {
     });
 
     // Dialogue Box Badge / Ribbon
-    this.badgeBox = this.add.rectangle(w / 2, boxY - boxH / 2, 160, 12, 0x0a1c28);
+    this.badgeBox = this.add.rectangle(w / 2, boxY - boxH / 2, isTall ? 180 : 160, isTall ? 14 : 12, 0x0a1c28);
     this.badgeBox.setStrokeStyle(1, 0x244b62);
     this.txtBadge = this.add.text(w / 2, boxY - boxH / 2, "", {
       fontFamily: "Press Start 2P",
-      fontSize: "5px",
+      fontSize: isTall ? "5.5px" : "5px",
       color: "#ffd166"
     }).setOrigin(0.5);
 
     // Story narration text
-    this.txtBody = this.add.text(28, boxY - 14, "", {
+    this.txtBody = this.add.text(28, boxY - (isTall ? 28 : 14), "", {
       fontFamily: "Press Start 2P",
-      fontSize: "6px",
+      fontSize: isTall ? "6.8px" : "6px",
       color: "#e8f8fc",
-      lineSpacing: 5.5,
+      lineSpacing: isTall ? 6 : 5.5,
       wordWrap: { width: boxW - 16 }
     });
 
     // Bottom Controls Bar
+    const controlsY = isTall ? (h - 18) : 203;
+    const pillH = isTall ? 22 : 17;
+
     // 1. Skip Button Pill (bottom left)
-    const skipPillX = 72;
-    const skipPillY = 203;
-    this.skipPill = this.add.rectangle(skipPillX, skipPillY, 96, 17, 0x091722, 0.9)
+    const skipPillX = isTall ? 80 : 72;
+    const skipPillY = controlsY;
+    this.skipPill = this.add.rectangle(skipPillX, skipPillY, isTall ? 108 : 96, pillH, 0x091722, 0.9)
       .setStrokeStyle(1, 0x244254)
       .setInteractive({ useHandCursor: true });
 
     this.txtSkip = this.add.text(skipPillX, skipPillY, "⏭ SKIP STORY", {
       fontFamily: "Press Start 2P",
-      fontSize: "5.5px",
+      fontSize: isTall ? "6px" : "5.5px",
       color: "#8aa4b8"
     }).setOrigin(0.5);
 
@@ -526,20 +536,20 @@ export default class StoryIntroScene extends Phaser.Scene {
     // 2. Pagination Dots
     this.dots = [];
     for (let i = 0; i < PROLOGUE_SLIDES.length; i++) {
-      const dot = this.add.circle(w / 2 - 24 + i * 16, 203, 3, i === 0 ? 0x00ffff : 0x224455);
+      const dot = this.add.circle(w / 2 - 24 + i * 16, controlsY, isTall ? 3.5 : 3, i === 0 ? 0x00ffff : 0x224455);
       this.dots.push(dot);
     }
 
     // 3. Action Prompt (Next / Begin) Pill (bottom right)
-    const nextPillX = w - 66;
-    const nextPillY = 203;
-    this.nextPill = this.add.rectangle(nextPillX, nextPillY, 84, 17, 0x1d1a08, 0.9)
+    const nextPillX = w - (isTall ? 72 : 66);
+    const nextPillY = controlsY;
+    this.nextPill = this.add.rectangle(nextPillX, nextPillY, isTall ? 96 : 84, pillH, 0x1d1a08, 0.9)
       .setStrokeStyle(1, 0xf6c026)
       .setInteractive({ useHandCursor: true });
 
     this.txtPrompt = this.add.text(nextPillX, nextPillY, "NEXT ▶", {
       fontFamily: "Press Start 2P",
-      fontSize: "5.5px",
+      fontSize: isTall ? "6.5px" : "5.5px",
       color: "#ffd166"
     }).setOrigin(0.5).setInteractive({ useHandCursor: true });
 
@@ -605,9 +615,25 @@ export default class StoryIntroScene extends Phaser.Scene {
   update() {
     if (this.isTransitioning) return;
     if (typeof window !== "undefined" && window.touchController) {
-      const triggers = window.touchController.consumeTriggers();
-      if (triggers.justAttack || triggers.justJump || triggers.justUpSlash) {
+      const tc = window.touchController;
+      const triggers = tc.consumeTriggers();
+
+      if (triggers.justAttack || triggers.justJump || triggers.justUpSlash || (tc.state.right && !this._rightHeld)) {
+        this._rightHeld = true;
         this.advanceSlide();
+      } else if (!tc.state.right) {
+        this._rightHeld = false;
+      }
+
+      if (tc.state.left && !this._leftHeld) {
+        this._leftHeld = true;
+        if (this.currentSlide > 0) {
+          sound.playCancel();
+          this.currentSlide--;
+          this.renderSlide(this.currentSlide);
+        }
+      } else if (!tc.state.left) {
+        this._leftHeld = false;
       }
     }
   }
@@ -847,5 +873,14 @@ export default class StoryIntroScene extends Phaser.Scene {
       duration: 250,
       ease: 'Back.easeOut'
     });
+  }
+
+  onViewportResize(w, h) {
+    if (this.cameras && this.cameras.main) {
+      this.cameras.main.setSize(w, h);
+    }
+    if (!this.tutorialPromptOpen && !this.isTransitioning) {
+      this.scene.restart();
+    }
   }
 }
