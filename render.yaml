@@ -1,0 +1,22 @@
+services:
+  - type: web
+    name: luna-blade-api
+    env: node
+    plan: free
+    rootDir: server
+    buildCommand: npm install
+    startCommand: node index.js
+    healthCheckPath: /health
+    envVars:
+      - key: PORT
+        value: 10000
+      - key: NIMIQ_NETWORK
+        value: testalbatross
+      - key: UPSTASH_REDIS_REST_URL
+        sync: false
+      - key: UPSTASH_REDIS_REST_TOKEN
+        sync: false
+      - key: NIM_PAYOUT_PRIVATE_KEY
+        sync: false
+      - key: JWT_SECRET
+        generateValue: true

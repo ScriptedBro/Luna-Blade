@@ -6,13 +6,18 @@ import { verifySignedMessageDeriveAddress } from "./src/verifyNimiq.js";
 import { submitScore, getDailyBoard, getDailyRank, getDailyWinners, getAllTimeBoard, getAllTimeRank } from "./src/leaderboard.js";
 import { runPayoutCycle, getPayoutSummary, isPayoutSignerConfigured, startPayoutCron, queueFirstBossPayout, queueCrystalHarvestPayout } from "./src/payout.js";
 import { hasClaimedFirstBoss, recordFirstBossClaim, getDailyCrystalStatus, recordCrystalHarvestClaim } from "./src/claims.js";
-
+import { initCloudStorage } from "./src/db.js";
 
 const app = express();
-app.use(cors({ origin: config.corsOrigins, credentials: true }));
+app.use(cors({ origin: config.corsOrigins === "*" ? true : config.corsOrigins, credentials: true }));
 app.use(express.json({ limit: "64kb" }));
 
 const appName = "Luna Blade";
+
+// Health check endpoint for Render & uptime monitoring
+app.get("/health", (_req, res) => {
+  res.json({ ok: true, app: appName, network: config.network, uptime: Math.floor(process.uptime()) });
+});
 
 // --- Nimiq challenge-response auth ---
 
@@ -271,12 +276,17 @@ app.get("/api/payouts/status", (_req, res) => {
 
 // --- Boot ---
 
-app.listen(config.port, () => {
-  console.log(`[luna-blade] API listening on :${config.port} (network=${config.network})`);
-  if (!config.jwtSecret) console.warn("[luna-blade] JWT_SECRET is not set — sessions insecure");
-  if (!isPayoutSignerConfigured()) console.warn("[luna-blade] NIM_PAYOUT_PRIVATE_KEY not set — payout worker disabled");
-  startPayoutCron();
-});
+async function startServer() {
+  await initCloudStorage();
+  app.listen(config.port, "0.0.0.0", () => {
+    console.log(`[luna-blade] API listening on 0.0.0.0:${config.port} (network=${config.network})`);
+    if (!config.jwtSecret) console.warn("[luna-blade] JWT_SECRET is not set — sessions insecure");
+    if (!isPayoutSignerConfigured()) console.warn("[luna-blade] NIM_PAYOUT_PRIVATE_KEY not set — payout worker disabled");
+    startPayoutCron();
+  });
+}
+
+startServer();
 
 function todaySeedString() {
   const d = new Date();

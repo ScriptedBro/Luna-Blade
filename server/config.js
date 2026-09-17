@@ -19,12 +19,9 @@ export const config = {
         : "https://test.nimiqwatch.com")
   ).trim(),
   jwtSecret: String(process.env.JWT_SECRET || ""),
-  corsOrigins: String(
-    process.env.CORS_ORIGINS || "http://localhost:5173,http://127.0.0.1:5173"
-  )
-    .split(",")
-    .map((s) => s.trim())
-    .filter(Boolean),
+  corsOrigins: process.env.CORS_ORIGINS
+    ? process.env.CORS_ORIGINS.split(",").map((s) => s.trim()).filter(Boolean)
+    : "*",
   devAuthBypass: bool(process.env.DEV_AUTH_BYPASS, false),
   // Payout worker
   payoutPrivateKey: String(process.env.NIM_PAYOUT_PRIVATE_KEY || ""),
