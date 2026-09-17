@@ -4,7 +4,10 @@ import { sound } from '../engine/Audio.js';
 import { nimiqService } from '../engine/NimiqService.js';
 import { pauseService } from '../engine/PauseService.js';
 import { fetchDailyBoard, fetchAllTimeBoard, fetchPayoutStatus, fetchConfig } from '../nimiq/leaderboard.js';
+import { fetchRewardsStatus } from '../nimiq/rewards.js';
+import { identiconDataUrl } from '../nimiq/identicon.js';
 import { getAddress } from '../nimiq/session.js';
+
 
 export default class LeaderboardScene extends Phaser.Scene {
   constructor() {
@@ -12,11 +15,12 @@ export default class LeaderboardScene extends Phaser.Scene {
   }
 
   async create() {
-    const w = GAME_CONFIG.WIDTH;
-    const h = GAME_CONFIG.HEIGHT;
+    const w = this.cameras?.main?.width || this.scale?.width || GAME_CONFIG.WIDTH;
+    const h = this.cameras?.main?.height || this.scale?.height || GAME_CONFIG.HEIGHT;
     this.lastScore = 0;
     this.activeTab = 'alltime';
     this.boardLayer = this.add.container(0, 0);
+    this.bottomBarLayer = this.add.container(0, 0);
 
     pauseService.detachScene();
     sound.playBGM('title');
@@ -25,8 +29,8 @@ export default class LeaderboardScene extends Phaser.Scene {
       window.touchController.hide();
     }
 
-    this.add.tileSprite(0, 0, w, h, 'env_bg').setOrigin(0, 0).setTint(0x334433);
-    this.add.text(w / 2, 14, '⚡ LEADERBOARD', {
+    this.bgTile = this.add.tileSprite(0, 0, w, h, 'env_bg').setOrigin(0, 0).setTint(0x334433);
+    this.titleText = this.add.text(w / 2, 14, '⚡ LEADERBOARD', {
       fontFamily: 'Press Start 2P',
       fontSize: '10px',
       color: '#f6c026',
@@ -37,29 +41,33 @@ export default class LeaderboardScene extends Phaser.Scene {
     this.buildTabs();
     this.renderBottomBar(w, h);
 
-    this.loadingText = this.add.text(w / 2, 130, 'LOADING ON-CHAIN SCORES…', {
+    this.loadingText = this.add.text(w / 2, h / 2, 'LOADING ON-CHAIN SCORES…', {
       fontFamily: 'Press Start 2P',
       fontSize: '6px',
+
       color: '#8cb38c'
     }).setOrigin(0.5);
 
     try {
-      const [daily, alltime, payout, cfg] = await Promise.all([
+      const [daily, alltime, payout, cfg, rewards] = await Promise.all([
         fetchDailyBoard(),
         fetchAllTimeBoard(),
         fetchPayoutStatus(),
         fetchConfig(),
+        fetchRewardsStatus().catch(() => null),
       ]);
       this.daily = daily;
       this.alltime = alltime;
       this.payout = payout;
       this.cfg = cfg;
+      this.rewardsStatus = rewards;
       this.loadingText?.destroy();
       this.setActiveTab('alltime');
     } catch (err) {
       this.loadingText?.destroy();
       this.showError(`Server unreachable — board unavailable (${err?.message || 'error'})`);
     }
+
   }
 
   buildTabs() {
@@ -105,14 +113,15 @@ export default class LeaderboardScene extends Phaser.Scene {
   rebuildBoard() {
     this.boardLayer.removeAll(true);
 
-    const w = GAME_CONFIG.WIDTH;
-    const h = GAME_CONFIG.HEIGHT;
+    const w = this.cameras?.main?.width || this.scale?.width || GAME_CONFIG.WIDTH;
+    const h = this.cameras?.main?.height || this.scale?.height || GAME_CONFIG.HEIGHT;
+    const isPortrait = h > 300;
     const isDaily = this.activeTab === 'daily';
     const board = isDaily ? (this.daily || { entries: [], prizeNim: [] }) : (this.alltime || { entries: [] });
 
     if (isDaily && this.cfg) {
-      const prizes = Array.isArray(this.cfg.dailyPrizeNim) ? this.cfg.dailyPrizeNim : [500, 300, 200];
-      this.addToLayer(w / 2, 48, `🏆 DAILY SPOILS • 1st: ${prizes[0]} NIM | 2nd: ${prizes[1]} NIM | 3rd: ${prizes[2]} NIM`, '5px', '#ffd166', 2);
+      const prizes = Array.isArray(this.cfg.dailyPrizeNim) ? this.cfg.dailyPrizeNim : [25, 15, 10];
+      this.addToLayer(w / 2, 48, `🏆 DAILY POOL: 50 NIM • 1st: ${prizes[0]} | 2nd: ${prizes[1]} | 3rd: ${prizes[2]} NIM`, '4.8px', '#ffd166', 2);
     }
 
     const headerY = isDaily ? 62 : 56;
@@ -134,13 +143,16 @@ export default class LeaderboardScene extends Phaser.Scene {
     }));
 
     const rowStartY = isDaily ? 80 : 72;
+    const maxRows = isPortrait ? 9 : 7;
+    const rowSpacing = isPortrait ? 22 : 19;
+
     if (rows.length === 0) {
-      this.addToLayer(w / 2, 130, isDaily ? 'NO VERIFIED RUNS TODAY' : 'NO VERIFIED RUNS YET', '7px', '#8cb38c');
-      this.addToLayer(w / 2, 148, 'Play a Trial and your signed score appears here.', '4.5px', '#a0b8a0');
+      this.addToLayer(w / 2, isPortrait ? 180 : 130, isDaily ? 'NO VERIFIED RUNS TODAY' : 'NO VERIFIED RUNS YET', '7px', '#8cb38c');
+      this.addToLayer(w / 2, isPortrait ? 200 : 148, 'Play a Trial and your signed score appears here.', '4.5px', '#a0b8a0');
     } else {
-      rows.slice(0, 7).forEach((row, idx) => {
-        const y = rowStartY + idx * 19;
-        const rowBox = this.add.rectangle(w / 2, y, 390, 18, row.isPlayer ? 0x223d22 : 0x111e11)
+      rows.slice(0, maxRows).forEach((row, idx) => {
+        const y = rowStartY + idx * rowSpacing;
+        const rowBox = this.add.rectangle(w / 2, y, 390, isPortrait ? 20 : 18, row.isPlayer ? 0x223d22 : 0x111e11)
           .setStrokeStyle(1, row.isPlayer ? 0x98ff20 : 0x223822);
         rowBox.setInteractive({ useHandCursor: true });
         this.boardLayer.add(rowBox);
@@ -148,7 +160,25 @@ export default class LeaderboardScene extends Phaser.Scene {
 
         this.addToLayer(w / 2 - 180, y - 3, `${idx + 1}.`, '6px',
           idx === 0 ? '#ffd700' : (idx === 1 ? '#e0e0e0' : (idx === 2 ? '#cd7f32' : '#888')));
-        this.addToLayer(w / 2 - 140, y - 3, row.name, '5.5px', row.isPlayer ? '#98ff20' : '#ffffff');
+
+        // Nimiq Identicon avatar thumbnail
+        if (row.wallet) {
+          const texKey = `identicon_${row.wallet}`;
+          if (this.textures && this.textures.exists(texKey)) {
+            const avatar = this.add.image(w / 2 - 158, y - 2, texKey).setDisplaySize(12, 12).setOrigin(0.5);
+            this.boardLayer.add(avatar);
+          } else {
+            identiconDataUrl(row.wallet).then((dataUrl) => {
+              if (this.textures && !this.textures.exists(texKey)) {
+                this.textures.addBase64(texKey, dataUrl);
+              }
+            }).catch(() => {});
+            const dot = this.add.circle(w / 2 - 158, y - 2, 4, 0x38e1ff, 0.7);
+            this.boardLayer.add(dot);
+          }
+        }
+
+        this.addToLayer(w / 2 - 120, y - 3, row.name, '5.5px', row.isPlayer ? '#98ff20' : '#ffffff');
         this.addToLayer(w / 2 + 10, y - 3, row.time, '5.5px', '#a0b8a0');
         this.addToLayer(w / 2 + 65, y - 3, `${row.score} pts`, '6px', '#ffd700');
         this.addToLayer(w / 2 + 140, y - 3, row.prize, '5.5px', '#e9b213');
@@ -157,6 +187,7 @@ export default class LeaderboardScene extends Phaser.Scene {
 
     this.renderPlayerStatus(w, h, myWallet, isDaily);
     if (isDaily) this.renderSpoilsStatus(w, h);
+    this.renderBottomBar(w, h);
   }
 
   addToLayer(x, y, text, fontSize, color, strokeThickness = 0) {
@@ -184,6 +215,7 @@ export default class LeaderboardScene extends Phaser.Scene {
   }
 
   renderPlayerStatus(w, h, myWallet, isDaily) {
+    const isPortrait = h > 300;
     const status = nimiqService.getStatus();
     let line;
     if (!myWallet) {
@@ -194,7 +226,8 @@ export default class LeaderboardScene extends Phaser.Scene {
         ? `⚡ ${status.shortAddress} — you're rank #${myRow.rank}${myRow.rank <= 3 ? ' 🏆' : ''}`
         : `⚡ ${status.shortAddress} — signed in. Play a Trial to claim a spot.`;
     }
-    const lineObj = this.add.text(w / 2, 212, line, {
+    const statusY = isPortrait ? h - 74 : 207;
+    const lineObj = this.add.text(w / 2, statusY, line, {
       fontFamily: 'Press Start 2P',
       fontSize: '4.5px',
       color: '#a0c4a0',
@@ -206,37 +239,75 @@ export default class LeaderboardScene extends Phaser.Scene {
       if (!myWallet && window.__lunaGate) window.__lunaGate.show().then(() => {});
     });
     this.boardLayer.add(lineObj);
+
+    // If connected, show player's personal rewards status pill
+    if (myWallet && this.rewardsStatus) {
+      const bossText = this.rewardsStatus.firstBossClaimed ? 'CLAIMED (+10 NIM)' : 'UNCLAIMED (10 NIM)';
+      const harvestText = `${this.rewardsStatus.crystalStatus?.nimEarned || 0} / 10 NIM`;
+      const rewardsPill = `🏆 1st Boss: ${bossText}  |  💎 Harvest: ${harvestText}`;
+      this.addToLayer(w / 2, isPortrait ? h - 60 : 218, rewardsPill, '4.2px', '#ffd700', 1);
+    }
   }
 
   renderSpoilsStatus(w, h) {
+    const isPortrait = h > 300;
     const counts = this.payout?.counts || {};
     const signer = this.payout?.signerConfigured;
     const text = signer
       ? `Payout worker online — ${counts.completed || 0} settled, ${counts.pending || 0} pending`
       : `Payout worker offline — daily spoils staged for settlement`;
-    this.addToLayer(w / 2, 226, text, '4.5px', '#8cb38c', 2);
+    this.addToLayer(w / 2, isPortrait ? h - 46 : 229, text, '4.5px', '#8cb38c', 2);
   }
 
   renderBottomBar(w, h) {
-    const backBtn = this.add.rectangle(55, h - 18, 75, 20, 0x1e331e).setStrokeStyle(1, 0x3d5c3d).setInteractive({ useHandCursor: true });
-    this.add.text(55, h - 18, '◄ MENU', { fontFamily: 'Press Start 2P', fontSize: '5.5px', color: '#fff' }).setOrigin(0.5);
+    if (this.bottomBarLayer) this.bottomBarLayer.removeAll(true);
+    else this.bottomBarLayer = this.add.container(0, 0);
+
+    const isPortrait = h > 300;
+    const barY = h - 22;
+
+    const backBtn = this.add.rectangle(55, barY, 75, 20, 0x1e331e).setStrokeStyle(1, 0x3d5c3d).setInteractive({ useHandCursor: true });
+    const backTxt = this.add.text(55, barY, '◄ MENU', { fontFamily: 'Press Start 2P', fontSize: '5.5px', color: '#fff' }).setOrigin(0.5);
     backBtn.on('pointerdown', () => {
       sound.playCoin();
       this.scene.start('MenuScene');
     });
+    this.bottomBarLayer.add(backBtn);
+    this.bottomBarLayer.add(backTxt);
 
-    const playBtn = this.add.rectangle(155, h - 18, 95, 20, 0x224422).setStrokeStyle(1, 0x98ff20).setInteractive({ useHandCursor: true });
-    this.add.text(155, h - 18, 'PLAY ENDLESS', { fontFamily: 'Press Start 2P', fontSize: '5.5px', color: '#f6c026' }).setOrigin(0.5);
+    const playBtn = this.add.rectangle(155, barY, 95, 20, 0x224422).setStrokeStyle(1, 0x98ff20).setInteractive({ useHandCursor: true });
+    const playTxt = this.add.text(155, barY, 'PLAY ENDLESS', { fontFamily: 'Press Start 2P', fontSize: '5.5px', color: '#f6c026' }).setOrigin(0.5);
     playBtn.on('pointerdown', () => {
       sound.playCoin();
       this.scene.start('SurvivalScene');
     });
+    this.bottomBarLayer.add(playBtn);
+    this.bottomBarLayer.add(playTxt);
 
-    const spoilsBtn = this.add.rectangle(375, h - 18, 100, 20, 0x4a3a14).setStrokeStyle(1, 0xe9b213).setInteractive({ useHandCursor: true });
-    this.add.text(375, h - 18, 'SPOILS STATUS', { fontFamily: 'Press Start 2P', fontSize: '5px', color: '#fff' }).setOrigin(0.5);
+    const spoilsBtn = this.add.rectangle(w - 68, barY, 105, 20, 0x332814).setStrokeStyle(1, 0x8a6f2d).setInteractive({ useHandCursor: true });
+    const spoilsTxt = this.add.text(w - 68, barY, 'SPOILS STATUS', { fontFamily: 'Press Start 2P', fontSize: '5.2px', color: '#ffd166' }).setOrigin(0.5);
     spoilsBtn.on('pointerdown', () => {
       this.toggleSpoilsPanel();
     });
+    this.bottomBarLayer.add(spoilsBtn);
+    this.bottomBarLayer.add(spoilsTxt);
+  }
+
+  onViewportResize(w, h) {
+    if (this.bgTile) this.bgTile.setSize(w, h);
+    if (this.titleText) this.titleText.setPosition(w / 2, 14);
+    if (this.tabButtons) {
+      this.tabButtons.forEach((t) => {
+        if (t.key === 'alltime') {
+          t.bg.setPosition(w / 2 - 58, 31);
+          t.txt.setPosition(w / 2 - 58, 31);
+        } else {
+          t.bg.setPosition(w / 2 + 58, 31);
+          t.txt.setPosition(w / 2 + 58, 31);
+        }
+      });
+    }
+    this.rebuildBoard();
   }
 
   toggleSpoilsPanel() {

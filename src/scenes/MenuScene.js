@@ -636,6 +636,9 @@ export default class MenuScene extends Phaser.Scene {
   }
 
   onViewportResize(w, h) {
+    if (this.cameras?.main && this.cameras.main.width === w && this.cameras.main.height === h) {
+      return;
+    }
     if (this.bgSky) {
       this.bgSky.setSize(w, h);
       this.bgSky.tileScaleY = h > 270 ? h / 270 : 1;

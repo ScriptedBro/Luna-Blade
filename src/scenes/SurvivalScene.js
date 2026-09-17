@@ -18,6 +18,10 @@ import { getTodaySeedString, generateDailySurvivalSpec } from '../engine/PRNG.js
 import { pauseService } from '../engine/PauseService.js';
 import { nimiqService } from '../engine/NimiqService.js';
 import confetti from 'canvas-confetti';
+import LunaCrystalDrop from '../entities/LunaCrystalDrop.js';
+import { bankCrystalHarvest } from '../nimiq/rewards.js';
+import { getAddress } from '../nimiq/session.js';
+
 
 export default class SurvivalScene extends Phaser.Scene {
   constructor() {
@@ -67,6 +71,9 @@ export default class SurvivalScene extends Phaser.Scene {
     this.crates = this.physics.add.group();
     this.enemies = this.physics.add.group();
     this.projectiles = this.physics.add.group({ runChildUpdate: true });
+    this.lunaCrystals = this.physics.add.group();
+    this.sessionCrystalsCollected = 0;
+    this.crystalBankResult = null;
 
     // Build seeded arena
     this.buildSeededArena();
@@ -82,6 +89,11 @@ export default class SurvivalScene extends Phaser.Scene {
     // Collisions
     this.physics.add.collider(this.enemies, this.platforms);
     this.physics.add.collider(this.crates, this.platforms);
+    this.physics.add.collider(this.lunaCrystals, this.platforms);
+    this.physics.add.overlap(this.player, this.lunaCrystals, (_p, crystal) => {
+      crystal.collect(this.player);
+    });
+
 
     // Projectile terrain collision
     this.physics.add.collider(this.projectiles, this.platforms, (proj) => {
@@ -830,13 +842,36 @@ export default class SurvivalScene extends Phaser.Scene {
       this.checkSpawnQueue();
     }
 
+    // Luna Crystal Drop (0.1 NIM)
+    if (this.lunaCrystals && enemy) {
+      const isBoss = mobType === 'boss_gorgok';
+      const chance = isBoss ? 1.0 : 0.65;
+      if (Math.random() < chance) {
+        const crystal = new LunaCrystalDrop(this, popupX, popupY);
+        this.lunaCrystals.add(crystal);
+      }
+    }
+
     return ptsEarned;
+  }
+
+  onCrateBroken(crate) {
+    if (this.lunaCrystals && Math.random() < 0.5) {
+      const crystal = new LunaCrystalDrop(this, crate.x, crate.y - 6);
+      this.lunaCrystals.add(crystal);
+    }
+  }
+
+  onLunaCrystalCollected(crystal) {
+    this.sessionCrystalsCollected = (this.sessionCrystalsCollected || 0) + 1;
+    this.updateCrystalHarvestHud();
   }
 
   onEnemyShattered(enemy) {
     if (!enemy || enemy._killHandled) return;
     this.addKill('snail', GAME_CONFIG.MOBS.SNAIL.PTS * 1.5, 0, enemy.x, enemy.y - 12, 'SHATTER! 💥', enemy);
   }
+
 
   updateWaveHud() {
     if (this.txtWave) {
@@ -947,6 +982,14 @@ export default class SurvivalScene extends Phaser.Scene {
       color: '#ffffff'
     }).setScrollFactor(0).setDepth(201);
 
+    // Luna Crystal Harvest Counter
+    this.txtHarvest = this.add.text(12, 28, '💎 +0.0 NIM', {
+      fontFamily: 'Press Start 2P',
+      fontSize: '5.5px',
+      color: '#38e1ff'
+    }).setScrollFactor(0).setDepth(201);
+
+
     this.txtCombo = this.add.text(w / 2, 40, '', {
       fontFamily: 'Press Start 2P',
       fontSize: '8px',
@@ -986,6 +1029,13 @@ export default class SurvivalScene extends Phaser.Scene {
       this.heroHealthBar.updateHealth(this.player.health, this.player.maxHealth);
     }
   }
+
+  updateCrystalHarvestHud() {
+    if (!this.txtHarvest) return;
+    const nim = ((this.sessionCrystalsCollected || 0) * 0.1).toFixed(1);
+    this.txtHarvest.setText(`💎 +${nim} NIM`);
+  }
+
 
   handlePlayerAttack(enemy) {
     if (!this.player.isAttacking || enemy.state === 'DEAD' || enemy._killHandled) return;
@@ -1202,6 +1252,21 @@ export default class SurvivalScene extends Phaser.Scene {
       rank: proof.rank || null,
       status: proof.label,
     });
+
+    // Bank Luna Crystals collected during the Endless run
+    if (this.sessionCrystalsCollected > 0 && getAddress()) {
+      try {
+        const bankRes = await bankCrystalHarvest({
+          crystalsCollected: this.sessionCrystalsCollected,
+          durationMs: runData.duration * 1000,
+          kills: runData.kills,
+        });
+        proof.crystalBankResult = bankRes;
+      } catch (err) {
+        console.warn('[rewards] crystal bank error', err?.message);
+      }
+    }
+
     return proof;
   }
 
@@ -1233,17 +1298,23 @@ export default class SurvivalScene extends Phaser.Scene {
       color: '#ffffff'
     }).setOrigin(0.5).setScrollFactor(0).setDepth(501);
 
+    const crystalLine = this.sessionCrystalsCollected > 0
+      ? `💎 Luna Harvest: +${(this.sessionCrystalsCollected * 0.1).toFixed(1)} NIM Banked (${this.sessionCrystalsCollected} Crystals)`
+      : (getAddress() ? '💎 Luna Harvest: 0 Crystals' : '⚡ Connect Wallet to Bank NIM Harvests');
+
     const details = this.add.text(w / 2, h / 2 - 14, [
       `Time Survived: ${this.secondsSurvived}s (+${this.secondsSurvived * 10} pts)`,
       `Kills: 🐗${this.killCount.boar || 0} 🐌${this.killCount.snail || 0} 🐝${this.killCount.bee || 0} 🍄${this.killCount.mushroom || 0} 👁️${this.killCount.flying_eye || 0} 👺${this.killCount.goblin || 0}`,
+      crystalLine,
       `${proof.label}`
     ].join('\n'), {
       fontFamily: 'Press Start 2P',
-      fontSize: '6px',
+      fontSize: '5.5px',
       color: '#a0c4a0',
       lineSpacing: 5,
       align: 'center'
     }).setOrigin(0.5).setScrollFactor(0).setDepth(501);
+
 
     // Navigation callbacks with listener cleanup
     let modalClosed = false;

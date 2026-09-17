@@ -22,6 +22,10 @@ import { sound } from '../engine/Audio.js';
 import { storage } from '../engine/Storage.js';
 import { pauseService } from '../engine/PauseService.js';
 import confetti from 'canvas-confetti';
+import LunaCrystalDrop from '../entities/LunaCrystalDrop.js';
+import { claimFirstStoryBossReward, bankCrystalHarvest, fetchRewardsStatus } from '../nimiq/rewards.js';
+import { getAddress } from '../nimiq/session.js';
+
 
 export default class StoryScene extends Phaser.Scene {
   constructor() {
@@ -110,12 +114,18 @@ export default class StoryScene extends Phaser.Scene {
     // Lush Parallax High Forest Background & Atmosphere
     this.createForestBackground();
 
-    // Platform, Hazard, Crate, Enemy, and Projectile groups
+    // Platform, Hazard, Crate, Enemy, Projectile, and Luna Crystal groups
     this.platforms = this.physics.add.staticGroup();
     this.hazards = this.physics.add.staticGroup();
     this.crates = this.physics.add.group();
     this.enemies = this.physics.add.group();
     this.projectiles = this.physics.add.group({ runChildUpdate: true });
+    this.lunaCrystals = this.physics.add.group();
+    this.sessionCrystalsCollected = 0;
+    this.firstBossClaimResult = null;
+    this.crystalBankResult = null;
+    this.levelStartTime = performance.now();
+    fetchRewardsStatus().then((st) => { this.rewardsStatus = st; }).catch(() => {});
 
     // Build the Level Geometry & Spawns
     this.buildChapterLevel();
@@ -135,6 +145,11 @@ export default class StoryScene extends Phaser.Scene {
     this.physics.add.collider(this.enemies, this.platforms);
     this.physics.add.collider(this.crates, this.platforms);
     this.physics.add.collider(this.crates, this.crates);
+    this.physics.add.collider(this.lunaCrystals, this.platforms);
+    this.physics.add.overlap(this.player, this.lunaCrystals, (_p, crystal) => {
+      crystal.collect(this.player);
+    });
+
 
     // Projectile collisions with environment
     this.physics.add.collider(this.projectiles, this.platforms, (proj) => {
@@ -1583,6 +1598,14 @@ export default class StoryScene extends Phaser.Scene {
     this.hudContainer.add(this.txtMaterials);
     this.updateHudMaterials();
 
+    // Luna Crystal Harvest Counter (0.1 NIM per crystal)
+    this.txtHarvest = this.add.text(w - 12, 22, '💎 +0.0 NIM', {
+      fontFamily: 'Press Start 2P',
+      fontSize: '5px',
+      color: '#38e1ff'
+    }).setOrigin(1, 0);
+    this.hudContainer.add(this.txtHarvest);
+
     // Combo Counter (Center Screen, below Boss Health Bar)
     this.txtCombo = this.add.text(w / 2, 70, '', {
       fontFamily: 'Press Start 2P',
@@ -1597,6 +1620,13 @@ export default class StoryScene extends Phaser.Scene {
     const mats = storage.getMaterials();
     this.txtMaterials.setText(`🌲${mats.bark} 🍯${mats.amber} ⚙️${mats.iron}`);
   }
+
+  updateHudHarvest() {
+    if (!this.txtHarvest) return;
+    const nim = ((this.sessionCrystalsCollected || 0) * 0.1).toFixed(1);
+    this.txtHarvest.setText(`💎 +${nim} NIM`);
+  }
+
 
   updateHearts() {
     if (!this.player) return;
@@ -1816,6 +1846,16 @@ export default class StoryScene extends Phaser.Scene {
         storage.addMaterials({ iron: 2, bark: 1 });
       }
       this.updateHudMaterials();
+
+      // Luna Crystal Drop (0.1 NIM each)
+      if (this.lunaCrystals) {
+        const isBoss = enemy.mobType && enemy.mobType.startsWith('boss');
+        const chance = isBoss ? 1.0 : 0.65;
+        if (Math.random() < chance) {
+          const crystal = new LunaCrystalDrop(this, enemy.x, enemy.y - 8);
+          this.lunaCrystals.add(crystal);
+        }
+      }
     }
   }
 
@@ -1825,7 +1865,25 @@ export default class StoryScene extends Phaser.Scene {
     this.registerComboHit();
     storage.addMaterials({ bark: 1 });
     this.updateHudMaterials();
+
+    if (this.lunaCrystals && Math.random() < 0.65) {
+      const crystal = new LunaCrystalDrop(this, enemy.x, enemy.y - 8);
+      this.lunaCrystals.add(crystal);
+    }
   }
+
+  onCrateBroken(crate) {
+    if (this.lunaCrystals && Math.random() < 0.5) {
+      const crystal = new LunaCrystalDrop(this, crate.x, crate.y - 6);
+      this.lunaCrystals.add(crystal);
+    }
+  }
+
+  onLunaCrystalCollected(crystal) {
+    this.sessionCrystalsCollected = (this.sessionCrystalsCollected || 0) + 1;
+    this.updateHudHarvest();
+  }
+
 
   handlePlayerEnemyCollision(enemy) {
     if (this.inDialogue || this.player.isDead || enemy.state === 'DEAD' || enemy.state === 'STUNNED') return;
@@ -2048,6 +2106,47 @@ export default class StoryScene extends Phaser.Scene {
       this.chapterIntroCard = null;
     }
 
+    // Settle NIM rewards (First Boss Bounty + Daily Luna Crystals)
+    const runDurationMs = performance.now() - (this.levelStartTime || performance.now());
+    const bossNames = {
+      1: 'Boss Gorgok',
+      2: 'Boss Wizard',
+      3: 'Boss Skeleton',
+      4: 'Boss Demon',
+      5: 'Boss NightBorne',
+    };
+    const bName = bossNames[this.chapterId] || 'Chapter Boss';
+
+    if (getAddress()) {
+      // 1. Bank crystal harvest
+      if (this.sessionCrystalsCollected > 0) {
+        bankCrystalHarvest({
+          crystalsCollected: this.sessionCrystalsCollected,
+          durationMs: runDurationMs,
+          kills: this.killsCount,
+        }).then((res) => {
+          this.crystalBankResult = res;
+        }).catch(() => {});
+      }
+
+      // 2. Claim first story boss bounty (10 NIM) if not yet claimed
+      if (!this.rewardsStatus || !this.rewardsStatus.firstBossClaimed) {
+        claimFirstStoryBossReward({
+          chapterId: this.chapterId,
+          bossName: bName,
+          durationMs: runDurationMs,
+          kills: this.killsCount,
+        }).then((claimRes) => {
+          this.firstBossClaimResult = claimRes;
+          if (this.rewardsStatus) this.rewardsStatus.firstBossClaimed = true;
+        }).catch((err) => {
+          if (err?.status === 409 && this.rewardsStatus) {
+            this.rewardsStatus.firstBossClaimed = true;
+          }
+        });
+      }
+    }
+
     if (this.chapterId === 1) {
       this.startDialogue([
         { speaker: 'SHRINE', text: '✨ "The first root inhales pure moonlight. The waters run crystal-clear once more."' },
@@ -2114,12 +2213,12 @@ export default class StoryScene extends Phaser.Scene {
     banner.add(overlay);
 
     const nextCh = this.chapterId < 5 ? this.chapterId + 1 : null;
-    const boxHeight = nextCh ? 164 : 140;
-    const box = this.add.rectangle(0, 0, 380, boxHeight, 0x0b2110, 0.96);
+    const boxHeight = nextCh ? 180 : 156;
+    const box = this.add.rectangle(0, 0, 396, boxHeight, 0x0b2110, 0.96);
     box.setStrokeStyle(2, 0xf6c026);
     banner.add(box);
 
-    const title = this.add.text(0, -boxHeight / 2 + 22, '✨ SHRINE CLEANSED! ✨', {
+    const title = this.add.text(0, -boxHeight / 2 + 20, '✨ SHRINE CLEANSED! ✨', {
       fontFamily: 'Press Start 2P',
       fontSize: '11px',
       color: '#f6c026'
@@ -2127,12 +2226,40 @@ export default class StoryScene extends Phaser.Scene {
     banner.add(title);
 
     const subTitleText = nextCh ? `Chapter ${this.chapterId} Cleared! | Foes Cleansed: ${this.killsCount}` : `Cosmos Restored! All 5 Shrines Cleansed!`;
-    const msg = this.add.text(0, -boxHeight / 2 + 42, subTitleText, {
+    const msg = this.add.text(0, -boxHeight / 2 + 37, subTitleText, {
       fontFamily: 'Press Start 2P',
-      fontSize: '7px',
+      fontSize: '6.5px',
       color: '#b0f0b0'
     }).setOrigin(0.5);
     banner.add(msg);
+
+    // NIM Rewards Status Pill
+    let rewardText = '';
+    let rewardColor = '#ffd700';
+    if (this.firstBossClaimResult && this.firstBossClaimResult.ok) {
+      rewardText = '🌟 FIRST BOSS SLAIN: +10 NIM TRANSMITTED TO WALLET!';
+      rewardColor = '#ffd700';
+    } else if (this.sessionCrystalsCollected > 0) {
+      const nim = (this.sessionCrystalsCollected * 0.1).toFixed(1);
+      rewardText = `💎 LUNA HARVEST: +${nim} NIM QUEUED TO WALLET`;
+      rewardColor = '#38e1ff';
+    } else if (!getAddress()) {
+      rewardText = '⚡ CONNECT WALLET TO CLAIM 10 NIM & DAILY HARVEST';
+      rewardColor = '#8cb38c';
+    } else {
+      rewardText = '💎 LUNA HARVEST BANKED';
+      rewardColor = '#a0c4a0';
+    }
+
+    const rewardBadge = this.add.text(0, -boxHeight / 2 + 54, rewardText, {
+      fontFamily: 'Press Start 2P',
+      fontSize: '5px',
+      color: rewardColor,
+      stroke: '#000000',
+      strokeThickness: 2,
+    }).setOrigin(0.5);
+    banner.add(rewardBadge);
+
 
     let actionTaken = false;
     const cleanup = () => {
@@ -2295,6 +2422,17 @@ export default class StoryScene extends Phaser.Scene {
       this.player.die();
     }
 
+    if (this.sessionCrystalsCollected > 0 && getAddress()) {
+      const runDurationMs = performance.now() - (this.levelStartTime || performance.now());
+      bankCrystalHarvest({
+        crystalsCollected: this.sessionCrystalsCollected,
+        durationMs: runDurationMs,
+        kills: this.killsCount,
+      }).then((res) => {
+        this.crystalBankResult = res;
+      }).catch(() => {});
+    }
+
     if (typeof window !== 'undefined' && window.touchController) {
       window.touchController.hide();
     }
@@ -2324,11 +2462,15 @@ export default class StoryScene extends Phaser.Scene {
       color: '#ff4444'
     }).setOrigin(0.5).setScrollFactor(0).setDepth(501);
 
-    const subtitle = this.add.text(w / 2, h / 2 - 22, `Chapter ${this.chapterId}: ${this.chapterConfig.title}`, {
+    const crystalBonus = this.sessionCrystalsCollected > 0
+      ? ` • 💎 +${(this.sessionCrystalsCollected * 0.1).toFixed(1)} NIM Saved`
+      : '';
+    const subtitle = this.add.text(w / 2, h / 2 - 22, `Chapter ${this.chapterId}: ${this.chapterConfig.title}${crystalBonus}`, {
       fontFamily: 'Press Start 2P',
-      fontSize: '6.5px',
+      fontSize: '6px',
       color: '#ffaaaa'
     }).setOrigin(0.5).setScrollFactor(0).setDepth(501);
+
 
     const hintText = this.add.text(w / 2, h / 2 + 42, '▶ TAP RETRY OR MAIN MENU TO CONTINUE ◀', {
       fontFamily: 'Press Start 2P',

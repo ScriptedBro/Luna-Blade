@@ -1,4 +1,6 @@
 import Phaser from 'phaser';
+import LunaCrystalDrop from '../entities/LunaCrystalDrop.js';
+
 
 export default class BootScene extends Phaser.Scene {
   constructor() {
@@ -182,7 +184,17 @@ export default class BootScene extends Phaser.Scene {
   }
 
   create() {
+    LunaCrystalDrop.ensureTexture(this);
     this.createAnimations();
+
+    // Ensure Phaser scale dimensions match target orientation before launching scenes
+    if (window.viewportManager) {
+      const isPortrait = window.viewportManager.detectPortrait();
+      const targetH = isPortrait ? 440 : 270;
+      if (this.scale.height !== targetH) {
+        this.scale.resize(480, targetH);
+      }
+    }
 
     const urlParams = new URLSearchParams(window.location.search);
     const targetScene = urlParams.get('scene');

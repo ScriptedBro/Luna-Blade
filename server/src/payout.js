@@ -1,7 +1,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import crypto from "node:crypto";
-import { config, DAILY_PRIZES_NIM, LUNA_PER_NIM } from "../config.js";
+import { config, DAILY_PRIZES_NIM, FIRST_BOSS_BOUNTY_NIM, LUNA_PER_NIM } from "../config.js";
 import { getDailyWinners } from "./leaderboard.js";
 import { ensureDataDir } from "./db.js";
 
@@ -265,6 +265,84 @@ async function checkSignerBalance(amountsLuna) {
   const balance = await getTreasuryBalanceLuna();
   return balance >= total;
 }
+
+/** Process any pending items in outbox if signer is active. */
+export async function processPendingOutbox() {
+  if (!isPayoutSignerConfigured()) return { processed: 0, reason: "signer_not_configured" };
+  return withMutex(async () => {
+    const rows = readOutbox();
+    const pending = rows.filter((r) => r.status === "pending" || r.status === "awaiting_confirmation");
+    if (pending.length === 0) return { processed: 0 };
+    const balanceOk = await checkSignerBalance(pending.map((r) => r.amountLuna));
+    if (!balanceOk) throw new Error("payout_insufficient_balance");
+
+    let processed = 0;
+    const updated = [];
+    for (const row of rows) {
+      if (row.status === "pending" || row.status === "awaiting_confirmation") {
+        updated.push(await processRow(row));
+        processed++;
+      } else {
+        updated.push(row);
+      }
+    }
+    writeOutbox(updated);
+    return { processed, outbox: updated };
+  });
+}
+
+/** Queue the one-time 10 NIM First Story Boss Defeat bounty payout. */
+export async function queueFirstBossPayout(wallet, bossName = "Boss") {
+  const norm = String(wallet || "").trim().replace(/\s+/g, "").toUpperCase();
+  const id = `bounty-first-boss-${norm}`;
+  const outbox = readOutbox();
+  if (outbox.some((r) => r.id === id)) {
+    return { queued: false, id, reason: "already_queued" };
+  }
+  const amountNim = FIRST_BOSS_BOUNTY_NIM;
+  const row = {
+    id,
+    type: "bounty_first_boss",
+    recipientAddress: norm,
+    amountLuna: Math.round(amountNim * LUNA_PER_NIM),
+    amountNim,
+    memo: `Luna Blade: Vanquished ${bossName}!`,
+    status: "pending",
+    attempts: 0,
+    createdAt: Date.now(),
+  };
+  appendOutbox(row);
+  if (isPayoutSignerConfigured()) {
+    processPendingOutbox().catch((err) => console.warn("[payout] instant dispatch error", err?.message));
+  }
+  return { queued: true, id, row };
+}
+
+/** Queue a Daily Luna Crystal Harvest payout (max 10 NIM/day). */
+export async function queueCrystalHarvestPayout(wallet, dateSeed, amountNim) {
+  const norm = String(wallet || "").trim().replace(/\s+/g, "").toUpperCase();
+  const nim = Number(amountNim) || 0;
+  if (nim <= 0) return { queued: false, reason: "zero_amount" };
+  const id = `crystals-${dateSeed}-${norm}-${Date.now()}`;
+  const row = {
+    id,
+    type: "crystal_harvest",
+    dateSeed,
+    recipientAddress: norm,
+    amountLuna: Math.round(nim * LUNA_PER_NIM),
+    amountNim: nim,
+    memo: `Luna Blade: Daily Luna Harvest (${nim} NIM)`,
+    status: "pending",
+    attempts: 0,
+    createdAt: Date.now(),
+  };
+  appendOutbox(row);
+  if (isPayoutSignerConfigured()) {
+    processPendingOutbox().catch((err) => console.warn("[payout] instant dispatch error", err?.message));
+  }
+  return { queued: true, id, row };
+}
+
 
 export function getPayoutSummary() {
   const rows = readOutbox();

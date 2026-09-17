@@ -65,12 +65,7 @@ function visualOffsets() {
 
   if (isInputFocused) {
     // Soft keyboard active at bottom
-    topInset = offsetTop;
     bottomInset = Math.max(0, ih - (height + offsetTop));
-  } else {
-    // Host chrome / navigation bar at top (e.g. Nimiq Pay mini-app top bar)
-    topInset = Math.max(offsetTop, heightShortfall);
-    bottomInset = 0;
   }
 
   return {

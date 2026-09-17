@@ -1,11 +1,55 @@
 import { GAME_CONFIG } from '../config.js';
 
 /**
+ * Reliable portrait mode detector across standard desktop browsers,
+ * mobile Chrome/Safari, and embedded WebViews (e.g. Nimiq Pay mini-app).
+ */
+export function isPortraitMode() {
+  if (typeof window === 'undefined') return false;
+
+  // 1. Check CSS matchMedia (browser layout engine)
+  if (window.matchMedia) {
+    try {
+      const mq = window.matchMedia('(orientation: portrait)');
+      if (mq && typeof mq.matches === 'boolean') {
+        return mq.matches;
+      }
+    } catch {
+      // Ignore older matchMedia errors
+    }
+  }
+
+  // 2. Check window.screen.orientation
+  if (window.screen && window.screen.orientation && window.screen.orientation.type) {
+    return window.screen.orientation.type.includes('portrait');
+  }
+
+  // 3. Check legacy window.orientation (0 or 180 is portrait)
+  if (typeof window.orientation === 'number') {
+    return window.orientation === 0 || window.orientation === 180;
+  }
+
+  // 4. Viewport dimensions comparison
+  const w = window.innerWidth || document.documentElement?.clientWidth || 0;
+  const h = window.innerHeight || document.documentElement?.clientHeight || 0;
+  if (w > 0 && h > 0) {
+    return h >= w;
+  }
+
+  // 5. Mobile screen dimension fallback
+  if (window.screen && window.screen.width && window.screen.height) {
+    return window.screen.height >= window.screen.width;
+  }
+
+  return false;
+}
+
+/**
  * Manages responsive viewport sizing and aspect-ratio adaptation
  * between mobile portrait and mobile/desktop landscape modes.
  * 
  * - Landscape: 480 x 270 (16:9 widescreen arcade)
- * - Portrait:  480 x 380 (5:4 expanded vertical viewport, +40% more viewable area)
+ * - Portrait:  480 x 440 (expanded vertical viewport, +64% more viewable area)
  */
 export class ViewportManager {
   constructor(game) {
@@ -21,15 +65,24 @@ export class ViewportManager {
       if (window.screen && window.screen.orientation) {
         window.screen.orientation.addEventListener('change', this.boundOnResize);
       }
+      if (window.matchMedia) {
+        try {
+          const mq = window.matchMedia('(orientation: portrait)');
+          if (mq.addEventListener) {
+            mq.addEventListener('change', this.boundOnResize);
+          } else if (mq.addListener) {
+            mq.addListener(this.boundOnResize);
+          }
+        } catch {}
+      }
+
       this.applyContainerStyles(this.currentWidth, this.currentHeight);
+      this.syncGameScale(this.currentWidth, this.currentHeight);
     }
   }
 
   detectPortrait() {
-    if (typeof window === 'undefined') return false;
-    const iw = window.innerWidth || 0;
-    const ih = window.innerHeight || 0;
-    return ih > iw;
+    return isPortraitMode();
   }
 
   applyContainerStyles(w, h) {
@@ -53,6 +106,14 @@ export class ViewportManager {
     }
   }
 
+  syncGameScale(targetW, targetH) {
+    if (!this.game || !this.game.scale) return;
+    if (this.game.scale.width !== targetW || this.game.scale.height !== targetH) {
+      this.game.scale.resize(targetW, targetH);
+      this.notifyScenes(targetW, targetH);
+    }
+  }
+
   onResize() {
     const newPortrait = this.detectPortrait();
     const targetW = GAME_CONFIG.WIDTH;
@@ -61,14 +122,11 @@ export class ViewportManager {
     this.isPortrait = newPortrait;
     this.applyContainerStyles(targetW, targetH);
 
-    if (this.currentWidth !== targetW || this.currentHeight !== targetH) {
+    const scaleNeedsResize = !this.game?.scale || this.game.scale.width !== targetW || this.game.scale.height !== targetH;
+    if (this.currentWidth !== targetW || this.currentHeight !== targetH || scaleNeedsResize) {
       this.currentWidth = targetW;
       this.currentHeight = targetH;
-
-      if (this.game && this.game.scale) {
-        this.game.scale.resize(targetW, targetH);
-        this.notifyScenes(targetW, targetH);
-      }
+      this.syncGameScale(targetW, targetH);
     }
   }
 

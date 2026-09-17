@@ -1,0 +1,75 @@
+import { apiFetch } from "./api.js";
+import { getToken, getAddress } from "./session.js";
+import { signWireMessage } from "./auth.js";
+import { todaySeedString } from "./leaderboard.js";
+
+/** Fetch reward eligibility and current daily crystal status for connected wallet */
+export async function fetchRewardsStatus() {
+  const token = getToken();
+  if (!token) return null;
+  try {
+    return await apiFetch("/api/rewards/status", { token });
+  } catch (e) {
+    console.warn("[rewards] failed to fetch status", e?.message);
+    return null;
+  }
+}
+
+/** Claim the one-time 10 NIM First Story Boss bounty */
+export async function claimFirstStoryBossReward({ chapterId, bossName, durationMs, kills }) {
+  const addr = getAddress();
+  const token = getToken();
+  if (!addr || !token) {
+    const err = new Error("not_connected");
+    err.status = 401;
+    throw err;
+  }
+  const ch = Number(chapterId) || 1;
+  const boss = String(bossName || "Gorgok");
+  const message = `Luna Blade Boss Proof: Chapter ${ch} | Boss: ${boss} | Player: ${addr}`;
+  const { signerPublicKey, signature } = await signWireMessage(message);
+
+  return apiFetch("/api/rewards/claim-boss", {
+    method: "POST",
+    token,
+    body: JSON.stringify({
+      message,
+      signerPublicKey,
+      signature,
+      chapterId: ch,
+      bossName: boss,
+      durationMs: Math.round(durationMs || 0),
+      kills: Math.round(kills || 0),
+    }),
+  });
+}
+
+/** Bank collected crystals from a run, crediting 0.1 NIM each up to 10 NIM/day */
+export async function bankCrystalHarvest({ crystalsCollected, durationMs, kills }) {
+  const addr = getAddress();
+  const token = getToken();
+  if (!addr || !token) {
+    return { ok: false, reason: "not_connected" };
+  }
+  const count = Math.max(0, Math.floor(Number(crystalsCollected) || 0));
+  if (count <= 0) {
+    return { ok: true, creditedNim: 0, creditedCrystals: 0 };
+  }
+  const dateSeed = todaySeedString();
+  const message = `Luna Blade Crystal Proof: ${count} | Date: ${dateSeed} | Player: ${addr}`;
+  const { signerPublicKey, signature } = await signWireMessage(message);
+
+  return apiFetch("/api/rewards/bank-crystals", {
+    method: "POST",
+    token,
+    body: JSON.stringify({
+      message,
+      signerPublicKey,
+      signature,
+      dateSeed,
+      crystalsCollected: count,
+      durationMs: Math.round(durationMs || 0),
+      kills: Math.round(kills || 0),
+    }),
+  });
+}

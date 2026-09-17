@@ -1,10 +1,12 @@
 import express from "express";
 import cors from "cors";
-import { config, DAILY_PRIZES_NIM } from "./config.js";
+import { config, DAILY_PRIZES_NIM, FIRST_BOSS_BOUNTY_NIM, LUNA_CRYSTAL_REWARD_NIM, LUNA_CRYSTAL_DAILY_CAP_NIM } from "./config.js";
 import { createNonce, consumeNonce, signSession, requireAuth } from "./src/auth.js";
 import { verifySignedMessageDeriveAddress } from "./src/verifyNimiq.js";
 import { submitScore, getDailyBoard, getDailyRank, getDailyWinners, getAllTimeBoard, getAllTimeRank } from "./src/leaderboard.js";
-import { runPayoutCycle, getPayoutSummary, isPayoutSignerConfigured, startPayoutCron } from "./src/payout.js";
+import { runPayoutCycle, getPayoutSummary, isPayoutSignerConfigured, startPayoutCron, queueFirstBossPayout, queueCrystalHarvestPayout } from "./src/payout.js";
+import { hasClaimedFirstBoss, recordFirstBossClaim, getDailyCrystalStatus, recordCrystalHarvestClaim } from "./src/claims.js";
+
 
 const app = express();
 app.use(cors({ origin: config.corsOrigins, credentials: true }));
@@ -47,8 +49,135 @@ app.get("/api/config", (_req, res) => {
     appName,
     network: config.network,
     dailyPrizeNim: DAILY_PRIZES_NIM,
+    firstBossPrizeNim: FIRST_BOSS_BOUNTY_NIM,
+    lunaCrystalRewardNim: LUNA_CRYSTAL_REWARD_NIM,
+    lunaCrystalDailyCapNim: LUNA_CRYSTAL_DAILY_CAP_NIM,
   });
 });
+
+// --- Rewards & Bounties (First Boss & Daily Luna Crystals) ---
+
+app.get("/api/rewards/status", requireAuth, (req, res) => {
+  const wallet = req.session.sub;
+  const dateSeed = todaySeedString();
+  const firstBossClaimed = hasClaimedFirstBoss(wallet);
+  const crystalStatus = getDailyCrystalStatus(wallet, dateSeed);
+  res.json({
+    wallet,
+    dateSeed,
+    firstBossClaimed,
+    firstBossPrizeNim: FIRST_BOSS_BOUNTY_NIM,
+    crystalStatus,
+  });
+});
+
+app.post("/api/rewards/claim-boss", requireAuth, async (req, res) => {
+  const { message, signerPublicKey, signature, chapterId, bossName, durationMs, kills } = req.body || {};
+  const wallet = req.session.sub;
+
+  if (!message || !signerPublicKey || !signature) {
+    return res.status(400).json({ error: "missing_proof" });
+  }
+
+  const ch = Number(chapterId) || 1;
+  const boss = String(bossName || "Unknown Boss");
+  const expected = `Luna Blade Boss Proof: Chapter ${ch} | Boss: ${boss} | Player: ${wallet}`;
+
+  let derived = null;
+  try {
+    derived = await verifySignedMessageDeriveAddress(message, signerPublicKey, signature);
+  } catch {
+    derived = null;
+  }
+
+  if (!derived || derived !== wallet || message !== expected) {
+    return res.status(401).json({ error: "invalid_boss_proof" });
+  }
+
+  // Must be Story Mode boss (Chapters 1 to 5)
+  if (ch < 1 || ch > 5) {
+    return res.status(400).json({ error: "boss_reward_story_only" });
+  }
+
+  // Anti-cheat / bot baseline threshold: at least 15s play and 1 kill
+  if (Number(durationMs || 0) < 15_000 || Number(kills || 0) < 1) {
+    return res.status(400).json({ error: "insufficient_run_telemetry" });
+  }
+
+  // Check if wallet has already claimed First Boss bounty anywhere across the game
+  if (hasClaimedFirstBoss(wallet)) {
+    return res.status(409).json({ error: "already_claimed", firstBossClaimed: true });
+  }
+
+  // Record claim
+  const record = recordFirstBossClaim(wallet, { chapterId: ch, bossName: boss });
+  if (!record.ok) {
+    return res.status(409).json({ error: "already_claimed" });
+  }
+
+  // Queue payout
+  const payoutResult = await queueFirstBossPayout(wallet, boss);
+
+  res.json({
+    ok: true,
+    bountyNim: FIRST_BOSS_BOUNTY_NIM,
+    txId: payoutResult.id,
+    claimedAt: record.claim.claimedAt,
+  });
+});
+
+app.post("/api/rewards/bank-crystals", requireAuth, async (req, res) => {
+  const { message, signerPublicKey, signature, dateSeed, crystalsCollected, durationMs, kills } = req.body || {};
+  const wallet = req.session.sub;
+
+  if (!message || !signerPublicKey || !signature) {
+    return res.status(400).json({ error: "missing_proof" });
+  }
+
+  const dSeed = String(dateSeed || todaySeedString());
+  const count = Math.max(0, Math.floor(Number(crystalsCollected) || 0));
+  const expected = `Luna Blade Crystal Proof: ${count} | Date: ${dSeed} | Player: ${wallet}`;
+
+  let derived = null;
+  try {
+    derived = await verifySignedMessageDeriveAddress(message, signerPublicKey, signature);
+  } catch {
+    derived = null;
+  }
+
+  if (!derived || derived !== wallet || message !== expected) {
+    return res.status(401).json({ error: "invalid_crystal_proof" });
+  }
+
+  if (count <= 0) {
+    const status = getDailyCrystalStatus(wallet, dSeed);
+    return res.json({ ok: true, creditedNim: 0, creditedCrystals: 0, status });
+  }
+
+  // Anti-teleport / anti-spoof checks
+  const runMs = Number(durationMs || 0);
+  const killCount = Number(kills || 0);
+  if (runMs < 8_000) {
+    return res.status(400).json({ error: "run_too_short" });
+  }
+  // Plausible crystals cap per run based on mobs and crates (generous upper bound)
+  if (count > (killCount * 2) + 20) {
+    return res.status(400).json({ error: "crystal_count_anomaly" });
+  }
+
+  const claimResult = recordCrystalHarvestClaim(wallet, dSeed, count);
+  if (claimResult.creditedNim > 0) {
+    await queueCrystalHarvestPayout(wallet, dSeed, claimResult.creditedNim);
+  }
+
+  res.json({
+    ok: true,
+    creditedNim: claimResult.creditedNim,
+    creditedCrystals: claimResult.creditedCrystals,
+    status: claimResult.status,
+  });
+});
+
 
 // --- Verified leaderboard ---
 
