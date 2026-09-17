@@ -9,14 +9,30 @@ export function todaySeedString() {
 }
 
 let cachedDeviceId = null;
-export function getDeviceId() {
+export async function getDeviceId() {
   if (cachedDeviceId) return cachedDeviceId;
+
+  // 1. If running inside Nimiq Pay, request official device identifier from host
+  if (typeof window !== "undefined" && window.nimiqPay != null) {
+    try {
+      const { requestDeviceIdentifier } = await import("@nimiq/mini-app-sdk");
+      const id = await requestDeviceIdentifier({ reason: "Leaderboard anti-cheat verification" });
+      if (id && typeof id === "string") {
+        cachedDeviceId = id;
+        return cachedDeviceId;
+      }
+    } catch (e) {
+      console.warn("Nimiq Pay requestDeviceIdentifier failed or denied:", e);
+    }
+  }
+
+  // 2. Fallback to localStorage UUID for web/desktop browsers
   const KEY = "luna-blade.device-id.v1";
   let id = null;
   try {
     id = localStorage.getItem(KEY);
     if (!id) {
-      id = crypto.randomUUID();
+      id = typeof crypto !== "undefined" && crypto.randomUUID ? crypto.randomUUID() : "anon-" + Date.now();
       localStorage.setItem(KEY, id);
     }
   } catch {
@@ -50,7 +66,7 @@ export async function submitVerifiedScore({ score, mode, durationMs, kills }) {
       mode,
       durationMs,
       kills,
-      deviceId: getDeviceId(),
+      deviceId: await getDeviceId(),
     }),
   });
 }

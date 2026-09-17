@@ -213,13 +213,37 @@ app.post("/api/scores/submit", requireAuth, async (req, res) => {
     return res.status(400).json({ error: "invalid_score" });
   }
 
+  // Anti-cheat heuristic validations (game physics & balance sanity checks)
+  const durMs = Number(durationMs) || 0;
+  const killCount = Number(kills) || 0;
+
+  // 1. Minimum run duration: a survival run must be at least 5 seconds
+  if (durMs < 5000) {
+    return res.status(400).json({ error: "invalid_duration", message: "Run duration too short" });
+  }
+
+  // 2. Score rate check: maximum possible points per second is bounded by mob spawn rates & combo
+  // In Luna Blade, maximum mob spawn is ~5 mobs/sec (up to 50 pts each) * 4x combo + 10 pts/sec survival = ~1,010 pts/sec.
+  // 1,500 pts/sec provides a generous ceiling that no human or bot can physically exceed without cheating.
+  const seconds = durMs / 1000;
+  const ptsPerSec = n / seconds;
+  if (ptsPerSec > 1500) {
+    return res.status(400).json({ error: "invalid_score_rate", message: "Score rate physically impossible" });
+  }
+
+  // 3. Kill rate check: continuous mob spawn caps at 12 kills per second
+  const killsPerSec = killCount / seconds;
+  if (killsPerSec > 12) {
+    return res.status(400).json({ error: "invalid_kill_rate", message: "Kill rate physically impossible" });
+  }
+
   const { isNewBest } = submitScore({
     wallet,
     dateSeed: String(dateSeed || ""),
     score: n,
-    durationMs,
-    kills,
-    deviceId,
+    durationMs: durMs,
+    kills: killCount,
+    deviceId: typeof deviceId === "string" ? deviceId.slice(0, 128) : null,
     signedAt: Date.now(),
   });
 
