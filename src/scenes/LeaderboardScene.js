@@ -19,9 +19,6 @@ export default class LeaderboardScene extends Phaser.Scene {
     const h = this.cameras?.main?.height || this.scale?.height || GAME_CONFIG.HEIGHT;
     this.lastScore = 0;
     this.activeTab = 'alltime';
-    this.boardLayer = this.add.container(0, 0);
-    this.bottomBarLayer = this.add.container(0, 0);
-
     pauseService.detachScene();
     sound.playBGM('title');
 
@@ -29,14 +26,17 @@ export default class LeaderboardScene extends Phaser.Scene {
       window.touchController.hide();
     }
 
-    this.bgTile = this.add.tileSprite(0, 0, w, h, 'env_bg').setOrigin(0, 0).setTint(0x334433);
+    this.bgTile = this.add.tileSprite(0, 0, w, h, 'env_bg').setOrigin(0, 0).setTint(0x334433).setDepth(0);
+    this.boardLayer = this.add.container(0, 0).setDepth(10);
+    this.bottomBarLayer = this.add.container(0, 0).setDepth(20);
+
     this.titleText = this.add.text(w / 2, 14, '⚡ LEADERBOARD', {
       fontFamily: 'Press Start 2P',
       fontSize: '10px',
       color: '#f6c026',
       stroke: '#000000',
       strokeThickness: 2
-    }).setOrigin(0.5);
+    }).setOrigin(0.5).setDepth(15);
 
     this.buildTabs();
     this.renderBottomBar(w, h);
@@ -51,7 +51,7 @@ export default class LeaderboardScene extends Phaser.Scene {
       fontSize: '6px',
 
       color: '#8cb38c'
-    }).setOrigin(0.5);
+    }).setOrigin(0.5).setDepth(25);
 
     try {
       const [daily, alltime, payout, cfg, rewards] = await Promise.all([
@@ -81,8 +81,8 @@ export default class LeaderboardScene extends Phaser.Scene {
     this.tabButtons = [];
 
     const mkTab = (key, label, x) => {
-      const bg = this.add.rectangle(x, y, 104, 16, 0x142014).setStrokeStyle(1, 0x3c6e3c).setInteractive({ useHandCursor: true });
-      const txt = this.add.text(x, y, label, { fontFamily: 'Press Start 2P', fontSize: '5.5px', color: '#a0c4a0' }).setOrigin(0.5);
+      const bg = this.add.rectangle(x, y, 104, 16, 0x142014).setStrokeStyle(1, 0x3c6e3c).setDepth(15).setInteractive({ useHandCursor: true });
+      const txt = this.add.text(x, y, label, { fontFamily: 'Press Start 2P', fontSize: '5.5px', color: '#a0c4a0' }).setOrigin(0.5).setDepth(16);
       const setHover = (on) => {
         if (this.activeTab === key) return;
         bg.setFillStyle(on ? 0x1e3320 : 0x142014);
@@ -174,13 +174,18 @@ export default class LeaderboardScene extends Phaser.Scene {
             const avatar = this.add.image(w / 2 - 158, y - 2, texKey).setDisplaySize(12, 12).setOrigin(0.5);
             this.boardLayer.add(avatar);
           } else {
+            const dot = this.add.circle(w / 2 - 158, y - 2, 4, 0x38e1ff, 0.7);
+            this.boardLayer.add(dot);
             identiconDataUrl(row.wallet).then((dataUrl) => {
               if (this.textures && !this.textures.exists(texKey)) {
                 this.textures.addBase64(texKey, dataUrl);
               }
+              if (dot && dot.active) {
+                const avatar = this.add.image(dot.x, dot.y, texKey).setDisplaySize(12, 12).setOrigin(0.5);
+                this.boardLayer.add(avatar);
+                dot.destroy();
+              }
             }).catch(() => {});
-            const dot = this.add.circle(w / 2 - 158, y - 2, 4, 0x38e1ff, 0.7);
-            this.boardLayer.add(dot);
           }
         }
 
@@ -218,6 +223,7 @@ export default class LeaderboardScene extends Phaser.Scene {
     }).setOrigin(0.5).setDepth(900).setVisible(false);
     obj.on('pointerover', () => tip.setVisible(true));
     obj.on('pointerout', () => tip.setVisible(false));
+    obj.once('destroy', () => tip.destroy());
   }
 
   renderPlayerStatus(w, h, myWallet, isDaily) {
@@ -269,8 +275,11 @@ export default class LeaderboardScene extends Phaser.Scene {
   }
 
   renderBottomBar(w, h) {
-    if (this.bottomBarLayer) this.bottomBarLayer.removeAll(true);
-    else this.bottomBarLayer = this.add.container(0, 0);
+    if (this.bottomBarLayer) {
+      this.bottomBarLayer.removeAll(true);
+    } else {
+      this.bottomBarLayer = this.add.container(0, 0).setDepth(20);
+    }
 
     const isPortrait = h > 300;
     const barY = h - 22;
@@ -374,7 +383,7 @@ export default class LeaderboardScene extends Phaser.Scene {
       color: '#d06a6a',
       align: 'center',
       wordWrap: { width: 360 }
-    }).setOrigin(0.5);
+    }).setOrigin(0.5).setDepth(25);
   }
 }
 
