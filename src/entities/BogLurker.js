@@ -60,9 +60,7 @@ export default class BogLurker extends Phaser.Physics.Arcade.Sprite {
       return;
     }
 
-    // Facing direction
     const dirToPlayer = player.x < this.x ? -1 : 1;
-    this.setFlipX(dirToPlayer > 0);
 
     // Mud / Slime Glob Spit Attack
     if (dist < 220 && dy < 60 && now > this.spitCooldownUntil && this.body.blocked.down) {
@@ -86,8 +84,10 @@ export default class BogLurker extends Phaser.Physics.Arcade.Sprite {
     }
 
     if (dist < 180 && !this.isLedgeAhead(dirToPlayer)) {
+      this.setFlipX(dirToPlayer > 0);
       this.setVelocityX(dirToPlayer * speed * 1.25);
     } else {
+      this.setFlipX(this.patrolDir > 0);
       this.setVelocityX(this.patrolDir * speed);
     }
   }
@@ -112,6 +112,7 @@ export default class BogLurker extends Phaser.Physics.Arcade.Sprite {
     this.stateTimer = this.scene.time.now + 650;
     this.spitCooldownUntil = this.scene.time.now + 2500;
     this.setVelocityX(0);
+    this.setFlipX(dir > 0);
 
     this.scene.time.delayedCall(220, () => {
       if (this.state === 'DEAD' || !this.scene) return;

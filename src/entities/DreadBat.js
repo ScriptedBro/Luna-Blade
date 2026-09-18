@@ -59,11 +59,15 @@ export default class DreadBat extends Phaser.Physics.Arcade.Sprite {
       } else {
         this.setVelocityY(dy < 0 ? 90 : -90);
         this.setVelocityX(this.patrolDir * 40);
+        this.setFlipX(this.patrolDir > 0);
       }
       return;
     }
 
     if (this.state === 'SWOOP_DIVE') {
+      if (this.body && Math.abs(this.body.velocity.x) > 10) {
+        this.setFlipX(this.body.velocity.x > 0);
+      }
       if (now > this.stateTimer) {
         this.state = 'RECOVER';
       }
@@ -75,12 +79,18 @@ export default class DreadBat extends Phaser.Physics.Arcade.Sprite {
     this.y = this.hoverBaseY + Math.sin(this.hoverTimer) * 10;
 
     const dirToPlayer = player.x < this.x ? -1 : 1;
-    this.setFlipX(dirToPlayer < 0);
 
     // Telegraph and trigger Swoop Dive
     if (dist < 200 && dist > 40 && now > this.attackCooldownUntil) {
       this.swoopDive(player);
       return;
+    }
+
+    // Facing direction: face player when close, face patrol direction when roaming
+    if (dist < 220) {
+      this.setFlipX(dirToPlayer > 0);
+    } else {
+      this.setFlipX(this.patrolDir > 0);
     }
 
     // Patrol back and forth (strictly bounded before boss arena seal!)
@@ -91,13 +101,17 @@ export default class DreadBat extends Phaser.Physics.Arcade.Sprite {
     if (this.x < 100) {
       this.x = 100;
       this.patrolDir = 1;
+      this.setFlipX(true);
     } else if (this.x > maxRight) {
       this.x = maxRight;
       this.patrolDir = -1;
+      this.setFlipX(false);
     } else if (this.body.blocked.left) {
       this.patrolDir = 1;
+      this.setFlipX(true);
     } else if (this.body.blocked.right) {
       this.patrolDir = -1;
+      this.setFlipX(false);
     }
   }
 
@@ -105,6 +119,8 @@ export default class DreadBat extends Phaser.Physics.Arcade.Sprite {
     this.state = 'SWOOP_DIVE';
     this.attackCooldownUntil = this.scene.time.now + 2800;
     this.stateTimer = this.scene.time.now + 900;
+    const dirToPlayer = player.x < this.x ? -1 : 1;
+    this.setFlipX(dirToPlayer > 0);
     this.play('dread_bat_attack_anim', true);
     sound.playWhoosh();
 

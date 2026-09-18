@@ -58,7 +58,6 @@ export default class BasaltGolem extends Phaser.Physics.Arcade.Sprite {
     }
 
     const dirToPlayer = player.x < this.x ? -1 : 1;
-    this.setFlipX(dirToPlayer > 0);
 
     // Ground Seismic Slam Attack
     if (dist < 80 && dy < 40 && now > this.attackCooldownUntil && this.body.blocked.down) {
@@ -82,8 +81,10 @@ export default class BasaltGolem extends Phaser.Physics.Arcade.Sprite {
     }
 
     if (dist < 200 && !this.isLedgeAhead(dirToPlayer)) {
+      this.setFlipX(dirToPlayer > 0);
       this.setVelocityX(dirToPlayer * speed);
     } else {
+      this.setFlipX(this.patrolDir > 0);
       this.setVelocityX(this.patrolDir * speed);
     }
   }
@@ -108,6 +109,8 @@ export default class BasaltGolem extends Phaser.Physics.Arcade.Sprite {
     this.attackCooldownUntil = this.scene.time.now + 3200;
     this.stateTimer = this.scene.time.now + 1100;
     this.setVelocityX(0);
+    const dirToPlayer = player.x < this.x ? -1 : 1;
+    this.setFlipX(dirToPlayer > 0);
     this.play('basalt_golem_attack_anim', true);
 
     // Slam hits at frame 7 (~650ms)
