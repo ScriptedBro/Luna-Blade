@@ -70,15 +70,41 @@ export default class BogLurker extends Phaser.Physics.Arcade.Sprite {
       return;
     }
 
-    // Ground Patrol
+    // Ground Patrol with ledge edge detection & gate safety
     const speed = (GAME_CONFIG.MOBS.BOG_LURKER && GAME_CONFIG.MOBS.BOG_LURKER.WALK_SPEED) || 35;
-    if (dist < 180) {
+    const hitWall = this.body.blocked.left || this.body.blocked.right;
+    const hitLedge = this.isLedgeAhead(this.patrolDir);
+    const gateClamped = this.scene.gateX && this.x >= this.scene.gateX - 60;
+
+    if (hitWall || hitLedge || gateClamped) {
+      if (gateClamped) {
+        this.x = this.scene.gateX - 60;
+        this.patrolDir = -1;
+      } else {
+        this.patrolDir *= -1;
+      }
+    }
+
+    if (dist < 180 && !this.isLedgeAhead(dirToPlayer)) {
       this.setVelocityX(dirToPlayer * speed * 1.25);
     } else {
       this.setVelocityX(this.patrolDir * speed);
-      if (this.body.blocked.left) this.patrolDir = 1;
-      if (this.body.blocked.right) this.patrolDir = -1;
     }
+  }
+
+  isLedgeAhead(dir) {
+    if (!this.body || !this.body.blocked.down || !this.scene.platforms) return false;
+
+    const lookX = this.x + (dir * (this.body.width / 2 + 10));
+    const footY = this.body.bottom + 8;
+
+    const hasGround = this.scene.platforms.getChildren().some(plat => {
+      const pb = plat.body;
+      if (!pb) return false;
+      return lookX >= pb.left && lookX <= pb.right && footY >= pb.top && footY <= pb.bottom + 14;
+    });
+
+    return !hasGround;
   }
 
   spitSlime(player, dir) {
@@ -105,12 +131,12 @@ export default class BogLurker extends Phaser.Physics.Arcade.Sprite {
 
     const isStomp = Math.abs(sourceX - this.x) < 8;
     const isCrit = amount >= 35;
-    juice.spawnDamageNumber(this.scene, this.x, this.y - 20, amount, isCrit);
+    juice.spawnDamageNumber(this.scene, this.x, this.y - 20, amount, isCrit ? 'crit' : 'normal');
     juice.hitStop(this.scene, isCrit ? 45 : 25);
 
     if (this.hp <= 0) {
       this.die();
-      return true;
+      return { killed: true, pts: (GAME_CONFIG.MOBS.BOG_LURKER && GAME_CONFIG.MOBS.BOG_LURKER.PTS) || 60 };
     }
 
     // Sludge stagger
@@ -120,7 +146,7 @@ export default class BogLurker extends Phaser.Physics.Arcade.Sprite {
     this.setVelocity(knockDir * 90, -80);
     this.setTint(0x4ade80);
 
-    return true;
+    return { killed: false, pts: 0 };
   }
 
   die() {

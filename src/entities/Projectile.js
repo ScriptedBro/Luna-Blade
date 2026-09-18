@@ -17,7 +17,7 @@ export default class Projectile extends Phaser.Physics.Arcade.Sprite {
     this.projType = type;
     this.isDeflected = false;
     this.isDeflectable = isDeflectable;
-    this.damage = (type === 'spore' || type === 'eye_dart') ? 15 : ((type === 'arcane_orb' || type === 'arcane_meteor') ? 30 : 25);
+    this.damage = (type === 'spore' || type === 'eye_dart') ? 15 : (type === 'mud_glob' ? 16 : ((type === 'arcane_orb' || type === 'arcane_meteor') ? 30 : 25));
     this.isDead = false;
     this.setDepth(22);
 
@@ -78,6 +78,14 @@ export default class Projectile extends Phaser.Physics.Arcade.Sprite {
       this.setVelocity(vx, vy);
       this.setScale(0.7);
       this.setTint(0x997755);
+    } else if (type === 'mud_glob') {
+      this.body.setSize(12, 12);
+      this.body.setOffset(2, 2);
+      this.body.setAllowGravity(true);
+      this.body.setGravityY(180);
+      this.setVelocity(vx, vy);
+      this.setScale(1.3);
+      this.setTint(0x4a7c59);
     }
 
     // Auto-cull after 5 seconds

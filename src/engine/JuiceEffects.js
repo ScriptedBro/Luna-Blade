@@ -67,6 +67,24 @@ class JuiceEffectsEngine {
     this.triggerHitStop(scene, 65, 0.015);
   }
 
+  screenShake(scene, intensity = 8, durationMs = 120) {
+    if (!scene || !scene.cameras || !scene.cameras.main) return;
+    let dur = 120;
+    let inten = 0.012;
+    if (typeof durationMs === 'number' && durationMs > 1) {
+      dur = durationMs;
+      inten = (typeof intensity === 'number' && intensity > 1) ? intensity * 0.0015 : intensity;
+    } else if (typeof intensity === 'number' && intensity > 1) {
+      dur = intensity;
+      inten = typeof durationMs === 'number' ? durationMs : 0.012;
+    } else if (typeof intensity === 'number') {
+      inten = intensity;
+      dur = typeof durationMs === 'number' ? durationMs : 120;
+    }
+    const clampedIntensity = Phaser.Math.Clamp(inten || 0.012, 0.003, 0.04);
+    scene.cameras.main.shake(dur || 120, clampedIntensity);
+  }
+
   /**
    * Flashes sprite solid white/bright tint upon taking damage
    */

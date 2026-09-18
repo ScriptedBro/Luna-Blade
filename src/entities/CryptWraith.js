@@ -81,9 +81,14 @@ export default class CryptWraith extends Phaser.Physics.Arcade.Sprite {
       return;
     }
 
-    // Float towards player slowly
+    // Float towards player slowly (strictly clamped before boss gate)
     const floatSpeed = (GAME_CONFIG.MOBS.CRYPT_WRAITH && GAME_CONFIG.MOBS.CRYPT_WRAITH.FLOAT_SPEED) || 50;
-    if (dist < 260) {
+    const maxRight = (this.scene.gateX || 2090) - 80;
+
+    if (this.x > maxRight) {
+      this.x = maxRight;
+      this.setVelocityX(0);
+    } else if (dist < 260 && !(dirToPlayer > 0 && this.x >= maxRight)) {
       this.setVelocityX(dirToPlayer * floatSpeed);
     } else {
       this.setVelocityX(0);
@@ -130,12 +135,12 @@ export default class CryptWraith extends Phaser.Physics.Arcade.Sprite {
     this.hp -= finalDamage;
     sound.playHit();
     juice.flashWhite(this, 90);
-    juice.spawnDamageNumber(this.scene, this.x, this.y - 25, finalDamage, isCrit);
+    juice.spawnDamageNumber(this.scene, this.x, this.y - 25, finalDamage, isCrit ? 'crit' : 'normal');
     juice.hitStop(this.scene, isCrit ? 45 : 25);
 
     if (this.hp <= 0) {
       this.die();
-      return true;
+      return { killed: true, pts: (GAME_CONFIG.MOBS.CRYPT_WRAITH && GAME_CONFIG.MOBS.CRYPT_WRAITH.PTS) || 70 };
     }
 
     // Phase shift evasion on hit
@@ -145,7 +150,7 @@ export default class CryptWraith extends Phaser.Physics.Arcade.Sprite {
     const retreatDir = sourceX < this.x ? 1 : -1;
     this.setVelocity(retreatDir * 90, -40);
 
-    return true;
+    return { killed: false, pts: 0 };
   }
 
   die() {

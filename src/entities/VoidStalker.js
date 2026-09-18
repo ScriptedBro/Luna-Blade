@@ -59,21 +59,49 @@ export default class VoidStalker extends Phaser.Physics.Arcade.Sprite {
     const dirToPlayer = player.x < this.x ? -1 : 1;
     this.setFlipX(dirToPlayer < 0);
 
-    // Pounce Leap Attack
+    // Pounce Leap Attack (only if no pit / chasm ahead!)
     if (dist < 160 && dist > 50 && dy < 50 && now > this.attackCooldownUntil && this.body.blocked.down) {
-      this.pounceAttack(player, dirToPlayer);
-      return;
+      if (!this.isLedgeAhead(dirToPlayer)) {
+        this.pounceAttack(player, dirToPlayer);
+        return;
+      }
     }
 
-    // Fast Sprinting Patrol
+    // Fast Sprinting Patrol with ledge edge detection & gate safety
     const runSpeed = (GAME_CONFIG.MOBS.VOID_STALKER && GAME_CONFIG.MOBS.VOID_STALKER.RUN_SPEED) || 115;
-    if (dist < 240) {
+    const hitWall = this.body.blocked.left || this.body.blocked.right;
+    const hitLedge = this.isLedgeAhead(this.patrolDir);
+    const gateClamped = this.scene.gateX && this.x >= this.scene.gateX - 60;
+
+    if (hitWall || hitLedge || gateClamped) {
+      if (gateClamped) {
+        this.x = this.scene.gateX - 60;
+        this.patrolDir = -1;
+      } else {
+        this.patrolDir *= -1;
+      }
+    }
+
+    if (dist < 240 && !this.isLedgeAhead(dirToPlayer)) {
       this.setVelocityX(dirToPlayer * runSpeed);
     } else {
       this.setVelocityX(this.patrolDir * runSpeed * 0.7);
-      if (this.body.blocked.left) this.patrolDir = 1;
-      if (this.body.blocked.right) this.patrolDir = -1;
     }
+  }
+
+  isLedgeAhead(dir) {
+    if (!this.body || !this.body.blocked.down || !this.scene.platforms) return false;
+
+    const lookX = this.x + (dir * (this.body.width / 2 + 10));
+    const footY = this.body.bottom + 8;
+
+    const hasGround = this.scene.platforms.getChildren().some(plat => {
+      const pb = plat.body;
+      if (!pb) return false;
+      return lookX >= pb.left && lookX <= pb.right && footY >= pb.top && footY <= pb.bottom + 14;
+    });
+
+    return !hasGround;
   }
 
   pounceAttack(player, dir) {
@@ -100,12 +128,12 @@ export default class VoidStalker extends Phaser.Physics.Arcade.Sprite {
     this.hp -= finalDamage;
     sound.playHit();
     juice.flashWhite(this, 90);
-    juice.spawnDamageNumber(this.scene, this.x, this.y - 20, finalDamage, inMidPounce);
+    juice.spawnDamageNumber(this.scene, this.x, this.y - 20, finalDamage, inMidPounce ? 'counter' : 'normal');
     juice.hitStop(this.scene, inMidPounce ? 45 : 25);
 
     if (this.hp <= 0) {
       this.die();
-      return true;
+      return { killed: true, pts: (GAME_CONFIG.MOBS.VOID_STALKER && GAME_CONFIG.MOBS.VOID_STALKER.PTS) || 90 };
     }
 
     this.state = 'STUNNED';
@@ -114,7 +142,7 @@ export default class VoidStalker extends Phaser.Physics.Arcade.Sprite {
     this.setVelocity(knockDir * 90, -60);
     this.setTint(0xa855f7);
 
-    return true;
+    return { killed: false, pts: 0 };
   }
 
   die() {

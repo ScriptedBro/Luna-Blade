@@ -66,15 +66,41 @@ export default class BasaltGolem extends Phaser.Physics.Arcade.Sprite {
       return;
     }
 
-    // Heavy Stride Patrol
+    // Heavy Stride Patrol with ledge edge detection & gate safety
     const speed = (GAME_CONFIG.MOBS.BASALT_GOLEM && GAME_CONFIG.MOBS.BASALT_GOLEM.WALK_SPEED) || 32;
-    if (dist < 200) {
+    const hitWall = this.body.blocked.left || this.body.blocked.right;
+    const hitLedge = this.isLedgeAhead(this.patrolDir);
+    const gateClamped = this.scene.gateX && this.x >= this.scene.gateX - 60;
+
+    if (hitWall || hitLedge || gateClamped) {
+      if (gateClamped) {
+        this.x = this.scene.gateX - 60;
+        this.patrolDir = -1;
+      } else {
+        this.patrolDir *= -1;
+      }
+    }
+
+    if (dist < 200 && !this.isLedgeAhead(dirToPlayer)) {
       this.setVelocityX(dirToPlayer * speed);
     } else {
       this.setVelocityX(this.patrolDir * speed);
-      if (this.body.blocked.left) this.patrolDir = 1;
-      if (this.body.blocked.right) this.patrolDir = -1;
     }
+  }
+
+  isLedgeAhead(dir) {
+    if (!this.body || !this.body.blocked.down || !this.scene.platforms) return false;
+
+    const lookX = this.x + (dir * (this.body.width / 2 + 10));
+    const footY = this.body.bottom + 8;
+
+    const hasGround = this.scene.platforms.getChildren().some(plat => {
+      const pb = plat.body;
+      if (!pb) return false;
+      return lookX >= pb.left && lookX <= pb.right && footY >= pb.top && footY <= pb.bottom + 14;
+    });
+
+    return !hasGround;
   }
 
   performSlam(player) {
@@ -121,12 +147,12 @@ export default class BasaltGolem extends Phaser.Physics.Arcade.Sprite {
     this.hp -= finalDamage;
     sound.playHit();
     juice.flashWhite(this, 90);
-    juice.spawnDamageNumber(this.scene, this.x, this.y - 25, finalDamage, !attackerFromFront);
+    juice.spawnDamageNumber(this.scene, this.x, this.y - 25, finalDamage, !attackerFromFront ? 'crit' : 'normal');
     juice.hitStop(this.scene, !attackerFromFront ? 45 : 25);
 
     if (this.hp <= 0) {
       this.die();
-      return true;
+      return { killed: true, pts: (GAME_CONFIG.MOBS.BASALT_GOLEM && GAME_CONFIG.MOBS.BASALT_GOLEM.PTS) || 85 };
     }
 
     // Heavy resist knockback
@@ -135,7 +161,7 @@ export default class BasaltGolem extends Phaser.Physics.Arcade.Sprite {
     const knockDir = sourceX < this.x ? 1 : -1;
     this.setVelocity(knockDir * 40, -40);
 
-    return true;
+    return { killed: false, pts: 0 };
   }
 
   die() {

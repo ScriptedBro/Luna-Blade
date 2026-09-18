@@ -83,11 +83,22 @@ export default class DreadBat extends Phaser.Physics.Arcade.Sprite {
       return;
     }
 
-    // Patrol back and forth
+    // Patrol back and forth (strictly bounded before boss arena seal!)
     const flySpeed = (GAME_CONFIG.MOBS.DREAD_BAT && GAME_CONFIG.MOBS.DREAD_BAT.FLY_SPEED) || 75;
+    const maxRight = Math.min((this.scene.levelWidth || 2600) - 100, (this.scene.gateX || 2090) - 80);
     this.setVelocityX(this.patrolDir * flySpeed);
-    if (this.x < 100) this.patrolDir = 1;
-    if (this.x > (this.scene.levelWidth || 2600) - 100) this.patrolDir = -1;
+
+    if (this.x < 100) {
+      this.x = 100;
+      this.patrolDir = 1;
+    } else if (this.x > maxRight) {
+      this.x = maxRight;
+      this.patrolDir = -1;
+    } else if (this.body.blocked.left) {
+      this.patrolDir = 1;
+    } else if (this.body.blocked.right) {
+      this.patrolDir = -1;
+    }
   }
 
   swoopDive(player) {
@@ -115,12 +126,12 @@ export default class DreadBat extends Phaser.Physics.Arcade.Sprite {
       juice.spawnFloatingText(this.scene, this.x, this.y - 25, 'DIVE COUNTER! 🦇', '#a855f7');
     }
 
-    juice.spawnDamageNumber(this.scene, this.x, this.y - 20, amount, isCrit);
+    juice.spawnDamageNumber(this.scene, this.x, this.y - 20, amount, isCrit ? 'crit' : 'normal');
     juice.hitStop(this.scene, isCrit ? 45 : 25);
 
     if (this.hp <= 0) {
       this.die();
-      return true;
+      return { killed: true, pts: (GAME_CONFIG.MOBS.DREAD_BAT && GAME_CONFIG.MOBS.DREAD_BAT.PTS) || 55 };
     }
 
     this.state = 'STUNNED';
@@ -129,7 +140,7 @@ export default class DreadBat extends Phaser.Physics.Arcade.Sprite {
     this.setVelocity(knockDir * 80, -60);
     this.setTint(0xc084fc);
 
-    return true;
+    return { killed: false, pts: 0 };
   }
 
   die() {

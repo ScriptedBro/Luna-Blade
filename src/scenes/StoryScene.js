@@ -58,6 +58,8 @@ export default class StoryScene extends Phaser.Scene {
     this.comboTimer = 0;
     this.levelWidth = this.chapterId === 1 ? 2800 : 2600;
     this.levelHeight = 440;
+    this.gateX = this.chapterId === 1 ? 2310 : 2090;
+    this.groundSegments = [];
     this.victoryAdvanceCallback = null;
     this.gameOverRetryCallback = null;
     this.activeGameOverCleanup = null;
@@ -355,8 +357,9 @@ export default class StoryScene extends Phaser.Scene {
     // =========================================================================
     // --- ZONE 1: The Forest Outskirts (0 - 480px) ---
     this.createGround(0, 380, 480);
-    this.spawnMob('boar', 220, 340);
-    this.spawnMob('snail', 340, 340);
+    this.spawnMob('boar', 200, 340);
+    this.spawnMob('bog_lurker', 280, 340);
+    this.spawnMob('snail', 380, 340);
 
     // --- OBSTACLE 1: Cascades Chasm (480 - 740px, 260px wide water chasm) ---
     // Ground leap cannot clear 260px! Must use stepping boughs over the roaring water!
@@ -369,8 +372,8 @@ export default class StoryScene extends Phaser.Scene {
 
     // --- ZONE 2: Lake Watchtower Ridge (740 - 1020px) ---
     this.createGround(740, 380, 280);
-    this.spawnMob('boar', 840, 340);
-    this.spawnMob('bog_lurker', 940, 340);
+    this.spawnMob('boar', 830, 340);
+    this.spawnMob('bog_lurker', 920, 340);
 
     // --- OBSTACLE 2: Watchtower Ravine Ascent (1020 - 1300px, 280px gap) ---
     // Rushing water abyss! Ascending watchtower staircase of platforms
@@ -384,8 +387,8 @@ export default class StoryScene extends Phaser.Scene {
 
     // --- ZONE 3: Ancient Pine Canopy & Ravine (1300 - 1540px) ---
     this.createGround(1300, 380, 240);
-    this.spawnMob('mushroom', 1370, 340);
-    this.spawnMob('bog_lurker', 1470, 340);
+    this.spawnMob('mushroom', 1360, 340);
+    this.spawnMob('bog_lurker', 1440, 340);
 
     // --- OBSTACLE 3: Deep Forest Ravine (1540 - 1820px, 280px gap) ---
     // Deep chasm. High canopy bridge gives safe passage and tactical drop on enemies!
@@ -399,8 +402,8 @@ export default class StoryScene extends Phaser.Scene {
 
     // --- ZONE 3b: Pine Glade Patrol (1820 - 2080px) ---
     this.createGround(1820, 380, 260);
-    this.spawnMob('boar', 1900, 340);
-    this.spawnMob('bog_lurker', 2000, 340);
+    this.spawnMob('boar', 1890, 340);
+    this.spawnMob('bog_lurker', 1980, 340);
     this.spawnCrate(1850, 350);
 
     // --- ZONE 4: Sanctuary Moat & Boss Approach (2080 - 2800px) ---
@@ -412,7 +415,7 @@ export default class StoryScene extends Phaser.Scene {
     this.createPlatform(2440, 240, 96);
 
     this.spawnMob('boar', 2220, 340);
-    this.spawnMob('bog_lurker', 2340, 340);
+    this.spawnMob('snail', 2270, 340);
 
     this.spawnCrate(2280, 270);
     this.spawnCrate(2520, 350);
@@ -430,8 +433,9 @@ export default class StoryScene extends Phaser.Scene {
     // =========================================================================
     // --- ZONE 1: Canopy Outskirts (0 - 460px) ---
     this.createGround(0, 380, 460);
-    this.spawnMob('boar', 220, 340);
-    this.spawnMob('snail', 360, 340);
+    this.spawnMob('boar', 200, 340);
+    this.spawnMob('dread_bat', 300, 160);
+    this.spawnMob('snail', 390, 340);
 
     // --- OBSTACLE 1: Amber Chasm (460 - 740px, 280px wide Honeycomb Trap) ---
     // Cannot be jumped from ground! Must climb giant branch platforms!
@@ -460,8 +464,9 @@ export default class StoryScene extends Phaser.Scene {
 
     // --- ZONE 3: Mid-Canopy Grove (1320 - 1560px) ---
     this.createGround(1320, 380, 240);
-    this.spawnMob('goblin', 1400, 340);
-    this.spawnMob('mushroom', 1500, 340);
+    this.spawnMob('goblin', 1380, 340);
+    this.spawnMob('dread_bat', 1450, 150);
+    this.spawnMob('mushroom', 1510, 340);
 
     // --- OBSTACLE 3: Queen's Bough Overpass (1560 - 1860px, 300px wide Trap) ---
     // Fatal honey pit! High canopy walkway spanning the chasm.
@@ -475,9 +480,9 @@ export default class StoryScene extends Phaser.Scene {
 
     // --- ZONE 4: Golden Hive Sanctuary & Boss Approach (1860 - 2600px) ---
     this.createGround(1860, 380, 740);
-    this.spawnMob('boar', 1920, 340);
-    this.spawnMob('flying_eye', 1940, 150);
-    this.spawnMob('snail', 1980, 340);
+    this.spawnMob('boar', 1900, 340);
+    this.spawnMob('dread_bat', 1950, 140);
+    this.spawnMob('snail', 1990, 340);
 
     this.createPlatform(2180, 270, 150);
     this.createPlatform(2340, 210, 150);
@@ -497,8 +502,9 @@ export default class StoryScene extends Phaser.Scene {
     // =========================================================================
     // --- ZONE 1: Ruined Courtyard (0 - 420px) ---
     this.createGround(0, 380, 420);
-    this.spawnMob('boar', 200, 340);
-    this.spawnMob('snail', 320, 340);
+    this.spawnMob('boar', 180, 340);
+    this.spawnMob('crypt_wraith', 260, 320);
+    this.spawnMob('snail', 360, 340);
 
     // --- OBSTACLE 1: Spiked Moat (420 - 700px, 280px wide Ancient Spikes) ---
     // Fatal spike pit! Stepping stone columns are required to cross!
@@ -526,8 +532,9 @@ export default class StoryScene extends Phaser.Scene {
 
     // --- ZONE 3: Sunken Catacombs (1280 - 1540px) ---
     this.createGround(1280, 380, 260);
-    this.spawnMob('goblin', 1360, 340);
-    this.spawnMob('snail', 1460, 340);
+    this.spawnMob('goblin', 1340, 340);
+    this.spawnMob('crypt_wraith', 1420, 320);
+    this.spawnMob('snail', 1490, 340);
 
     // --- OBSTACLE 3: Vorgath's Spiked Precipice (1540 - 1840px, 300px Spikes) ---
     // Ancient stone pillars across the spike trench.
@@ -541,8 +548,9 @@ export default class StoryScene extends Phaser.Scene {
 
     // --- ZONE 4: Crypt Sanctuary & Boss Approach (1840 - 2600px) ---
     this.createGround(1840, 380, 760);
-    this.spawnMob('boar', 1900, 340);
-    this.spawnMob('goblin', 1960, 340);
+    this.spawnMob('boar', 1890, 340);
+    this.spawnMob('crypt_wraith', 1940, 320);
+    this.spawnMob('goblin', 1980, 340);
 
     this.createPlatform(2120, 270, 96);
     this.createPlatform(2300, 210, 96);
@@ -563,8 +571,9 @@ export default class StoryScene extends Phaser.Scene {
     // =========================================================================
     // --- ZONE 1: Caldera Edge (0 - 420px) ---
     this.createGround(0, 380, 420);
-    this.spawnMob('goblin', 220, 340);
-    this.spawnMob('boar', 340, 340);
+    this.spawnMob('goblin', 180, 340);
+    this.spawnMob('basalt_golem', 260, 340);
+    this.spawnMob('boar', 350, 340);
 
     // --- OBSTACLE 1: Magma Rift (420 - 720px, 300px wide Molten Lava & Geyser) ---
     // Boiling magma! Stepping basalt platforms over erupting geyser
@@ -594,8 +603,9 @@ export default class StoryScene extends Phaser.Scene {
 
     // --- ZONE 3: Obsidian Steppes (1320 - 1560px) ---
     this.createGround(1320, 380, 240);
-    this.spawnMob('goblin', 1400, 340);
-    this.spawnMob('flying_eye', 1480, 160);
+    this.spawnMob('goblin', 1370, 340);
+    this.spawnMob('basalt_golem', 1440, 340);
+    this.spawnMob('flying_eye', 1500, 160);
 
     // --- OBSTACLE 3: Crucible Bridge (1560 - 1880px, 320px wide Molten Lava) ---
     // Deep magma pit with lava eruptions.
@@ -609,8 +619,9 @@ export default class StoryScene extends Phaser.Scene {
 
     // --- ZONE 4: Molten Core Sanctuary & Boss Approach (1880 - 2600px) ---
     this.createGround(1880, 380, 720);
-    this.spawnMob('boar', 1920, 340);
-    this.spawnMob('goblin', 1980, 340);
+    this.spawnMob('boar', 1900, 340);
+    this.spawnMob('basalt_golem', 1950, 340);
+    this.spawnMob('goblin', 1990, 340);
 
     this.createPlatform(2200, 270, 96);
     this.createPlatform(2380, 210, 96);
@@ -631,8 +642,9 @@ export default class StoryScene extends Phaser.Scene {
     // =========================================================================
     // --- ZONE 1: Astral Foothills (0 - 400px) ---
     this.createGround(0, 380, 400);
-    this.spawnMob('goblin', 200, 340);
-    this.spawnMob('boar', 320, 340);
+    this.spawnMob('goblin', 180, 340);
+    this.spawnMob('void_stalker', 260, 340);
+    this.spawnMob('boar', 340, 340);
 
     // --- OBSTACLE 1: Void Rift Crossing (400 - 720px, 320px wide Astral Chasm) ---
     // Bottomless cosmic abyss! Floating crystal steps required to cross!
@@ -661,8 +673,9 @@ export default class StoryScene extends Phaser.Scene {
 
     // --- ZONE 3: Astral Plateau (1340 - 1580px) ---
     this.createGround(1340, 380, 240);
-    this.spawnMob('goblin', 1420, 340);
-    this.spawnMob('mushroom', 1500, 340);
+    this.spawnMob('goblin', 1380, 340);
+    this.spawnMob('void_stalker', 1440, 340);
+    this.spawnMob('mushroom', 1510, 340);
 
     // --- OBSTACLE 3: Starlight Precipice (1580 - 1900px, 320px wide Astral Chasm) ---
     // Cosmic void gap into the Lunar Spire core.
@@ -675,8 +688,9 @@ export default class StoryScene extends Phaser.Scene {
 
     // --- ZONE 4: Lunar Heart Sanctuary & Final Boss Approach (1900 - 2600px) ---
     this.createGround(1900, 380, 700);
-    this.spawnMob('boar', 1940, 340);
-    this.spawnMob('goblin', 1980, 340);
+    this.spawnMob('boar', 1910, 340);
+    this.spawnMob('void_stalker', 1960, 340);
+    this.spawnMob('goblin', 2000, 340);
 
     this.createPlatform(2180, 270, 96);
     this.createPlatform(2360, 210, 96);
@@ -846,8 +860,10 @@ export default class StoryScene extends Phaser.Scene {
 
   createGround(x, y, width) {
     const depth = 10;
+    this.groundSegments.push({ x1: x, x2: x + width, y: y });
     const body = this.add.rectangle(x + width / 2, y + 20, width, 40, 0x000000, 0);
     this.physics.add.existing(body, true);
+    body.isMainGround = true;
     this.platforms.add(body);
 
     const numTiles = Math.ceil(width / 16);
@@ -1418,18 +1434,22 @@ export default class StoryScene extends Phaser.Scene {
 
   getRemainingEnemiesCount() {
     if (!this.enemies) return 0;
+    const gateX = this.gateX || (this.chapterId === 1 ? 2310 : 2090);
     return this.enemies.getChildren().filter(e => {
       if (!e.active) return false;
       if (e.state === 'DEAD' || e.isDead) return false;
       if (e.hp !== undefined && e.hp <= 0) return false;
       if (e.mobType && e.mobType.startsWith('boss')) return false;
+      // Failsafe: Never count enemies beyond the sealed gate or fallen into chasms
+      if (e.x >= gateX - 10) return false;
+      if (e.y > this.levelHeight + 30) return false;
       return true;
     }).length;
   }
 
   createBossArenaSeal(x, groundY = 380) {
-    // 1. Static physical collider blocking player
-    this.bossBarrierWall = this.add.rectangle(x, groundY - 110, 24, 240, 0x000000, 0);
+    // 1. Static physical collider blocking player and all flying/ground mobs from crossing
+    this.bossBarrierWall = this.add.rectangle(x, 200, 24, 440, 0x000000, 0);
     this.physics.add.existing(this.bossBarrierWall, true);
     this.platforms.add(this.bossBarrierWall);
 
@@ -2429,11 +2449,9 @@ export default class StoryScene extends Phaser.Scene {
       if (this.player.flipX && enemyCenterX > this.player.x) return;
     }
 
-    const dmg = this.player.getAttackDamage();
-    const isUpward = this.player.attackType === 'upward';
     const res = enemy.takeDamage(dmg, this.player.x, isUpward);
 
-    if (res && res.killed) {
+    if ((res && res.killed) || enemy.state === 'DEAD' || (enemy.hp !== undefined && enemy.hp <= 0)) {
       this.killsCount++;
       this.registerComboHit();
       this.onEnemyKilled();
@@ -2541,7 +2559,7 @@ export default class StoryScene extends Phaser.Scene {
       } else {
         const res = enemy.takeDamage(35, this.player.x);
         this.registerComboHit(true);
-        if (res && res.killed) {
+        if ((res && res.killed) || enemy.state === 'DEAD' || (enemy.hp !== undefined && enemy.hp <= 0)) {
           this.killsCount++;
           this.onEnemyKilled();
           if (typeof storage !== 'undefined') {
@@ -2758,14 +2776,41 @@ export default class StoryScene extends Phaser.Scene {
   }
 
   respawnPlayerAtSafeLedge(player) {
-    const rx = player.lastSafeX || 60;
-    const ry = player.lastSafeY || 346;
+    let rx = player.lastSafeX;
+    let ry = player.lastSafeY;
 
-    // Reset player velocity and position at safe ledge
+    // Validate whether candidate rx is situated safely on a registered ground segment away from hazards
+    const isOverHazard = (x) => this.hazards?.getChildren()?.some(h => {
+      const hb = h.body;
+      return hb && x >= hb.left - 20 && x <= hb.right + 20;
+    });
+
+    const isSafeOnGround = (x) => this.groundSegments?.some(s => x >= s.x1 + 35 && x <= s.x2 - 35);
+
+    if (!rx || isOverHazard(rx) || !isSafeOnGround(rx)) {
+      // Find the nearest ground segment to the left of the player's fall location
+      const leftSegments = (this.groundSegments || []).filter(s => s.x2 <= player.x).sort((a, b) => b.x2 - a.x2);
+      const chosenSeg = leftSegments[0] || (this.groundSegments && this.groundSegments[0]);
+      if (chosenSeg) {
+        rx = chosenSeg.x2 - 45;
+        ry = chosenSeg.y - 34;
+      } else {
+        rx = this.chapterId === 1 ? 60 : 40;
+        ry = 346;
+      }
+    }
+
+    player.lastSafeX = rx;
+    player.lastSafeY = ry;
+
+    // Reset player velocity, state and position at safe ledge
     player.setVelocity(0, 0);
     if (player.body) {
       player.body.reset(rx, ry);
+      player.body.velocity.x = 0;
+      player.body.velocity.y = 0;
     }
+    player.state = 0;
 
     // Camera quick pan to safe ledge
     this.cameras.main.pan(rx, ry - 28, 200, 'Quad.easeOut');
@@ -2782,7 +2827,7 @@ export default class StoryScene extends Phaser.Scene {
     });
 
     // Grace period invulnerability & player recovery blink
-    player.invulnerableUntil = this.time.now + 1600;
+    player.invulnerableUntil = this.time.now + 2000;
     player.setAlpha(0.3);
     this.tweens.add({
       targets: player,
@@ -3383,13 +3428,21 @@ export default class StoryScene extends Phaser.Scene {
     if (this.player) {
       this.player.update(this.cursors, touchInputs);
 
-      // Feature 1: Track last safe grounded coordinates (solid ground/platforms, Y <= 360)
-      if (this.player.body && (this.player.body.blocked.down || this.player.body.touching.down) && this.player.y <= 360) {
-        this.player.lastSafeX = this.player.x;
-        this.player.lastSafeY = this.player.y;
+      // Feature 1: Track confirmed safe grounded coordinates (solid main ground, not over hazards)
+      if (this.player.body && this.player.body.blocked.down && this.player.y <= 360) {
+        const px = this.player.x;
+        const safeSeg = this.groundSegments?.find(s => px >= s.x1 + 35 && px <= s.x2 - 35);
+        const overHazard = this.hazards?.getChildren()?.some(h => {
+          const hb = h.body;
+          return hb && px >= hb.left - 20 && px <= hb.right + 20;
+        });
+        if (safeSeg && !overHazard) {
+          this.player.lastSafeX = px;
+          this.player.lastSafeY = safeSeg.y - 34;
+        }
       }
 
-      const gateX = this.chapterId === 1 ? 2310 : 2090;
+      const gateX = this.gateX || (this.chapterId === 1 ? 2310 : 2090);
       const arenaThresholdX = this.chapterId === 1 ? 2320 : 2120;
       const remainingFoes = this.getRemainingEnemiesCount();
 
@@ -3419,9 +3472,7 @@ export default class StoryScene extends Phaser.Scene {
             }
           }
         } else {
-          this.dismissEnemyTracker();
-
-          // All foes are defeated! Ensure arena is unsealed
+          // All foes defeated! Drop the mystical gate with triumphant fanfare
           if (!this.bossArenaUnsealed) {
             this.unsealBossArena();
           }
@@ -3446,10 +3497,22 @@ export default class StoryScene extends Phaser.Scene {
 
     // Update enemies only when NOT in dialogue
     if (this.enemies) {
+      const gateX = this.gateX || (this.chapterId === 1 ? 2310 : 2090);
       this.enemies.getChildren().forEach(enemy => {
         if (!this.inDialogue) {
           enemy.update(this.player);
         }
+
+        // Clamp regular mobs before the closed boss gate
+        if (!this.bossArenaUnsealed && enemy.active && enemy.state !== 'DEAD' && (!enemy.mobType || !enemy.mobType.startsWith('boss'))) {
+          if (enemy.x >= gateX - 20) {
+            enemy.x = gateX - 60;
+            if (enemy.patrolDir) enemy.patrolDir = -1;
+            if (enemy.body) enemy.body.setVelocityX(Math.min(enemy.body.velocity.x, -60));
+          }
+        }
+
+        // Failsafe: auto-cull fallen mobs so they never soft-lock progression
         if (enemy.active && enemy.state !== 'DEAD' && enemy.y > this.levelHeight + 20) {
           if (typeof enemy.die === 'function') {
             enemy.die();

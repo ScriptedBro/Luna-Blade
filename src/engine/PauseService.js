@@ -267,6 +267,9 @@ export class PauseService {
     if (this.modal) {
       this.modal.classList.add('hidden');
     }
+    if (sceneToRestart.physics && sceneToRestart.physics.world) {
+      sceneToRestart.physics.resume();
+    }
     sound.playCoin();
 
     if (sceneToRestart.chapterId) {
