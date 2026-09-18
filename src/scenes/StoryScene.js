@@ -56,6 +56,12 @@ export default class StoryScene extends Phaser.Scene {
     this.bossApproachBanner = null;
     this.bossBattleBanner = null;
     this.bossApproachMarkers = [];
+    this.bossBarrierWall = null;
+    this.bossBarrierVisual = null;
+    this.bossArenaUnsealed = false;
+    this.bossLockedBanner = null;
+    this.lastBossLockedWarningTime = 0;
+    this.initialLevelEnemiesCount = 0;
     this.arenaGateWall = null;
     this.arenaGateVisual = null;
     this.skipIntroCard = Boolean(data && data.skipIntroCard);
@@ -78,6 +84,14 @@ export default class StoryScene extends Phaser.Scene {
       this.bossBattleBanner.destroy();
       this.bossBattleBanner = null;
     }
+    if (this.bossLockedBanner) {
+      this.bossLockedBanner.destroy();
+      this.bossLockedBanner = null;
+    }
+    if (this.bossBarrierVisual) {
+      this.bossBarrierVisual.destroy();
+      this.bossBarrierVisual = null;
+    }
 
     if (typeof window !== 'undefined' && window.touchController) {
       window.touchController.hide();
@@ -95,6 +109,14 @@ export default class StoryScene extends Phaser.Scene {
       if (this.bossBattleBanner) {
         this.bossBattleBanner.destroy();
         this.bossBattleBanner = null;
+      }
+      if (this.bossLockedBanner) {
+        this.bossLockedBanner.destroy();
+        this.bossLockedBanner = null;
+      }
+      if (this.bossBarrierVisual) {
+        this.bossBarrierVisual.destroy();
+        this.bossBarrierVisual = null;
       }
       if (this.activeGameOverCleanup) {
         this.activeGameOverCleanup();
@@ -130,8 +152,15 @@ export default class StoryScene extends Phaser.Scene {
     // Build the Level Geometry & Spawns
     this.buildChapterLevel();
 
+    // Track total level enemies and place the mystical Boss Arena Seal
+    this.initialLevelEnemiesCount = this.enemies ? this.enemies.getChildren().length : 0;
+    const gateX = this.chapterId === 1 ? 2310 : 2090;
+    this.createBossArenaSeal(gateX, 380);
+
     // Spawn Player standing on ground (Y=380)
     this.player = new Player(this, 60, 346);
+    this.player.lastSafeX = 60;
+    this.player.lastSafeY = 346;
     this.physics.add.collider(this.player, this.platforms);
 
     // Camera follow
@@ -203,8 +232,26 @@ export default class StoryScene extends Phaser.Scene {
     this.physics.add.overlap(this.enemies, this.projectiles, (enemy, proj) => {
       if (!proj.isDeflected || proj.isDead || enemy.state === 'DEAD') return;
       proj.explode();
-      enemy.takeDamage(35, proj.x);
+      const res = enemy.takeDamage(35, proj.x);
+      if (res && res.killed) {
+        this.killsCount++;
+        this.registerComboHit();
+        this.onEnemyKilled();
+      }
     });
+
+    // Player attack vs Boss Barrier
+    if (this.bossBarrierWall) {
+      this.physics.add.overlap(this.player.attackHitbox, this.bossBarrierWall, () => {
+        if (!this.bossArenaUnsealed && !this.bossTriggered) {
+          if (this.player.currentSwingHits && this.player.currentSwingHits.has(this.bossBarrierWall)) return;
+          if (this.player.currentSwingHits) this.player.currentSwingHits.add(this.bossBarrierWall);
+          sound.playRicochet();
+          const rem = this.getRemainingEnemiesCount();
+          this.triggerBossLockedWarning(rem);
+        }
+      });
+    }
 
     // Player attack vs crates
     this.physics.add.overlap(this.player.attackHitbox, this.crates, (hitbox, crate) => {
@@ -264,68 +311,63 @@ export default class StoryScene extends Phaser.Scene {
     // =========================================================================
     // Chapter 1: Whispering Woods (2800px) - Forest & Lake, Water Hazards
     // =========================================================================
-    // --- ZONE 1: The Forest Outskirts (0 - 640px) ---
-    this.createGround(0, 380, 520);
-    this.createHazard(520, 400, 120, 'WATER HAZARD 🌊');
+    // --- ZONE 1: The Forest Outskirts (0 - 480px) ---
+    this.createGround(0, 380, 480);
+    this.spawnMob('boar', 220, 340);
+    this.spawnMob('snail', 340, 340);
 
-    this.createPlatform(180, 310, 90);
-    this.createPlatform(320, 250, 110);
+    // --- OBSTACLE 1: Cascades Chasm (480 - 740px, 260px wide water chasm) ---
+    // Ground leap cannot clear 260px! Must use stepping boughs over the roaring water!
+    this.createHazard(480, 400, 260, 'WATER HAZARD 🌊');
+    this.createPlatform(430, 315, 96); // Launching bough
+    this.createPlatform(550, 260, 96); // Mid-water stepping stone
+    this.createPlatform(670, 305, 96); // Receiving bough
+    this.spawnMob('bee', 550, 150);
+    this.spawnCrate(550, 225);
 
-    this.spawnMob('boar', 240, 340);
-    this.spawnMob('boar', 440, 340);
-    this.spawnMob('snail', 340, 230);
-    this.spawnCrate(330, 220);
+    // --- ZONE 2: Lake Watchtower Ridge (740 - 1020px) ---
+    this.createGround(740, 380, 280);
+    this.spawnMob('boar', 840, 340);
+    this.spawnMob('snail', 940, 340);
 
-    // --- ZONE 2: Lake Cascades & Watchtower Lookout (640 - 1120px) ---
-    this.createGround(640, 380, 340);
-    this.createHazard(980, 400, 140, 'WATER HAZARD 🌊');
+    // --- OBSTACLE 2: Watchtower Ravine Ascent (1020 - 1300px, 280px gap) ---
+    // Rushing water abyss! Ascending watchtower staircase of platforms
+    this.createHazard(1020, 400, 280, 'WATER HAZARD 🌊');
+    this.createPlatform(980, 310, 96);  // Step 1: Lower scaffold
+    this.createPlatform(1090, 240, 96); // Step 2: High watchtower deck (with Crate)
+    this.createPlatform(1200, 280, 96); // Step 3: Descending step
+    this.spawnMob('flying_eye', 1100, 140);
+    this.spawnMob('snail', 1090, 205);
+    this.spawnCrate(1130, 205);
 
-    this.createPlatform(720, 300, 90);
-    this.createPlatform(840, 240, 100);
+    // --- ZONE 3: Ancient Pine Canopy & Ravine (1300 - 1540px) ---
+    this.createGround(1300, 380, 240);
+    this.spawnMob('mushroom', 1370, 340);
+    this.spawnMob('goblin', 1470, 340);
 
-    this.createPlatform(990, 320, 48);
-    this.createPlatform(1055, 270, 48);
+    // --- OBSTACLE 3: Deep Forest Ravine (1540 - 1820px, 280px gap) ---
+    // Deep chasm. High canopy bridge gives safe passage and tactical drop on enemies!
+    this.createHazard(1540, 400, 280, 'WATER HAZARD 🌊');
+    this.createPlatform(1500, 295, 96); // Canopy climb 1
+    this.createPlatform(1610, 230, 96); // High canopy bridge (with Crate)
+    this.createPlatform(1730, 270, 96); // Drop-stomp perch above patrol
+    this.spawnMob('flying_eye', 1620, 140);
+    this.spawnMob('mushroom', 1610, 195);
+    this.spawnCrate(1610, 195);
 
-    this.createPlatform(1010, 185, 90);
-    this.spawnCrate(1030, 155);
+    // --- ZONE 3b: Pine Glade Patrol (1820 - 2080px) ---
+    this.createGround(1820, 380, 260);
+    this.spawnMob('boar', 1900, 340);
+    this.spawnMob('goblin', 2000, 340);
+    this.spawnCrate(1850, 350);
 
-    this.spawnMob('boar', 780, 340);
-    this.spawnMob('snail', 680, 340);
-    this.spawnMob('snail', 860, 220);
-    this.spawnMob('bee', 820, 150);
-    this.spawnMob('flying_eye', 1040, 130);
-    this.spawnCrate(740, 270);
-
-    // --- ZONE 3: Ancient Pine Canopy & Ravine (1120 - 2060px) ---
-    this.createGround(1120, 380, 400);
-    this.createHazard(1520, 400, 120, 'WATER HAZARD 🌊');
-    this.createGround(1640, 380, 420);
-
-    this.createPlatform(1220, 300, 90);
-    this.createPlatform(1370, 240, 100);
-    this.createPlatform(1540, 290, 80);
-    this.createPlatform(1700, 230, 100);
-    this.createPlatform(1860, 180, 120);
-
-    this.spawnMob('mushroom', 1240, 340);
-    this.spawnMob('snail', 1390, 220);
-    this.spawnMob('flying_eye', 1460, 150);
-    this.spawnMob('goblin', 1680, 340);
-    this.spawnMob('boar', 1760, 340);
-    this.spawnMob('mushroom', 1860, 340);
-    this.spawnMob('goblin', 1980, 340);
-
-    this.spawnCrate(1240, 270);
-    this.spawnCrate(1400, 350);
-    this.spawnCrate(1720, 200);
-    this.spawnCrate(1880, 150);
-
-    // --- ZONE 4: Obelisk Sanctuary & Boss Arena (2060 - 2800px) ---
-    this.createHazard(2060, 400, 100, 'WATER HAZARD 🌊');
+    // --- ZONE 4: Sanctuary Moat & Boss Approach (2080 - 2800px) ---
+    this.createHazard(2080, 400, 80, 'WATER HAZARD 🌊');
+    this.createPlatform(2060, 310, 96); // Moat crossing bridge
     this.createGround(2160, 380, 640);
 
-    this.createPlatform(2260, 300, 100);
-    this.createPlatform(2440, 240, 110);
+    this.createPlatform(2260, 300, 96);
+    this.createPlatform(2440, 240, 96);
 
     this.spawnMob('boar', 2220, 340);
     this.spawnMob('snail', 2280, 340);
@@ -344,51 +386,60 @@ export default class StoryScene extends Phaser.Scene {
     // =========================================================================
     // Chapter 2: The Hive Canopy (2600px) - Autumn Trees, Honeycomb Traps, Bees
     // =========================================================================
-    this.createGround(0, 380, 480);
-    this.createHazard(480, 395, 80, 'HONEYCOMB TRAP 🍯');
-    this.createGround(560, 380, 480);
-    this.createHazard(1040, 395, 80, 'HONEYCOMB TRAP 🍯');
-    this.createGround(1120, 380, 520);
-    this.createHazard(1640, 395, 80, 'HONEYCOMB TRAP 🍯');
-    this.createGround(1720, 380, 880);
+    // --- ZONE 1: Canopy Outskirts (0 - 460px) ---
+    this.createGround(0, 380, 460);
+    this.spawnMob('boar', 220, 340);
+    this.spawnMob('snail', 360, 340);
 
-    this.createPlatform(160, 300, 90);
-    this.createPlatform(260, 230, 90);
-    this.createPlatform(420, 180, 120);
-    this.createPlatform(600, 230, 90);
-    this.createPlatform(780, 170, 130);
-    this.createPlatform(960, 250, 110);
-    this.createPlatform(1200, 290, 100);
-    this.createPlatform(1360, 220, 110);
-    this.createPlatform(1520, 170, 120);
-    this.createPlatform(1760, 280, 100);
-    this.createPlatform(1940, 210, 120);
-    this.createPlatform(2180, 270, 100);
-    this.createPlatform(2340, 210, 120);
-    this.createPlatform(2480, 270, 100);
+    // --- OBSTACLE 1: Amber Chasm (460 - 740px, 280px wide Honeycomb Trap) ---
+    // Cannot be jumped from ground! Must climb giant branch platforms!
+    this.createHazard(460, 395, 280, 'HONEYCOMB TRAP 🍯');
+    this.createPlatform(410, 310, 150); // Branch 1: Launch bough
+    this.createPlatform(540, 240, 150); // Branch 2: Suspended hive bough (with Crate)
+    this.createPlatform(670, 290, 150); // Branch 3: Descent bough
+    this.spawnMob('bee', 540, 140);
+    this.spawnMob('flying_eye', 660, 150);
+    this.spawnCrate(580, 205);
 
-    this.spawnMob('bee', 220, 160);
-    this.spawnMob('flying_eye', 440, 120);
-    this.spawnMob('snail', 460, 155);
-    this.spawnMob('boar', 340, 340);
-    this.spawnMob('mushroom', 600, 200);
-    this.spawnMob('goblin', 780, 140);
-    this.spawnMob('bee', 900, 120);
-    this.spawnMob('boar', 820, 340);
-    this.spawnMob('flying_eye', 1200, 140);
-    this.spawnMob('mushroom', 1360, 190);
-    this.spawnMob('goblin', 1520, 140);
-    this.spawnMob('bee', 1540, 120);
-    this.spawnMob('boar', 1740, 340);
-    this.spawnMob('flying_eye', 1880, 140);
-    this.spawnMob('snail', 1960, 180);
+    // --- ZONE 2: Hive Ridge (740 - 1020px) ---
+    this.createGround(740, 380, 280);
+    this.spawnMob('boar', 830, 340);
+    this.spawnMob('mushroom', 940, 340);
 
-    this.spawnCrate(280, 205);
-    this.spawnCrate(800, 145);
-    this.spawnCrate(1140, 350);
-    this.spawnCrate(1380, 195);
-    this.spawnCrate(1780, 255);
-    this.spawnCrate(2200, 245);
+    // --- OBSTACLE 2: Great Hive Ravine (1020 - 1320px, 300px wide Honeycomb Trap) ---
+    // Deep honey trap guarded by swarm. Stepped branches are the only way across!
+    this.createHazard(1020, 395, 300, 'HONEYCOMB TRAP 🍯');
+    this.createPlatform(970, 310, 150);  // Branch 1: Ascent
+    this.createPlatform(1100, 230, 150); // Branch 2: High hive crown (with Crate)
+    this.createPlatform(1230, 280, 150); // Branch 3: Descent
+    this.spawnMob('bee', 1100, 130);
+    this.spawnMob('snail', 1120, 195);
+    this.spawnCrate(1140, 195);
+
+    // --- ZONE 3: Mid-Canopy Grove (1320 - 1560px) ---
+    this.createGround(1320, 380, 240);
+    this.spawnMob('goblin', 1400, 340);
+    this.spawnMob('mushroom', 1500, 340);
+
+    // --- OBSTACLE 3: Queen's Bough Overpass (1560 - 1860px, 300px wide Trap) ---
+    // Fatal honey pit! High canopy walkway spanning the chasm.
+    this.createHazard(1560, 395, 300, 'HONEYCOMB TRAP 🍯');
+    this.createPlatform(1510, 300, 150); // Canopy step 1
+    this.createPlatform(1640, 220, 150); // Canopy step 2: Queen's bough
+    this.createPlatform(1770, 270, 150); // Canopy step 3: Overlook perch
+    this.spawnMob('bee', 1640, 130);
+    this.spawnMob('goblin', 1660, 180);
+    this.spawnCrate(1680, 185);
+
+    // --- ZONE 4: Golden Hive Sanctuary & Boss Approach (1860 - 2600px) ---
+    this.createGround(1860, 380, 740);
+    this.spawnMob('boar', 1920, 340);
+    this.spawnMob('flying_eye', 1940, 150);
+    this.spawnMob('snail', 1980, 340);
+
+    this.createPlatform(2180, 270, 150);
+    this.createPlatform(2340, 210, 150);
+    this.spawnCrate(2200, 235);
     this.spawnCrate(2420, 350);
 
     // Warning signpost and amber totems marking boss arena approach
@@ -402,53 +453,58 @@ export default class StoryScene extends Phaser.Scene {
     // =========================================================================
     // Chapter 3: Sunken Ruins (2600px) - Mossy Stone, Spike Traps, Boss Vorgath
     // =========================================================================
-    this.createGround(0, 380, 400);
-    this.createHazard(400, 400, 90, 'ANCIENT SPIKES ⚡');
-    this.createGround(490, 380, 440);
-    this.createHazard(930, 400, 100, 'ANCIENT SPIKES ⚡');
-    this.createGround(1030, 380, 460);
-    this.createHazard(1490, 400, 100, 'ANCIENT SPIKES ⚡');
-    this.createGround(1590, 380, 400);
-    this.createHazard(1990, 400, 90, 'ANCIENT SPIKES ⚡');
-    this.createGround(2080, 380, 520);
+    // --- ZONE 1: Ruined Courtyard (0 - 420px) ---
+    this.createGround(0, 380, 420);
+    this.spawnMob('boar', 200, 340);
+    this.spawnMob('snail', 320, 340);
 
-    // Stepping stone platforms
-    this.createPlatform(140, 280, 80);
-    this.createPlatform(290, 220, 90);
-    this.createPlatform(460, 260, 90);
-    this.createPlatform(620, 190, 90);
-    this.createPlatform(780, 240, 100);
-    this.createPlatform(980, 210, 90);
-    this.createPlatform(1180, 280, 90);
-    this.createPlatform(1340, 210, 100);
-    this.createPlatform(1520, 250, 90);
-    this.createPlatform(1700, 190, 100);
-    this.createPlatform(1920, 230, 90);
-    this.createPlatform(2200, 260, 90);
-    this.createPlatform(2380, 200, 90);
+    // --- OBSTACLE 1: Spiked Moat (420 - 700px, 280px wide Ancient Spikes) ---
+    // Fatal spike pit! Stepping stone columns are required to cross!
+    this.createHazard(420, 400, 280, 'ANCIENT SPIKES ⚡');
+    this.createPlatform(380, 310, 96); // Column 1
+    this.createPlatform(500, 240, 96); // Column 2: High pedestal (with Crate)
+    this.createPlatform(620, 290, 96); // Column 3
+    this.spawnMob('flying_eye', 500, 140);
+    this.spawnCrate(510, 205);
 
-    // Pre-arena Crypt Monsters
-    this.spawnMob('boar', 180, 340);
-    this.spawnMob('snail', 310, 200);
-    this.spawnMob('mushroom', 400, 340);
-    this.spawnMob('flying_eye', 480, 160);
-    this.spawnMob('goblin', 700, 340);
-    this.spawnMob('boar', 820, 340);
-    this.spawnMob('bee', 850, 140);
-    this.spawnMob('mushroom', 1140, 340);
-    this.spawnMob('goblin', 1280, 340);
-    this.spawnMob('flying_eye', 1360, 160);
-    this.spawnMob('snail', 1540, 230);
-    this.spawnMob('boar', 1740, 340);
-    this.spawnMob('mushroom', 1820, 140);
-    this.spawnMob('goblin', 1940, 200);
+    // --- ZONE 2: Crypt Hallway (700 - 980px) ---
+    this.createGround(700, 380, 280);
+    this.spawnMob('goblin', 780, 340);
+    this.spawnMob('boar', 880, 340);
 
-    this.spawnCrate(310, 195);
-    this.spawnCrate(800, 215);
-    this.spawnCrate(1100, 350);
-    this.spawnCrate(1360, 185);
-    this.spawnCrate(1720, 165);
-    this.spawnCrate(2120, 245);
+    // --- OBSTACLE 2: Crypt Colonnade Abyss (980 - 1280px, 300px wide Spikes) ---
+    // Deep spiked chasm. Multi-tier stone columns provide the only crossing.
+    this.createHazard(980, 400, 300, 'ANCIENT SPIKES ⚡');
+    this.createPlatform(940, 310, 96);  // Pillar 1
+    this.createPlatform(1060, 230, 96); // Pillar 2: High archway (with Crate)
+    this.createPlatform(1180, 280, 96); // Pillar 3
+    this.spawnMob('bee', 1060, 140);
+    this.spawnMob('mushroom', 1080, 195);
+    this.spawnCrate(1080, 195);
+
+    // --- ZONE 3: Sunken Catacombs (1280 - 1540px) ---
+    this.createGround(1280, 380, 260);
+    this.spawnMob('goblin', 1360, 340);
+    this.spawnMob('snail', 1460, 340);
+
+    // --- OBSTACLE 3: Vorgath's Spiked Precipice (1540 - 1840px, 300px Spikes) ---
+    // Ancient stone pillars across the spike trench.
+    this.createHazard(1540, 400, 300, 'ANCIENT SPIKES ⚡');
+    this.createPlatform(1500, 300, 96); // Pillar 1
+    this.createPlatform(1620, 220, 96); // Pillar 2: High tomb pillar (with Crate)
+    this.createPlatform(1740, 270, 96); // Pillar 3: Overlook perch
+    this.spawnMob('flying_eye', 1620, 130);
+    this.spawnMob('mushroom', 1640, 185);
+    this.spawnCrate(1640, 185);
+
+    // --- ZONE 4: Crypt Sanctuary & Boss Approach (1840 - 2600px) ---
+    this.createGround(1840, 380, 760);
+    this.spawnMob('boar', 1900, 340);
+    this.spawnMob('goblin', 1960, 340);
+
+    this.createPlatform(2120, 270, 96);
+    this.createPlatform(2300, 210, 96);
+    this.spawnCrate(2140, 235);
     this.spawnCrate(2380, 350);
 
     // Warning signpost and crypt flame pillars marking boss arena approach
@@ -463,52 +519,61 @@ export default class StoryScene extends Phaser.Scene {
     // =========================================================================
     // Chapter 4: Obsidian Caldera (2600px) - Volcanic Magma, Basalt Platforms, Ignis
     // =========================================================================
-    this.createGround(0, 380, 440);
-    this.createHazard(440, 400, 140, 'MOLTEN LAVA 🔥');
-    this.createGround(580, 380, 440);
-    this.createHazard(1020, 400, 160, 'MOLTEN LAVA 🔥');
-    this.createGround(1180, 380, 420);
-    this.createHazard(1600, 400, 160, 'MOLTEN LAVA 🔥');
-    this.createGround(1760, 380, 230);
-    this.createHazard(1990, 400, 90, 'MOLTEN LAVA 🔥');
-    this.createGround(2080, 380, 520);
+    // --- ZONE 1: Caldera Edge (0 - 420px) ---
+    this.createGround(0, 380, 420);
+    this.spawnMob('goblin', 220, 340);
+    this.spawnMob('boar', 340, 340);
 
-    // Obsidian platforms over lava chasms
-    this.createPlatform(180, 290, 96);
-    this.createPlatform(320, 230, 96);
-    this.createPlatform(470, 260, 96);
-    this.createPlatform(640, 210, 96);
-    this.createPlatform(800, 260, 96);
-    this.createPlatform(940, 200, 144);
-    this.createPlatform(1060, 260, 96);
-    this.createPlatform(1220, 220, 96);
-    this.createPlatform(1380, 270, 96);
-    this.createPlatform(1520, 200, 96);
-    this.createPlatform(1640, 250, 96);
-    this.createPlatform(1820, 280, 96);
-    this.createPlatform(1960, 220, 96);
-    this.createPlatform(2240, 270, 96);
-    this.createPlatform(2420, 210, 96);
+    // --- OBSTACLE 1: Magma Rift (420 - 720px, 300px wide Molten Lava & Geyser) ---
+    // Boiling magma! Stepping basalt platforms over erupting geyser
+    this.createHazard(420, 400, 300, 'MOLTEN LAVA 🔥');
+    this.createPlatform(380, 300, 96); // Basalt 1
+    this.createPlatform(500, 220, 96); // Basalt 2: High perch over geyser (with Crate)
+    this.createPlatform(620, 270, 96); // Basalt 3
+    this.spawnMob('flying_eye', 500, 130);
+    this.spawnCrate(510, 185);
+    this.createLavaGeyser(570, 392, 240, 0);
 
-    // Volcanic Foes
-    this.spawnMob('goblin', 240, 340);
-    this.spawnMob('flying_eye', 340, 160);
-    this.spawnMob('boar', 680, 340);
+    // --- ZONE 2: Basalt Ridge (720 - 1000px) ---
+    this.createGround(720, 380, 280);
     this.spawnMob('mushroom', 820, 340);
-    this.spawnMob('flying_eye', 960, 140);
-    this.spawnMob('goblin', 1260, 340);
-    this.spawnMob('flying_eye', 1400, 160);
-    this.spawnMob('mushroom', 1480, 340);
-    this.spawnMob('boar', 1840, 340);
-    this.spawnMob('goblin', 1980, 180);
+    this.spawnMob('boar', 920, 340);
 
-    // Crates
-    this.spawnCrate(340, 195);
-    this.spawnCrate(660, 175);
-    this.spawnCrate(960, 165);
-    this.spawnCrate(1400, 235);
-    this.spawnCrate(1840, 245);
-    this.spawnCrate(2260, 235);
+    // --- OBSTACLE 2: Basalt Lake (1000 - 1320px, 320px wide Molten Lava & Geyser) ---
+    // Wide molten lake! High basalt bridges required to navigate safely
+    this.createHazard(1000, 400, 320, 'MOLTEN LAVA 🔥');
+    this.createPlatform(960, 300, 96);  // Basalt 1
+    this.createPlatform(1080, 220, 96); // Basalt 2: High volcanic ledge (with Crate)
+    this.createPlatform(1200, 270, 96); // Basalt 3
+    this.spawnMob('flying_eye', 1080, 130);
+    this.spawnMob('mushroom', 1100, 185);
+    this.spawnCrate(1100, 185);
+    this.createLavaGeyser(1140, 392, 240, 900);
+
+    // --- ZONE 3: Obsidian Steppes (1320 - 1560px) ---
+    this.createGround(1320, 380, 240);
+    this.spawnMob('goblin', 1400, 340);
+    this.spawnMob('flying_eye', 1480, 160);
+
+    // --- OBSTACLE 3: Crucible Bridge (1560 - 1880px, 320px wide Molten Lava) ---
+    // Deep magma pit with lava eruptions.
+    this.createHazard(1560, 400, 320, 'MOLTEN LAVA 🔥');
+    this.createPlatform(1520, 300, 96); // Basalt 1
+    this.createPlatform(1640, 220, 96); // Basalt 2: Crucible platform (with Crate)
+    this.createPlatform(1760, 270, 96); // Basalt 3
+    this.spawnMob('flying_eye', 1640, 130);
+    this.spawnCrate(1660, 185);
+    this.createLavaGeyser(1700, 392, 240, 1800);
+
+    // --- ZONE 4: Molten Core Sanctuary & Boss Approach (1880 - 2600px) ---
+    this.createGround(1880, 380, 720);
+    this.spawnMob('boar', 1920, 340);
+    this.spawnMob('goblin', 1980, 340);
+
+    this.createPlatform(2200, 270, 96);
+    this.createPlatform(2380, 210, 96);
+    this.spawnCrate(2220, 235);
+    this.spawnCrate(2420, 350);
 
     // Warning signpost and obsidian magma pillars marking boss arena approach
     this.createBossApproachLandmarks(1940, 380);
@@ -516,66 +581,65 @@ export default class StoryScene extends Phaser.Scene {
     // Caldera Obelisk (Locked by Ignis)
     this.obelisk = new Obelisk(this, 2520, 380, 'Shrine of the Molten Core');
     this.obelisk.lock();
-
-    // Periodic lava geyser eruptions across molten pits for timed platform leaps
-    this.createLavaGeyser(510, 392, 240, 0);
-    this.createLavaGeyser(1100, 392, 240, 900);
-    this.createLavaGeyser(1680, 392, 240, 1800);
-    this.createLavaGeyser(2035, 392, 240, 2700);
   }
 
   buildChapter5LunarSpire() {
     // =========================================================================
     // Chapter 5: The Lunar Spire (2600px) - Astral Chasm, Crystal Steps, Umbra
     // =========================================================================
-    this.createGround(0, 380, 420);
-    this.createHazard(420, 400, 140, 'ASTRAL CHASM 🌌');
-    this.createGround(560, 380, 420);
-    this.createHazard(980, 400, 160, 'ASTRAL CHASM 🌌');
-    this.createGround(1140, 380, 420);
-    this.createHazard(1560, 400, 160, 'ASTRAL CHASM 🌌');
-    this.createGround(1720, 380, 270);
-    this.createHazard(1990, 400, 90, 'ASTRAL CHASM 🌌');
-    this.createGround(2080, 380, 520);
+    // --- ZONE 1: Astral Foothills (0 - 400px) ---
+    this.createGround(0, 380, 400);
+    this.spawnMob('goblin', 200, 340);
+    this.spawnMob('boar', 320, 340);
 
-    // Celestial crystal steps
-    this.createPlatform(160, 280, 96);
-    this.createPlatform(280, 210, 96);
-    this.createPlatform(450, 250, 96);
-    this.createPlatform(620, 200, 96);
-    this.createPlatform(780, 270, 96);
-    this.createPlatform(920, 190, 144);
-    this.createPlatform(1030, 250, 96);
-    this.createPlatform(1200, 210, 96);
-    this.createPlatform(1360, 260, 96);
-    this.createPlatform(1500, 180, 96);
-    this.createPlatform(1610, 240, 96);
-    this.createPlatform(1800, 270, 96);
-    this.createPlatform(1940, 200, 96);
-    this.createPlatform(2220, 270, 96);
-    this.createPlatform(2400, 200, 96);
+    // --- OBSTACLE 1: Void Rift Crossing (400 - 720px, 320px wide Astral Chasm) ---
+    // Bottomless cosmic abyss! Floating crystal steps required to cross!
+    this.createHazard(400, 400, 320, 'ASTRAL CHASM 🌌');
+    this.createPlatform(360, 310, 96); // Crystal 1
+    this.createPlatform(480, 230, 96); // Crystal 2: Celestial step (with Crate)
+    this.createPlatform(600, 280, 96); // Crystal 3
+    this.spawnMob('flying_eye', 480, 140);
+    this.spawnMob('bee', 600, 150);
+    this.spawnCrate(490, 195);
 
-    // Celestial Void Guardians
-    this.spawnMob('flying_eye', 220, 140);
-    this.spawnMob('goblin', 320, 340);
-    this.spawnMob('bee', 480, 140);
-    this.spawnMob('mushroom', 660, 340);
-    this.spawnMob('boar', 840, 340);
-    this.spawnMob('flying_eye', 940, 130);
-    this.spawnMob('goblin', 1240, 340);
-    this.spawnMob('bee', 1380, 140);
-    this.spawnMob('mushroom', 1460, 340);
-    this.spawnMob('flying_eye', 1620, 130);
-    this.spawnMob('goblin', 1820, 340);
-    this.spawnMob('boar', 1960, 340);
+    // --- ZONE 2: Starlight Ridge (720 - 1000px) ---
+    this.createGround(720, 380, 280);
+    this.spawnMob('mushroom', 820, 340);
+    this.spawnMob('boar', 920, 340);
 
-    // Crates
-    this.spawnCrate(300, 175);
-    this.spawnCrate(640, 165);
-    this.spawnCrate(940, 155);
-    this.spawnCrate(1380, 225);
-    this.spawnCrate(1820, 235);
-    this.spawnCrate(2240, 235);
+    // --- OBSTACLE 2: Celestial Staircase (1000 - 1340px, 340px wide Astral Chasm) ---
+    // Multi-tier crystal stairway ascending above the void abyss
+    this.createHazard(1000, 400, 340, 'ASTRAL CHASM 🌌');
+    this.createPlatform(960, 310, 96);  // Step 1: Ascent
+    this.createPlatform(1080, 220, 96); // Step 2: High astral balcony (with Crate)
+    this.createPlatform(1220, 280, 96); // Step 3: Descent
+    this.spawnMob('flying_eye', 1080, 130);
+    this.spawnMob('bee', 1220, 140);
+    this.spawnCrate(1100, 185);
+
+    // --- ZONE 3: Astral Plateau (1340 - 1580px) ---
+    this.createGround(1340, 380, 240);
+    this.spawnMob('goblin', 1420, 340);
+    this.spawnMob('mushroom', 1500, 340);
+
+    // --- OBSTACLE 3: Starlight Precipice (1580 - 1900px, 320px wide Astral Chasm) ---
+    // Cosmic void gap into the Lunar Spire core.
+    this.createHazard(1580, 400, 320, 'ASTRAL CHASM 🌌');
+    this.createPlatform(1540, 300, 96); // Crystal step 1
+    this.createPlatform(1660, 220, 96); // Crystal step 2: High Spire balcony (with Crate)
+    this.createPlatform(1780, 270, 96); // Crystal step 3
+    this.spawnMob('flying_eye', 1660, 130);
+    this.spawnCrate(1680, 185);
+
+    // --- ZONE 4: Lunar Heart Sanctuary & Final Boss Approach (1900 - 2600px) ---
+    this.createGround(1900, 380, 700);
+    this.spawnMob('boar', 1940, 340);
+    this.spawnMob('goblin', 1980, 340);
+
+    this.createPlatform(2180, 270, 96);
+    this.createPlatform(2360, 210, 96);
+    this.spawnCrate(2200, 235);
+    this.spawnCrate(2420, 350);
 
     // Warning signpost and celestial spires marking boss arena approach
     this.createBossApproachLandmarks(1940, 380);
@@ -826,7 +890,7 @@ export default class StoryScene extends Phaser.Scene {
 
     const body = this.add.rectangle(x + actualWidth / 2, y + 6, actualWidth, 12, 0x000000, 0);
     this.physics.add.existing(body, true);
-    body.body.checkCollision.down = true;
+    body.body.checkCollision.down = false;
     body.body.checkCollision.left = false;
     body.body.checkCollision.right = false;
     body.body.checkCollision.up = true;
@@ -891,10 +955,38 @@ export default class StoryScene extends Phaser.Scene {
       this.add.image(x + 4, y - 8, 'prop_reeds').setOrigin(0.5, 1.0).setDepth(12);
       this.add.image(x + width - 4, y - 8, 'prop_reeds').setOrigin(0.5, 1.0).setDepth(12).setFlipX(true);
     } else if (this.chapterId === 2) {
-      const hCount = Math.ceil(width / 32);
-      for (let i = 0; i < hCount; i++) {
-        const hive = this.add.image(x + i * 32 + 16, y + 8, 'env_hive').setOrigin(0.5, 0.5).setScale(0.7).setDepth(11);
-        hive.setTint(0xffaa22);
+      // Golden Amber Honey Trap: flowing liquid surface at ravine base with amber bubbles
+      const honeyCount = Math.ceil(width / 64);
+      for (let i = 0; i < honeyCount; i++) {
+        const honeySurface = this.add.image(x + i * 64, y - 8, 'water_surface')
+          .setOrigin(0, 0)
+          .setDepth(11)
+          .setTint(0xffaa00);
+        this.tweens.add({
+          targets: honeySurface,
+          y: y - 5,
+          duration: 1100 + i * 160,
+          yoyo: true,
+          repeat: -1,
+          ease: 'Sine.easeInOut'
+        });
+        this.add.image(x + i * 64, y + 24, 'water_deep')
+          .setOrigin(0, 0)
+          .setDepth(10)
+          .setTint(0x995500);
+      }
+      // Rising golden honey bubbles
+      for (let i = 0; i < Math.floor(width / 36); i++) {
+        const bubble = this.add.circle(x + 18 + i * 36, y + 8, 3, 0xffd54f, 0.75).setDepth(12);
+        this.tweens.add({
+          targets: bubble,
+          y: y - 18,
+          alpha: 0,
+          scale: 1.5,
+          duration: 900 + (i % 3) * 260,
+          repeat: -1,
+          ease: 'Sine.easeOut'
+        });
       }
     } else {
       const sCount = Math.ceil(width / 16);
@@ -1272,10 +1364,462 @@ export default class StoryScene extends Phaser.Scene {
     });
   }
 
+  getRemainingEnemiesCount() {
+    if (!this.enemies) return 0;
+    return this.enemies.getChildren().filter(e => {
+      if (!e.active) return false;
+      if (e.state === 'DEAD' || e.isDead) return false;
+      if (e.hp !== undefined && e.hp <= 0) return false;
+      if (e.mobType && e.mobType.startsWith('boss')) return false;
+      return true;
+    }).length;
+  }
+
+  createBossArenaSeal(x, groundY = 380) {
+    // 1. Static physical collider blocking player
+    this.bossBarrierWall = this.add.rectangle(x, groundY - 110, 24, 240, 0x000000, 0);
+    this.physics.add.existing(this.bossBarrierWall, true);
+    this.platforms.add(this.bossBarrierWall);
+
+    // Chapter themes for glowing seal
+    const theme = {
+      1: { col: 0x44ff88, stroke: 0x22aa44, hex: '#44ff88', rune: '᚛ ᛟ ᚜' },
+      2: { col: 0xffcc22, stroke: 0xaa8800, hex: '#ffcc22', rune: '✦ 🍯 ✦' },
+      3: { col: 0x55ddff, stroke: 0x2277aa, hex: '#55ddff', rune: '☠ ᛉ ☠' },
+      4: { col: 0xff4422, stroke: 0xaa2200, hex: '#ff4422', rune: '🔥 ⚡ 🔥' },
+      5: { col: 0xcc88ff, stroke: 0x8822bb, hex: '#cc88ff', rune: '✧ ☾ ✧' }
+    }[this.chapterId] || { col: 0xffcc00, stroke: 0xaa8800, hex: '#ffcc00', rune: '⚠️' };
+
+    // 2. Container for mystical visual gate
+    const container = this.add.container(x, groundY);
+    container.setDepth(18);
+    this.bossBarrierVisual = container;
+
+    // Glowing energy barrier columns
+    const beamBack = this.add.rectangle(0, -110, 20, 230, theme.col, 0.18);
+    const beamCore = this.add.rectangle(0, -110, 8, 230, 0xffffff, 0.35);
+
+    // Left and right containment pillars
+    const leftPillar = this.add.rectangle(-12, -110, 4, 230, theme.stroke, 0.85);
+    const rightPillar = this.add.rectangle(12, -110, 4, 230, theme.stroke, 0.85);
+
+    // Pulsing rune seals stacked vertically
+    const runeTop = this.add.text(0, -170, theme.rune, {
+      fontFamily: 'Press Start 2P',
+      fontSize: '5px',
+      color: theme.hex
+    }).setOrigin(0.5);
+
+    const runeMid = this.add.text(0, -110, '🔒', {
+      fontSize: '14px'
+    }).setOrigin(0.5);
+
+    const runeLabel = this.add.text(0, -90, 'SEALED', {
+      fontFamily: 'Press Start 2P',
+      fontSize: '5px',
+      color: '#ff4444',
+      stroke: '#000000',
+      strokeThickness: 2
+    }).setOrigin(0.5);
+
+    const runeBottom = this.add.text(0, -50, theme.rune, {
+      fontFamily: 'Press Start 2P',
+      fontSize: '5px',
+      color: theme.hex
+    }).setOrigin(0.5);
+
+    container.add([beamBack, beamCore, leftPillar, rightPillar, runeTop, runeMid, runeLabel, runeBottom]);
+
+    // Breathing pulse tween for mystical aura
+    this.tweens.add({
+      targets: [beamBack, beamCore],
+      alpha: { from: 0.15, to: 0.45 },
+      scaleX: { from: 0.9, to: 1.15 },
+      duration: 800,
+      yoyo: true,
+      repeat: -1,
+      ease: 'Sine.easeInOut'
+    });
+
+    this.tweens.add({
+      targets: runeMid,
+      scale: { from: 0.95, to: 1.15 },
+      duration: 600,
+      yoyo: true,
+      repeat: -1,
+      ease: 'Sine.easeInOut'
+    });
+  }
+
+  triggerBossLockedWarning(remaining) {
+    if (this.isGameOver || this.isVictory || this.inDialogue) return;
+    if (this.time.now - this.lastBossLockedWarningTime < 2800) return;
+    this.lastBossLockedWarningTime = this.time.now;
+
+    sound.playHit();
+    this.cameras.main.shake(180, 0.005);
+
+    const nearest = this.getNearestRemainingEnemy();
+    const nearestDesc = nearest ? `Nearest: ${nearest.dir === 'WEST' ? 'behind us ◄' : 'ahead ►'} (${nearest.distance}px)` : '';
+
+    // 1. Companion Sylva or Player speech
+    const warningMsg = nearest ? `⚠️ ${remaining} foes remain! ${nearestDesc}` : `⚠️ Foes remain! Defeat all ${remaining} enemies first!`;
+    if (this.player && this.player.pet) {
+      const pet = this.player.pet;
+      this.showFloatingText(pet.x, pet.y - 18, warningMsg, '#ffcc44');
+      this.tweens.add({
+        targets: pet,
+        scaleX: 1.4,
+        scaleY: 1.4,
+        duration: 150,
+        yoyo: true,
+        repeat: 2
+      });
+    } else if (this.player) {
+      this.showFloatingText(this.player.x, this.player.y - 28, warningMsg, '#ffcc44');
+    }
+
+    // 2. Cinematic top alert banner
+    if (this.bossLockedBanner) {
+      this.bossLockedBanner.destroy();
+      this.bossLockedBanner = null;
+    }
+
+    const w = GAME_CONFIG.WIDTH;
+    const banner = this.add.container(w / 2, -45).setScrollFactor(0).setDepth(446);
+    this.bossLockedBanner = banner;
+
+    const bgHeight = nearest ? 44 : 34;
+    const bg = this.add.rectangle(0, 0, 320, bgHeight, 0x140808, 0.95)
+      .setStrokeStyle(1.5, 0xcc3322);
+    const lockIcon = this.add.text(-140, 0, '🔒', { fontSize: '10px' }).setOrigin(0.5);
+    const mainText = this.add.text(0, nearest ? -12 : -7, '🔒 BOSS LAIR SEALED 🔒', {
+      fontFamily: 'Press Start 2P',
+      fontSize: '6.5px',
+      color: '#ff4444'
+    }).setOrigin(0.5);
+    const subText = this.add.text(0, nearest ? 0 : 7, `Defeat all ${remaining} remaining enemies to enter!`, {
+      fontFamily: 'Press Start 2P',
+      fontSize: '5px',
+      color: '#ffcc66'
+    }).setOrigin(0.5);
+
+    banner.add([bg, lockIcon, mainText, subText]);
+
+    if (nearest) {
+      const arrow = nearest.dir === 'WEST' ? '◄' : '►';
+      const trackerText = this.add.text(0, 12, `🎯 ${arrow} ${nearest.distance}px: ${nearest.name}`, {
+        fontFamily: 'Press Start 2P',
+        fontSize: '4.5px',
+        color: '#ffdd55'
+      }).setOrigin(0.5);
+      banner.add(trackerText);
+    }
+
+    this.tweens.add({
+      targets: banner,
+      y: 62,
+      duration: 300,
+      ease: 'Back.easeOut'
+    });
+
+    this.time.delayedCall(3800, () => {
+      this.dismissBossLockedWarning();
+    });
+  }
+
+  getNearestRemainingEnemy() {
+    if (!this.enemies || !this.player) return null;
+    let nearest = null;
+    let minDist = Infinity;
+    this.enemies.getChildren().forEach(enemy => {
+      if (enemy.active && enemy.state !== 'DEAD' && !enemy.isBoss) {
+        const d = Phaser.Math.Distance.Between(this.player.x, this.player.y, enemy.x, enemy.y);
+        if (d < minDist) {
+          minDist = d;
+          nearest = {
+            enemy,
+            distance: Math.round(d),
+            dir: enemy.x < this.player.x ? 'WEST' : 'EAST',
+            name: (enemy.mobType || 'Enemy').toUpperCase()
+          };
+        }
+      }
+    });
+    return nearest;
+  }
+
+  getEnemiesLeftBehind() {
+    if (!this.enemies || !this.player) return { count: 0, nearest: null };
+    const screenLeft = this.cameras.main.worldView ? this.cameras.main.worldView.x : (this.player.x - 240);
+    let count = 0;
+    let nearest = null;
+    let minDist = Infinity;
+
+    this.enemies.getChildren().forEach(enemy => {
+      if (enemy.active && enemy.state !== 'DEAD' && !enemy.isBoss) {
+        // Passed enemy that is now off-screen to the left
+        if (enemy.x < screenLeft - 8 || enemy.x < this.player.x - 170) {
+          count++;
+          const d = Math.round(Phaser.Math.Distance.Between(this.player.x, this.player.y, enemy.x, enemy.y));
+          if (d < minDist) {
+            minDist = d;
+            nearest = {
+              enemy,
+              distance: d,
+              name: (enemy.mobType || 'Enemy').toUpperCase()
+            };
+          }
+        }
+      }
+    });
+
+    return { count, nearest };
+  }
+
+  ensureEnemyTrackerPill(w) {
+    if (!this.enemyTrackerPill) {
+      this.enemyTrackerPill = this.add.container(w / 2, 42).setScrollFactor(0).setDepth(440);
+      const bg = this.add.rectangle(0, 0, 250, 18, 0x140c06, 0.94)
+        .setStrokeStyle(1.2, 0xffaa00);
+      const txt = this.add.text(0, 0, '', {
+        fontFamily: 'Press Start 2P',
+        fontSize: '4.5px',
+        color: '#ffcc00'
+      }).setOrigin(0.5);
+
+      this.enemyTrackerPill.add([bg, txt]);
+      this.enemyTrackerPillBg = bg;
+      this.enemyTrackerPillText = txt;
+
+      this.tweens.add({
+        targets: this.enemyTrackerPill,
+        alpha: { from: 0, to: 1 },
+        duration: 200
+      });
+    }
+  }
+
+  showLeftEdgeOffscreenIndicator(count) {
+    const h = GAME_CONFIG.HEIGHT;
+    if (!this.leftEdgeIndicator) {
+      this.leftEdgeIndicator = this.add.container(18, h / 2).setScrollFactor(0).setDepth(440);
+      const bg = this.add.rectangle(0, 0, 26, 22, 0x220808, 0.92)
+        .setStrokeStyle(1.5, 0xff3333);
+      const arrow = this.add.text(-2, -4, '◄', {
+        fontFamily: 'Press Start 2P',
+        fontSize: '7px',
+        color: '#ff4444'
+      }).setOrigin(0.5);
+      const numTxt = this.add.text(0, 5, `${count}`, {
+        fontFamily: 'Press Start 2P',
+        fontSize: '4.5px',
+        color: '#ffdd55'
+      }).setOrigin(0.5);
+
+      this.leftEdgeIndicator.add([bg, arrow, numTxt]);
+      this.leftEdgeIndicatorNum = numTxt;
+
+      this.tweens.add({
+        targets: this.leftEdgeIndicator,
+        scale: { from: 0.85, to: 1.15 },
+        duration: 380,
+        yoyo: true,
+        repeat: -1
+      });
+    } else if (this.leftEdgeIndicatorNum) {
+      this.leftEdgeIndicatorNum.setText(`${count}`);
+    }
+  }
+
+  dismissLeftEdgeIndicator() {
+    if (!this.leftEdgeIndicator) return;
+    const ind = this.leftEdgeIndicator;
+    this.leftEdgeIndicator = null;
+    this.leftEdgeIndicatorNum = null;
+    this.tweens.add({
+      targets: ind,
+      alpha: 0,
+      duration: 180,
+      onComplete: () => ind.destroy()
+    });
+  }
+
+  updateEnemyTracker(gateX, remainingFoes) {
+    if (this.isGameOver || this.isVictory || this.inDialogue) {
+      this.dismissEnemyTracker();
+      return;
+    }
+
+    const foesBehind = this.getEnemiesLeftBehind();
+    const isNearGate = this.player && this.player.x >= gateX - 220;
+    const w = GAME_CONFIG.WIDTH;
+
+    // 1. Immediately indicate when enemies have been passed and are outside the screen
+    if (foesBehind.count > 0) {
+      this.ensureEnemyTrackerPill(w);
+      const countLabel = foesBehind.count === 1 ? '1 FOE BEHIND' : `${foesBehind.count} FOES BEHIND`;
+      this.enemyTrackerPillText.setText(`⚠️ ◄ ${countLabel}: ${foesBehind.nearest.name} (${foesBehind.nearest.distance}px)`);
+      if (this.enemyTrackerPillBg) this.enemyTrackerPillBg.setStrokeStyle(1.2, 0xff3333);
+      this.showLeftEdgeOffscreenIndicator(foesBehind.count);
+    } else if (isNearGate && remainingFoes > 0) {
+      // 2. Approaching sealed boss gate with remaining foes anywhere in the map
+      const nearest = this.getNearestRemainingEnemy();
+      if (!nearest) {
+        this.dismissEnemyTracker();
+        return;
+      }
+      this.ensureEnemyTrackerPill(w);
+      const arrow = nearest.dir === 'WEST' ? '◄' : '►';
+      this.enemyTrackerPillText.setText(`🎯 ${arrow} ${nearest.distance}px: ${nearest.name} (${remainingFoes} left)`);
+      if (this.enemyTrackerPillBg) this.enemyTrackerPillBg.setStrokeStyle(1.2, 0xffaa00);
+      this.dismissLeftEdgeIndicator();
+    } else {
+      this.dismissEnemyTracker();
+    }
+  }
+
+  dismissEnemyTracker() {
+    this.dismissLeftEdgeIndicator();
+    if (!this.enemyTrackerPill) return;
+    const pill = this.enemyTrackerPill;
+    this.enemyTrackerPill = null;
+    this.enemyTrackerPillBg = null;
+    this.enemyTrackerPillText = null;
+    this.tweens.add({
+      targets: pill,
+      alpha: 0,
+      duration: 200,
+      onComplete: () => pill.destroy()
+    });
+  }
+
+  dismissBossLockedWarning(immediate = false) {
+    if (!this.bossLockedBanner) return;
+    const b = this.bossLockedBanner;
+    this.bossLockedBanner = null;
+    if (immediate) {
+      b.destroy();
+      return;
+    }
+    this.tweens.add({
+      targets: b,
+      y: -50,
+      alpha: 0,
+      duration: 250,
+      ease: 'Sine.easeIn',
+      onComplete: () => b.destroy()
+    });
+  }
+
+  unsealBossArena() {
+    if (this.bossArenaUnsealed) return;
+    this.bossArenaUnsealed = true;
+
+    this.dismissBossLockedWarning(true);
+    sound.playSparkle();
+
+    // Announcement banner
+    const w = GAME_CONFIG.WIDTH;
+    const banner = this.add.container(w / 2, -45).setScrollFactor(0).setDepth(446);
+    const bg = this.add.rectangle(0, 0, 310, 34, 0x08180c, 0.95)
+      .setStrokeStyle(1.5, 0x22cc66);
+    const starIcon = this.add.text(-135, 0, '✨', { fontSize: '10px' }).setOrigin(0.5);
+    const mainText = this.add.text(0, -7, '✨ ALL FOES DEFEATED! ✨', {
+      fontFamily: 'Press Start 2P',
+      fontSize: '6.5px',
+      color: '#44ff88'
+    }).setOrigin(0.5);
+    const subText = this.add.text(0, 7, 'The Boss Arena is now unsealed!', {
+      fontFamily: 'Press Start 2P',
+      fontSize: '5px',
+      color: '#ffffff'
+    }).setOrigin(0.5);
+
+    banner.add([bg, starIcon, mainText, subText]);
+
+    this.tweens.add({
+      targets: banner,
+      y: 58,
+      duration: 350,
+      ease: 'Back.easeOut'
+    });
+
+    this.time.delayedCall(3500, () => {
+      this.tweens.add({
+        targets: banner,
+        y: -50,
+        alpha: 0,
+        duration: 250,
+        ease: 'Sine.easeIn',
+        onComplete: () => banner.destroy()
+      });
+    });
+
+    // Animate away the visual barrier
+    if (this.bossBarrierVisual) {
+      const vis = this.bossBarrierVisual;
+      this.bossBarrierVisual = null;
+      this.tweens.add({
+        targets: vis,
+        alpha: 0,
+        scaleY: 1.3,
+        scaleX: 1.5,
+        duration: 600,
+        ease: 'Sine.easeOut',
+        onComplete: () => vis.destroy()
+      });
+    }
+
+    // Remove physical collider wall so player can walk through
+    if (this.bossBarrierWall) {
+      if (this.platforms) {
+        this.platforms.remove(this.bossBarrierWall, true, true);
+      }
+      this.bossBarrierWall.destroy();
+      this.bossBarrierWall = null;
+    }
+
+    this.updateHudObjective();
+  }
+
+  updateHudObjective() {
+    if (!this.txtObjective) return;
+    if (!this.bossArenaUnsealed) {
+      const remaining = this.getRemainingEnemiesCount();
+      const cleared = Math.max(0, this.initialLevelEnemiesCount - remaining);
+      this.txtObjective.setText(`OBJECTIVE: Defeat Foes (${cleared}/${this.initialLevelEnemiesCount})`);
+      this.txtObjective.setColor('#ffcc66');
+    } else if (!this.bossTriggered) {
+      this.txtObjective.setText('OBJECTIVE: Enter Boss Arena!');
+      this.txtObjective.setColor('#44ff88');
+    } else if (this.boss && this.boss.active && this.boss.hp > 0) {
+      const bossName = (this.bossHealthBar && this.bossHealthBar.bossName) ? this.bossHealthBar.bossName : 'Boss';
+      this.txtObjective.setText(`OBJECTIVE: Defeat ${bossName}!`);
+      this.txtObjective.setColor('#ff6644');
+    } else {
+      this.txtObjective.setText('OBJECTIVE: Cleanse Guardian Obelisk');
+      this.txtObjective.setColor('#d0f0c0');
+    }
+  }
+
+  onEnemyKilled() {
+    this.updateHudObjective();
+    if (this.getRemainingEnemiesCount() === 0) {
+      this.unsealBossArena();
+    }
+  }
+
+  onBossDefeated(boss) {
+    this.updateHudObjective();
+  }
+
   triggerBossEncounter(chapter) {
     if (this.bossTriggered) return;
     this.bossTriggered = true;
     this.dismissBossApproachWarning(true);
+    this.dismissBossLockedWarning(true);
+    this.updateHudObjective();
 
     sound.playVictory();
     this.cameras.main.shake(400, 0.02);
@@ -1584,6 +2128,7 @@ export default class StoryScene extends Phaser.Scene {
       color: '#d0f0c0'
     });
     this.hudContainer.add(this.txtObjective);
+    this.updateHudObjective();
 
     // Hero Health Bar
     this.heroHealthBar = new HeroHealthBar(this, 240, 14, this.player ? this.player.maxHealth : GAME_CONFIG.PLAYER.MAX_HEALTH);
@@ -1830,6 +2375,7 @@ export default class StoryScene extends Phaser.Scene {
     if (res && res.killed) {
       this.killsCount++;
       this.registerComboHit();
+      this.onEnemyKilled();
 
       // Drop materials directly to storage
       if (enemy.mobType === 'boar') {
@@ -1863,6 +2409,7 @@ export default class StoryScene extends Phaser.Scene {
     if (!enemy) return;
     this.killsCount++;
     this.registerComboHit();
+    this.onEnemyKilled();
     storage.addMaterials({ bark: 1 });
     this.updateHudMaterials();
 
@@ -1938,6 +2485,7 @@ export default class StoryScene extends Phaser.Scene {
         this.registerComboHit(true);
         if (res && res.killed) {
           this.killsCount++;
+          this.onEnemyKilled();
           if (typeof storage !== 'undefined') {
             storage.addMaterials({ bark: 1, iron: 1 });
             this.updateHudMaterials();
@@ -2062,15 +2610,132 @@ export default class StoryScene extends Phaser.Scene {
     }
 
     // 3. Other hazards (water, honeycomb, spikes, astral chasm)
-    const damaged = player.takeDamage(20, player.flipX ? 1 : -1);
+    const damaged = player.takeDamage(35, player.flipX ? 1 : -1);
     if (damaged) {
       this.updateHearts();
-      player.setVelocityY(-240);
-      player.setVelocityX(player.flipX ? 160 : -160);
+      const label = (hazard && hazard.hazardLabel) ? `${hazard.hazardLabel} -35` : 'CHASM HAZARD! -35';
+      this.showFloatingText(player.x, player.y - 20, label, '#ff4444');
+
+      // Play chapter-specific hazard splash audio & particle burst
+      this.triggerHazardFX(player, hazard);
+
       if (player.isDead) {
         this.handlePlayerGameOver();
+        return;
       }
+
+      // Feature 1: Safe ledge respawn (Hollow Knight / Celeste style)
+      this.respawnPlayerAtSafeLedge(player);
     }
+  }
+
+  triggerHazardFX(player, hazard) {
+    const px = player.x;
+    const py = player.y;
+
+    if (this.chapterId === 1) {
+      // Water Splash
+      sound.playWaterSplash();
+      for (let i = 0; i < 16; i++) {
+        const drop = this.add.circle(px + Phaser.Math.Between(-14, 14), py + 10, Phaser.Math.Between(2, 5), 0x38bdf8, 0.9).setDepth(20);
+        this.physics.add.existing(drop);
+        drop.body.setVelocity(Phaser.Math.Between(-80, 80), Phaser.Math.Between(-220, -90));
+        drop.body.setGravityY(450);
+        this.tweens.add({
+          targets: drop,
+          alpha: 0,
+          scale: 0.2,
+          duration: 450 + i * 20,
+          onComplete: () => drop.destroy()
+        });
+      }
+    } else if (this.chapterId === 2) {
+      // Gooey Amber Honey Splash
+      sound.playHoneySquish();
+      for (let i = 0; i < 16; i++) {
+        const drop = this.add.circle(px + Phaser.Math.Between(-12, 12), py + 10, Phaser.Math.Between(3, 6), 0xffaa00, 0.95).setDepth(20);
+        this.physics.add.existing(drop);
+        drop.body.setVelocity(Phaser.Math.Between(-60, 60), Phaser.Math.Between(-180, -70));
+        drop.body.setGravityY(350);
+        this.tweens.add({
+          targets: drop,
+          alpha: 0,
+          scale: 0.3,
+          duration: 550 + i * 25,
+          onComplete: () => drop.destroy()
+        });
+      }
+    } else if (this.chapterId === 3) {
+      // Ancient Spikes Impale
+      sound.playSpikeHit();
+      for (let i = 0; i < 14; i++) {
+        const spark = this.add.rectangle(px + Phaser.Math.Between(-10, 10), py + 8, 3, 3, 0xdddddd, 0.9).setDepth(20);
+        this.physics.add.existing(spark);
+        spark.body.setVelocity(Phaser.Math.Between(-100, 100), Phaser.Math.Between(-160, -50));
+        spark.body.setGravityY(350);
+        this.tweens.add({
+          targets: spark,
+          alpha: 0,
+          duration: 350,
+          onComplete: () => spark.destroy()
+        });
+      }
+    } else if (this.chapterId === 5) {
+      // Cosmic Astral Chasm Void
+      sound.playElementalSlash('frost_moon');
+      for (let i = 0; i < 16; i++) {
+        const star = this.add.circle(px + Phaser.Math.Between(-14, 14), py + 10, Phaser.Math.Between(2, 5), 0xc084fc, 0.85).setDepth(20);
+        this.tweens.add({
+          targets: star,
+          scale: 1.8,
+          alpha: 0,
+          y: star.y - Phaser.Math.Between(20, 50),
+          duration: 450 + i * 20,
+          onComplete: () => star.destroy()
+        });
+      }
+    } else {
+      sound.playHit();
+    }
+  }
+
+  respawnPlayerAtSafeLedge(player) {
+    const rx = player.lastSafeX || 60;
+    const ry = player.lastSafeY || 346;
+
+    // Reset player velocity and position at safe ledge
+    player.setVelocity(0, 0);
+    if (player.body) {
+      player.body.reset(rx, ry);
+    }
+
+    // Camera quick pan to safe ledge
+    this.cameras.main.pan(rx, ry - 28, 200, 'Quad.easeOut');
+
+    // Recovery dust puff at respawn location
+    const puff = this.add.circle(rx, ry + 12, 14, 0xffffff, 0.75).setDepth(21);
+    this.tweens.add({
+      targets: puff,
+      scale: 2.2,
+      alpha: 0,
+      duration: 350,
+      ease: 'Quad.easeOut',
+      onComplete: () => puff.destroy()
+    });
+
+    // Grace period invulnerability & player recovery blink
+    player.invulnerableUntil = this.time.now + 1600;
+    player.setAlpha(0.3);
+    this.tweens.add({
+      targets: player,
+      alpha: 1.0,
+      duration: 150,
+      yoyo: true,
+      repeat: 4,
+      onComplete: () => {
+        if (player && !player.isDead) player.setAlpha(1.0);
+      }
+    });
   }
 
   registerComboHit(isRicochet = false) {
@@ -2660,6 +3325,16 @@ export default class StoryScene extends Phaser.Scene {
     if (this.player) {
       this.player.update(this.cursors, touchInputs);
 
+      // Feature 1: Track last safe grounded coordinates (solid ground/platforms, Y <= 360)
+      if (this.player.body && (this.player.body.blocked.down || this.player.body.touching.down) && this.player.y <= 360) {
+        this.player.lastSafeX = this.player.x;
+        this.player.lastSafeY = this.player.y;
+      }
+
+      const gateX = this.chapterId === 1 ? 2310 : 2090;
+      const arenaThresholdX = this.chapterId === 1 ? 2320 : 2120;
+      const remainingFoes = this.getRemainingEnemiesCount();
+
       // Check boss approach warning zone (~200–240px before arena)
       if (!this.bossApproachTriggered && !this.bossTriggered && !this.player.isDead) {
         const approachX = this.chapterId === 1 ? 2060 : 1880;
@@ -2668,24 +3343,40 @@ export default class StoryScene extends Phaser.Scene {
         }
       }
 
-      // Immediately remove Danger Ahead approach banner the moment player reaches the boss lair
-      const arenaThresholdX = this.chapterId === 1 ? 2320 : 2120;
-      if (this.bossApproachBanner && this.player.x >= arenaThresholdX) {
-        this.dismissBossApproachWarning(true);
-      }
-
-      // Check arena boss encounter triggers
+      // If player reaches the boss area before killing all enemies, notify and block them
       if (!this.bossTriggered && !this.player.isDead && !this.inDialogue) {
-        if (this.chapterId === 1 && this.player.x >= 2320) {
-          this.triggerBossEncounter(1);
-        } else if (this.chapterId === 2 && this.player.x >= 2120) {
-          this.triggerBossEncounter(2);
-        } else if (this.chapterId === 3 && this.player.x >= 2120) {
-          this.triggerBossEncounter(3);
-        } else if (this.chapterId === 4 && this.player.x >= 2120) {
-          this.triggerBossEncounter(4);
-        } else if (this.chapterId === 5 && this.player.x >= 2120) {
-          this.triggerBossEncounter(5);
+        if (remainingFoes > 0) {
+          // Real-time enemy tracker: immediately indicates when enemies are passed & off-screen, or near sealed gate
+          this.updateEnemyTracker(gateX, remainingFoes);
+
+          // Approached within 40px of the sealed gate
+          if (this.player.x >= gateX - 40) {
+            this.triggerBossLockedWarning(remainingFoes);
+          }
+          // Prevent crossing beyond the gate
+          if (this.player.x >= gateX - 10) {
+            this.player.x = gateX - 16;
+            if (this.player.body) {
+              this.player.body.setVelocityX(Math.min(this.player.body.velocity.x, -80));
+            }
+          }
+        } else {
+          this.dismissEnemyTracker();
+
+          // All foes are defeated! Ensure arena is unsealed
+          if (!this.bossArenaUnsealed) {
+            this.unsealBossArena();
+          }
+
+          // Immediately remove Danger Ahead approach banner the moment player reaches the boss lair
+          if (this.bossApproachBanner && this.player.x >= arenaThresholdX) {
+            this.dismissBossApproachWarning(true);
+          }
+
+          // Trigger arena boss encounter
+          if (this.player.x >= arenaThresholdX) {
+            this.triggerBossEncounter(this.chapterId);
+          }
         }
       }
     }
@@ -2696,9 +3387,20 @@ export default class StoryScene extends Phaser.Scene {
     if (this.bgMidPines) this.bgMidPines.tilePositionX = camScrollX * 0.22;
 
     // Update enemies only when NOT in dialogue
-    if (!this.inDialogue && this.enemies) {
+    if (this.enemies) {
       this.enemies.getChildren().forEach(enemy => {
-        enemy.update(this.player);
+        if (!this.inDialogue) {
+          enemy.update(this.player);
+        }
+        if (enemy.active && enemy.state !== 'DEAD' && enemy.y > this.levelHeight + 20) {
+          if (typeof enemy.die === 'function') {
+            enemy.die();
+          } else {
+            enemy.destroy();
+          }
+          this.killsCount++;
+          this.onEnemyKilled();
+        }
       });
     }
 
@@ -2719,9 +3421,14 @@ export default class StoryScene extends Phaser.Scene {
 
     // Fall out of world check
     if (this.player && this.player.y > this.levelHeight + 30 && !this.player.isDead) {
-      this.player.die();
+      const damaged = this.player.takeDamage(35, 0);
       this.updateHearts();
-      this.handlePlayerGameOver();
+      if (this.player.isDead) {
+        this.handlePlayerGameOver();
+      } else {
+        this.triggerHazardFX(this.player, null);
+        this.respawnPlayerAtSafeLedge(this.player);
+      }
     }
   }
 }

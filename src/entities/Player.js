@@ -72,6 +72,33 @@ export default class Player extends Phaser.Physics.Arcade.Sprite {
         tint: 0x9933ff,
         emitting: false
       });
+    } else if (this.weaponConfig.effect === 'crimson_flame') {
+      this.particles = scene.add.particles(0, 0, 'spark', {
+        scale: { start: 1.3, end: 0 },
+        speed: { min: 25, max: 60 },
+        lifespan: 350,
+        blendMode: 'ADD',
+        tint: [0xff3300, 0xff7700, 0xffcc00],
+        emitting: false
+      });
+    } else if (this.weaponConfig.effect === 'frost_moon') {
+      this.particles = scene.add.particles(0, 0, 'spark', {
+        scale: { start: 1.2, end: 0.1 },
+        speed: { min: 15, max: 45 },
+        lifespan: 400,
+        blendMode: 'ADD',
+        tint: [0x38e1ff, 0x88ffff, 0xffffff],
+        emitting: false
+      });
+    } else if (this.weaponConfig.effect === 'verdant_bloom') {
+      this.particles = scene.add.particles(0, 0, 'spark', {
+        scale: { start: 1.2, end: 0 },
+        speed: { min: 15, max: 40 },
+        lifespan: 380,
+        blendMode: 'ADD',
+        tint: [0x33ee66, 0x98ff98, 0xffff66],
+        emitting: false
+      });
     }
   }
 
@@ -132,6 +159,13 @@ export default class Player extends Phaser.Physics.Arcade.Sprite {
       } else {
         this.setVelocityX(0);
         if (onGround && !this.isAttacking) this.play('player_idle', true);
+      }
+
+      // Ambient cosmetic weapon particle trail while running or airborne
+      if (this.particles && (Math.abs(this.body.velocity.x) > 20 || !onGround)) {
+        if (this.scene.time.now % 100 < 20) {
+          this.particles.emitParticleAt(this.x + (this.flipX ? 6 : -6), this.y - 8, 1);
+        }
       }
     }
 
@@ -236,8 +270,14 @@ export default class Player extends Phaser.Physics.Arcade.Sprite {
     this.updateAttackHitbox();
     this.performAttackScan();
 
+    if (this.weaponConfig.effect && this.weaponConfig.isSkin) {
+      sound.playElementalSlash(this.weaponConfig.effect);
+    }
+
     if (this.particles) {
-      this.particles.emitParticleAt(this.x, this.y - 10, 8);
+      const px = this.flipX ? (this.x - 14) : (this.x + 14);
+      const py = isUpward ? (this.y - 24) : (this.y - 8);
+      this.particles.emitParticleAt(px, py, 6);
     }
 
     // Play attack anim (Attack-01 has 8 frames; 0..3 = Combo 1, 4..7 = Combo 2)

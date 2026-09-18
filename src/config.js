@@ -152,6 +152,48 @@ export const GAME_CONFIG = {
       effect: 'void_smoke',
       cost: { amber: 10, iron: 8 },
       cosmeticDescription: 'Infused with ancient twilight essence. Deep obsidian blade with purple shadow trails.'
+    },
+    SKIN_FLAME: {
+      id: 'skin_flame',
+      name: 'Crimson Flame Katana',
+      tier: 'Cosmetic Skin',
+      isSkin: true,
+      iconKey: 'sword_flame',
+      damageMul: 1.0, // Pure cosmetic skin: no damage increase
+      rangeMul: 1.0,
+      effect: 'crimson_flame',
+      slashColor: 0xff4411,
+      slashAccent: 0xffaa00,
+      cost: { iron: 10, bark: 6, amber: 4 },
+      cosmeticDescription: 'Forged from volcanic caldera rubies. Blazing flame slash arc & rising ember trails.'
+    },
+    SKIN_FROST: {
+      id: 'skin_frost',
+      name: 'Frostmoon Crystal Saber',
+      tier: 'Cosmetic Skin',
+      isSkin: true,
+      iconKey: 'sword_frost',
+      damageMul: 1.0, // Pure cosmetic skin: no damage increase
+      rangeMul: 1.0,
+      effect: 'frost_moon',
+      slashColor: 0x38e1ff,
+      slashAccent: 0xe0f7fa,
+      cost: { amber: 8, bark: 8, iron: 4 },
+      cosmeticDescription: 'Carved from glacial lunar ice. Prismatic icy slash arc & sub-zero snowflake sparkles.'
+    },
+    SKIN_VERDANT: {
+      id: 'skin_verdant',
+      name: 'Verdant Jade Rapier',
+      tier: 'Cosmetic Skin',
+      isSkin: true,
+      iconKey: 'sword_verdant',
+      damageMul: 1.0, // Pure cosmetic skin: no damage increase
+      rangeMul: 1.0,
+      effect: 'verdant_bloom',
+      slashColor: 0x44ff88,
+      slashAccent: 0xa8ffb2,
+      cost: { bark: 12, amber: 6, iron: 2 },
+      cosmeticDescription: 'Infused with ancient forest flora. Glowing emerald slash arc & floating blossom petals.'
     }
   },
 

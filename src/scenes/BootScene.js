@@ -181,6 +181,11 @@ export default class BootScene extends Phaser.Scene {
     // Companion Sprite & Portrait (Sylva, the Moon Sprite)
     this.load.image('fairy_portrait', 'assets/companion/fairy_portrait.png');
     this.load.spritesheet('fairy_fly', 'assets/companion/fairy_fly.png', { frameWidth: 36, frameHeight: 38 });
+
+    // Weapon Skin Icons
+    this.load.image('sword_flame', 'assets/weapons/sword_flame.png');
+    this.load.image('sword_frost', 'assets/weapons/sword_frost.png');
+    this.load.image('sword_verdant', 'assets/weapons/sword_verdant.png');
   }
 
   create() {

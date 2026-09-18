@@ -80,6 +80,10 @@ class StorageManager {
     return false;
   }
 
+  consumeMaterials(cost) {
+    return this.spendMaterials(cost);
+  }
+
   getEquippedWeapon() {
     return this.data.equippedWeapon;
   }

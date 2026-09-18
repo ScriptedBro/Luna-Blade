@@ -185,6 +185,155 @@ class SoundEngine {
     }
   }
 
+  playElementalSlash(effect) {
+    if (this.muted || this.soundMuted || !this.ctx) return;
+    this.resume();
+    const t = this.ctx.currentTime;
+
+    if (effect === 'crimson_flame') {
+      // Blazing fire crackle & low whoosh
+      const osc = this.ctx.createOscillator();
+      const oscGain = this.ctx.createGain();
+      osc.type = 'sawtooth';
+      osc.frequency.setValueAtTime(220, t);
+      osc.frequency.exponentialRampToValueAtTime(70, t + 0.16);
+      oscGain.gain.setValueAtTime(0.35, t);
+      oscGain.gain.exponentialRampToValueAtTime(0.01, t + 0.16);
+
+      const filter = this.ctx.createBiquadFilter();
+      filter.type = 'lowpass';
+      filter.frequency.setValueAtTime(1400, t);
+      filter.frequency.exponentialRampToValueAtTime(300, t + 0.16);
+
+      osc.connect(filter);
+      filter.connect(oscGain);
+      oscGain.connect(this.sfxGain);
+      osc.start(t);
+      osc.stop(t + 0.16);
+    } else if (effect === 'frost_moon') {
+      // Crystalline frost chime
+      const osc = this.ctx.createOscillator();
+      const oscGain = this.ctx.createGain();
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(1480, t);
+      osc.frequency.exponentialRampToValueAtTime(880, t + 0.22);
+      oscGain.gain.setValueAtTime(0.28, t);
+      oscGain.gain.exponentialRampToValueAtTime(0.005, t + 0.22);
+
+      osc.connect(oscGain);
+      oscGain.connect(this.sfxGain);
+      osc.start(t);
+      osc.stop(t + 0.22);
+    } else if (effect === 'verdant_bloom') {
+      // Flora whip / wind chime
+      const osc = this.ctx.createOscillator();
+      const oscGain = this.ctx.createGain();
+      osc.type = 'triangle';
+      osc.frequency.setValueAtTime(650, t);
+      osc.frequency.exponentialRampToValueAtTime(1200, t + 0.08);
+      osc.frequency.exponentialRampToValueAtTime(440, t + 0.2);
+      oscGain.gain.setValueAtTime(0.25, t);
+      oscGain.gain.exponentialRampToValueAtTime(0.008, t + 0.2);
+
+      osc.connect(oscGain);
+      oscGain.connect(this.sfxGain);
+      osc.start(t);
+      osc.stop(t + 0.2);
+    }
+  }
+
+  playWaterSplash() {
+    if (this.muted || this.soundMuted || !this.ctx) return;
+    this.resume();
+    const t = this.ctx.currentTime;
+
+    // Rushing water noise splash
+    const bufferSize = this.ctx.sampleRate * 0.25;
+    const buffer = this.ctx.createBuffer(1, bufferSize, this.ctx.sampleRate);
+    const data = buffer.getChannelData(0);
+    for (let i = 0; i < bufferSize; i++) {
+      data[i] = Math.random() * 2 - 1;
+    }
+    const noise = this.ctx.createBufferSource();
+    noise.buffer = buffer;
+
+    const filter = this.ctx.createBiquadFilter();
+    filter.type = 'lowpass';
+    filter.frequency.setValueAtTime(1400, t);
+    filter.frequency.exponentialRampToValueAtTime(180, t + 0.25);
+
+    const gain = this.ctx.createGain();
+    gain.gain.setValueAtTime(0.7, t);
+    gain.gain.exponentialRampToValueAtTime(0.01, t + 0.25);
+
+    noise.connect(filter);
+    filter.connect(gain);
+    gain.connect(this.sfxGain);
+    noise.start(t);
+
+    // Droplet bloop
+    const osc = this.ctx.createOscillator();
+    const oscGain = this.ctx.createGain();
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(520, t);
+    osc.frequency.exponentialRampToValueAtTime(260, t + 0.16);
+    oscGain.gain.setValueAtTime(0.35, t);
+    oscGain.gain.exponentialRampToValueAtTime(0.01, t + 0.16);
+    osc.connect(oscGain);
+    oscGain.connect(this.sfxGain);
+    osc.start(t);
+    osc.stop(t + 0.16);
+  }
+
+  playHoneySquish() {
+    if (this.muted || this.soundMuted || !this.ctx) return;
+    this.resume();
+    const t = this.ctx.currentTime;
+
+    // Gooey amber squelch / pop
+    const osc = this.ctx.createOscillator();
+    const oscGain = this.ctx.createGain();
+    osc.type = 'triangle';
+    osc.frequency.setValueAtTime(280, t);
+    osc.frequency.exponentialRampToValueAtTime(620, t + 0.08);
+    osc.frequency.exponentialRampToValueAtTime(140, t + 0.22);
+
+    const filter = this.ctx.createBiquadFilter();
+    filter.type = 'bandpass';
+    filter.frequency.setValueAtTime(450, t);
+    filter.Q.value = 4.0;
+
+    oscGain.gain.setValueAtTime(0.65, t);
+    oscGain.gain.exponentialRampToValueAtTime(0.01, t + 0.22);
+
+    osc.connect(filter);
+    filter.connect(oscGain);
+    oscGain.connect(this.sfxGain);
+    osc.start(t);
+    osc.stop(t + 0.22);
+  }
+
+  playSpikeHit() {
+    if (this.muted || this.soundMuted || !this.ctx) return;
+    this.resume();
+    const t = this.ctx.currentTime;
+
+    // Sharp metallic sting
+    const osc = this.ctx.createOscillator();
+    const oscGain = this.ctx.createGain();
+    osc.type = 'sawtooth';
+    osc.frequency.setValueAtTime(1200, t);
+    osc.frequency.exponentialRampToValueAtTime(220, t + 0.18);
+
+    oscGain.gain.setValueAtTime(0.55, t);
+    oscGain.gain.exponentialRampToValueAtTime(0.01, t + 0.18);
+
+    osc.connect(oscGain);
+    oscGain.connect(this.sfxGain);
+    osc.start(t);
+    osc.stop(t + 0.18);
+  }
+
   playUpwardSlash() {
     if (this.muted || this.soundMuted || !this.ctx) return;
     this.resume();
