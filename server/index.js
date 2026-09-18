@@ -205,6 +205,8 @@ app.post("/api/rewards/bank-crystals", requireAuth, async (req, res) => {
     ok: true,
     creditedNim: claimResult.creditedNim,
     creditedCrystals: claimResult.creditedCrystals,
+    dailyCapReached: claimResult.dailyCapReached,
+    message: claimResult.message,
     status: claimResult.status,
   });
 });

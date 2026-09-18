@@ -25,7 +25,7 @@ import { nimiqService } from '../engine/NimiqService.js';
 import { juice } from '../engine/JuiceEffects.js';
 import confetti from 'canvas-confetti';
 import LunaCrystalDrop from '../entities/LunaCrystalDrop.js';
-import { bankCrystalHarvest } from '../nimiq/rewards.js';
+import { bankCrystalHarvest, fetchRewardsStatus } from '../nimiq/rewards.js';
 import { getAddress } from '../nimiq/session.js';
 
 
@@ -80,6 +80,12 @@ export default class SurvivalScene extends Phaser.Scene {
     this.lunaCrystals = this.physics.add.group();
     this.sessionCrystalsCollected = 0;
     this.crystalBankResult = null;
+    this.rewardsStatus = null;
+    this.isDailyHarvestCapped = false;
+    fetchRewardsStatus().then((st) => {
+      this.rewardsStatus = st;
+      this.checkDailyHarvestCap();
+    }).catch(() => {});
 
     // Build seeded arena
     this.buildSeededArena();
@@ -854,10 +860,12 @@ export default class SurvivalScene extends Phaser.Scene {
       this.checkSpawnQueue();
     }
 
-    // Luna Crystal Drop (0.1 NIM)
+    // Luna Crystal Drop (0.001 NIM each) - rare drops!
     if (this.lunaCrystals && enemy) {
       const isBoss = mobType === 'boss_gorgok';
-      const chance = isBoss ? 1.0 : 0.65;
+      const eliteTypes = ['bog_lurker', 'dread_bat', 'crypt_wraith', 'basalt_golem', 'void_stalker', 'hornet_guard', 'skeleton_warrior', 'cinder_drake', 'astral_shade', 'mirelurker'];
+      const isElite = eliteTypes.includes(mobType);
+      const chance = isBoss ? 0.50 : (isElite ? 0.15 : 0.05);
       if (Math.random() < chance) {
         const crystal = new LunaCrystalDrop(this, popupX, popupY);
         this.lunaCrystals.add(crystal);
@@ -868,15 +876,27 @@ export default class SurvivalScene extends Phaser.Scene {
   }
 
   onCrateBroken(crate) {
-    if (this.lunaCrystals && Math.random() < 0.5) {
+    if (this.lunaCrystals && Math.random() < 0.05) {
       const crystal = new LunaCrystalDrop(this, crate.x, crate.y - 6);
       this.lunaCrystals.add(crystal);
     }
   }
 
   onLunaCrystalCollected(crystal) {
+    const wasCapped = this.isDailyHarvestCapped;
     this.sessionCrystalsCollected = (this.sessionCrystalsCollected || 0) + 1;
-    this.updateCrystalHarvestHud();
+    this.checkDailyHarvestCap();
+    if (!wasCapped && this.isDailyHarvestCapped && this.player) {
+      juice.spawnFloatingText(
+        this,
+        this.player.x,
+        this.player.y - 40,
+        'DAILY NIM CAP REACHED (0.1 MAX)! 🔒',
+        '#f59e0b',
+        18,
+        2500
+      );
+    }
   }
 
   onEnemyShattered(enemy) {
@@ -1052,10 +1072,29 @@ export default class SurvivalScene extends Phaser.Scene {
     }
   }
 
+  checkDailyHarvestCap() {
+    const earned = Number(this.rewardsStatus?.crystalStatus?.nimEarned || 0);
+    const cap = Number(this.rewardsStatus?.crystalStatus?.dailyCapNim ?? 0.1);
+    const sessionEarned = (this.sessionCrystalsCollected || 0) * 0.001;
+    const totalToday = earned + sessionEarned;
+    this.isDailyHarvestCapped = totalToday >= cap || Boolean(this.rewardsStatus?.crystalStatus?.isCapped);
+    this.updateCrystalHarvestHud();
+  }
+
   updateCrystalHarvestHud() {
     if (!this.txtHarvest) return;
-    const nim = ((this.sessionCrystalsCollected || 0) * 0.001).toFixed(3);
-    this.txtHarvest.setText(`💎 +${nim} NIM`);
+    const cap = Number(this.rewardsStatus?.crystalStatus?.dailyCapNim ?? 0.1);
+    const earnedToday = Number(this.rewardsStatus?.crystalStatus?.nimEarned || 0);
+    const sessionEarned = (this.sessionCrystalsCollected || 0) * 0.001;
+    const totalToday = earnedToday + sessionEarned;
+
+    if (totalToday >= cap || this.rewardsStatus?.crystalStatus?.isCapped) {
+      this.txtHarvest.setText(`💎 ${cap.toFixed(3)} NIM (MAX 🔒)`);
+      this.txtHarvest.setColor('#f59e0b');
+    } else {
+      this.txtHarvest.setText(`💎 +${sessionEarned.toFixed(3)} NIM`);
+      this.txtHarvest.setColor('#ffd700');
+    }
   }
 
 
@@ -1307,9 +1346,16 @@ export default class SurvivalScene extends Phaser.Scene {
       color: '#ffffff'
     }).setOrigin(0.5).setScrollFactor(0).setDepth(501);
 
-    const crystalLine = this.sessionCrystalsCollected > 0
-      ? `💎 Luna Harvest: +${(this.sessionCrystalsCollected * 0.001).toFixed(3)} NIM Banked (${this.sessionCrystalsCollected} Crystals)`
-      : (getAddress() ? '💎 Luna Harvest: 0 Crystals' : '⚡ Connect Wallet to Bank NIM Harvests');
+    let crystalLine = '';
+    if (this.isDailyHarvestCapped || this.rewardsStatus?.crystalStatus?.isCapped) {
+      crystalLine = '🔒 Daily Limit Reached (0.1 NIM Max) • No More NIM Today (Resets 00:00 UTC)';
+    } else if (this.sessionCrystalsCollected > 0) {
+      crystalLine = `💎 Luna Harvest: +${(this.sessionCrystalsCollected * 0.001).toFixed(3)} NIM Banked (${this.sessionCrystalsCollected} Crystals)`;
+    } else if (getAddress()) {
+      crystalLine = '💎 Luna Harvest: 0 Crystals';
+    } else {
+      crystalLine = '⚡ Connect Wallet to Bank NIM Harvests';
+    }
 
     const details = this.add.text(w / 2, h / 2 - 14, [
       `Time Survived: ${this.secondsSurvived}s (+${this.secondsSurvived * 10} pts)`,

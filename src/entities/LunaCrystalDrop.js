@@ -2,7 +2,7 @@ import Phaser from 'phaser';
 import { sound } from '../engine/Audio.js';
 
 export default class LunaCrystalDrop extends Phaser.Physics.Arcade.Sprite {
-  constructor(scene, x, y, valueNim = 0.1) {
+  constructor(scene, x, y, valueNim = 0.001) {
     LunaCrystalDrop.ensureTexture(scene);
     super(scene, x, y, 'luna_crystal');
 
@@ -111,11 +111,16 @@ export default class LunaCrystalDrop extends Phaser.Physics.Arcade.Sprite {
     }
 
     // Float notification text
-    const text = this.scene.add.text(this.x, this.y - 12, '+0.001 NIM 💎', {
+    const isCapped = Boolean(this.scene && this.scene.isDailyHarvestCapped);
+    const floatLabel = isCapped ? 'DAILY CAP (0.1 NIM MAX) 🔒' : '+0.001 NIM 💎';
+    const floatColor = isCapped ? '#fbbf24' : '#38e1ff';
+    const floatStroke = isCapped ? '#3b2200' : '#002233';
+
+    const text = this.scene.add.text(this.x, this.y - 12, floatLabel, {
       fontFamily: 'Press Start 2P',
-      fontSize: '6.5px',
-      color: '#38e1ff',
-      stroke: '#002233',
+      fontSize: isCapped ? '5px' : '6.5px',
+      color: floatColor,
+      stroke: floatStroke,
       strokeThickness: 2,
     }).setOrigin(0.5).setDepth(250);
 

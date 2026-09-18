@@ -244,11 +244,12 @@ export default class LeaderboardScene extends Phaser.Scene {
     // If connected, show player's personal rewards status pill
     if (myWallet && this.rewardsStatus) {
       const bossText = this.rewardsStatus.firstBossClaimed ? 'CLAIMED (+10 NIM)' : 'UNCLAIMED (10 NIM)';
-      const cap = this.rewardsStatus.crystalStatus?.dailyCapNim ?? 0.1;
+      const cap = Number(this.rewardsStatus.crystalStatus?.dailyCapNim ?? 0.1);
       const earned = Number(this.rewardsStatus.crystalStatus?.nimEarned || 0).toFixed(3);
-      const harvestText = `${earned} / ${cap} NIM`;
+      const isCapped = Boolean(this.rewardsStatus.crystalStatus?.isCapped);
+      const harvestText = isCapped ? `${earned} / ${cap.toFixed(3)} NIM (MAX 🔒)` : `${earned} / ${cap.toFixed(3)} NIM`;
       const rewardsPill = `🏆 1st Boss: ${bossText}  |  💎 Harvest: ${harvestText}`;
-      this.addToLayer(w / 2, isPortrait ? h - 60 : 218, rewardsPill, '4.2px', '#ffd700', 1);
+      this.addToLayer(w / 2, isPortrait ? h - 60 : 218, rewardsPill, '4.2px', isCapped ? '#f59e0b' : '#ffd700', 1);
     }
   }
 

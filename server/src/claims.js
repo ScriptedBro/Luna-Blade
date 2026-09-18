@@ -189,10 +189,17 @@ export function recordCrystalHarvestClaim(wallet, dateSeed, crystalsCount, devic
 
   saveJson(CLAIMS_FILE, store);
 
+  const updatedStatus = getDailyCrystalStatus(norm, dateSeed, deviceId);
+  const isCappedNow = Boolean(updatedStatus.isCapped || updatedStatus.remainingNim <= 0 || (updatedStatus.deviceRemainingNim !== undefined && updatedStatus.deviceRemainingNim <= 0));
+
   return {
     ok: true,
     creditedNim,
     creditedCrystals,
-    status: getDailyCrystalStatus(norm, dateSeed, deviceId),
+    dailyCapReached: isCappedNow,
+    message: isCappedNow
+      ? "Daily NIM limit reached (0.1 NIM/day). You cannot earn any more NIM today. Resets at 00:00 UTC."
+      : undefined,
+    status: updatedStatus,
   };
 }

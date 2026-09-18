@@ -176,7 +176,10 @@ export default class StoryScene extends Phaser.Scene {
     this.firstBossClaimResult = null;
     this.crystalBankResult = null;
     this.levelStartTime = performance.now();
-    fetchRewardsStatus().then((st) => { this.rewardsStatus = st; }).catch(() => {});
+    fetchRewardsStatus().then((st) => {
+      this.rewardsStatus = st;
+      this.checkDailyHarvestCap();
+    }).catch(() => {});
 
     // Build the Level Geometry & Spawns
     this.buildChapterLevel();
@@ -2260,10 +2263,29 @@ export default class StoryScene extends Phaser.Scene {
     this.txtMaterials.setText(`🌲${mats.bark} 🍯${mats.amber} ⚙️${mats.iron}`);
   }
 
+  checkDailyHarvestCap() {
+    const earned = Number(this.rewardsStatus?.crystalStatus?.nimEarned || 0);
+    const cap = Number(this.rewardsStatus?.crystalStatus?.dailyCapNim ?? 0.1);
+    const sessionEarned = (this.sessionCrystalsCollected || 0) * 0.001;
+    const totalToday = earned + sessionEarned;
+    this.isDailyHarvestCapped = totalToday >= cap || Boolean(this.rewardsStatus?.crystalStatus?.isCapped);
+    this.updateHudHarvest();
+  }
+
   updateHudHarvest() {
     if (!this.txtHarvest) return;
-    const nim = ((this.sessionCrystalsCollected || 0) * 0.001).toFixed(3);
-    this.txtHarvest.setText(`💎 +${nim} NIM`);
+    const cap = Number(this.rewardsStatus?.crystalStatus?.dailyCapNim ?? 0.1);
+    const earnedToday = Number(this.rewardsStatus?.crystalStatus?.nimEarned || 0);
+    const sessionEarned = (this.sessionCrystalsCollected || 0) * 0.001;
+    const totalToday = earnedToday + sessionEarned;
+
+    if (totalToday >= cap || this.rewardsStatus?.crystalStatus?.isCapped) {
+      this.txtHarvest.setText(`💎 ${cap.toFixed(3)} NIM (MAX 🔒)`);
+      this.txtHarvest.setColor('#f59e0b');
+    } else {
+      this.txtHarvest.setText(`💎 +${sessionEarned.toFixed(3)} NIM`);
+      this.txtHarvest.setColor('#ffd700');
+    }
   }
 
 
@@ -2497,10 +2519,12 @@ export default class StoryScene extends Phaser.Scene {
       }
       this.updateHudMaterials();
 
-      // Luna Crystal Drop (0.1 NIM each)
+      // Luna Crystal Drop (0.001 NIM each) - rare drops!
       if (this.lunaCrystals) {
         const isBoss = enemy.mobType && enemy.mobType.startsWith('boss');
-        const chance = isBoss ? 1.0 : 0.65;
+        const eliteTypes = ['bog_lurker', 'dread_bat', 'crypt_wraith', 'basalt_golem', 'void_stalker', 'hornet_guard', 'skeleton_warrior', 'cinder_drake', 'astral_shade', 'mirelurker'];
+        const isElite = eliteTypes.includes(enemy.mobType);
+        const chance = isBoss ? 1.0 : (isElite ? 0.15 : 0.05);
         if (Math.random() < chance) {
           const crystal = new LunaCrystalDrop(this, enemy.x, enemy.y - 8);
           this.lunaCrystals.add(crystal);
@@ -2517,22 +2541,34 @@ export default class StoryScene extends Phaser.Scene {
     storage.addMaterials({ bark: 1 });
     this.updateHudMaterials();
 
-    if (this.lunaCrystals && Math.random() < 0.65) {
+    if (this.lunaCrystals && Math.random() < 0.05) {
       const crystal = new LunaCrystalDrop(this, enemy.x, enemy.y - 8);
       this.lunaCrystals.add(crystal);
     }
   }
 
   onCrateBroken(crate) {
-    if (this.lunaCrystals && Math.random() < 0.5) {
+    if (this.lunaCrystals && Math.random() < 0.05) {
       const crystal = new LunaCrystalDrop(this, crate.x, crate.y - 6);
       this.lunaCrystals.add(crystal);
     }
   }
 
   onLunaCrystalCollected(crystal) {
+    const wasCapped = this.isDailyHarvestCapped;
     this.sessionCrystalsCollected = (this.sessionCrystalsCollected || 0) + 1;
-    this.updateHudHarvest();
+    this.checkDailyHarvestCap();
+    if (!wasCapped && this.isDailyHarvestCapped && this.player) {
+      juice.spawnFloatingText(
+        this,
+        this.player.x,
+        this.player.y - 40,
+        'DAILY NIM CAP REACHED (0.1 MAX)! 🔒',
+        '#f59e0b',
+        18,
+        2500
+      );
+    }
   }
 
 
@@ -3022,6 +3058,9 @@ export default class StoryScene extends Phaser.Scene {
     if (this.firstBossClaimResult && this.firstBossClaimResult.ok) {
       rewardText = '🌟 FIRST BOSS SLAIN: +10 NIM TRANSMITTED TO WALLET!';
       rewardColor = '#ffd700';
+    } else if (this.isDailyHarvestCapped || this.rewardsStatus?.crystalStatus?.isCapped) {
+      rewardText = '🔒 DAILY LIMIT REACHED (0.1 NIM/DAY) • NO MORE NIM TODAY (RESETS 00:00 UTC)';
+      rewardColor = '#f59e0b';
     } else if (this.sessionCrystalsCollected > 0) {
       const nim = (this.sessionCrystalsCollected * 0.001).toFixed(3);
       rewardText = `💎 LUNA HARVEST: +${nim} NIM QUEUED TO WALLET`;
@@ -3245,9 +3284,12 @@ export default class StoryScene extends Phaser.Scene {
       color: '#ff4444'
     }).setOrigin(0.5).setScrollFactor(0).setDepth(501);
 
-    const crystalBonus = this.sessionCrystalsCollected > 0
-      ? ` • 💎 +${(this.sessionCrystalsCollected * 0.001).toFixed(3)} NIM Saved`
-      : '';
+    let crystalBonus = '';
+    if (this.isDailyHarvestCapped || this.rewardsStatus?.crystalStatus?.isCapped) {
+      crystalBonus = ' • 🔒 Daily Cap Reached (0.1 NIM Max)';
+    } else if (this.sessionCrystalsCollected > 0) {
+      crystalBonus = ` • 💎 +${(this.sessionCrystalsCollected * 0.001).toFixed(3)} NIM Saved`;
+    }
     const subtitle = this.add.text(w / 2, h / 2 - 22, `Chapter ${this.chapterId}: ${this.chapterConfig.title}${crystalBonus}`, {
       fontFamily: 'Press Start 2P',
       fontSize: '6px',
