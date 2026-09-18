@@ -57,7 +57,6 @@ export default class VoidStalker extends Phaser.Physics.Arcade.Sprite {
     }
 
     const dirToPlayer = player.x < this.x ? -1 : 1;
-    this.setFlipX(dirToPlayer < 0);
 
     // Pounce Leap Attack (only if no pit / chasm ahead!)
     if (dist < 160 && dist > 50 && dy < 50 && now > this.attackCooldownUntil && this.body.blocked.down) {
@@ -83,8 +82,10 @@ export default class VoidStalker extends Phaser.Physics.Arcade.Sprite {
     }
 
     if (dist < 240 && !this.isLedgeAhead(dirToPlayer)) {
+      this.setFlipX(dirToPlayer > 0);
       this.setVelocityX(dirToPlayer * runSpeed);
     } else {
+      this.setFlipX(this.patrolDir > 0);
       this.setVelocityX(this.patrolDir * runSpeed * 0.7);
     }
   }
@@ -108,6 +109,7 @@ export default class VoidStalker extends Phaser.Physics.Arcade.Sprite {
     this.state = 'POUNCE';
     this.attackCooldownUntil = this.scene.time.now + 2600;
     this.stateTimer = this.scene.time.now + 850;
+    this.setFlipX(dir > 0);
 
     const pounceSpeed = (GAME_CONFIG.MOBS.VOID_STALKER && GAME_CONFIG.MOBS.VOID_STALKER.POUNCE_SPEED) || 230;
     this.setVelocity(dir * pounceSpeed, -140);

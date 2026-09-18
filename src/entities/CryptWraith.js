@@ -73,7 +73,7 @@ export default class CryptWraith extends Phaser.Physics.Arcade.Sprite {
     this.y = this.baseY + Math.sin(this.bobTimer) * 8;
 
     const dirToPlayer = player.x < this.x ? -1 : 1;
-    this.setFlipX(dirToPlayer < 0);
+    this.setFlipX(dirToPlayer > 0);
 
     // Crypt Shriek attack
     if (dist < 110 && now > this.attackCooldownUntil) {
@@ -100,6 +100,8 @@ export default class CryptWraith extends Phaser.Physics.Arcade.Sprite {
     this.attackCooldownUntil = this.scene.time.now + 3000;
     this.stateTimer = this.scene.time.now + 600;
     this.setVelocity(0, 0);
+    const dirToPlayer = player.x < this.x ? -1 : 1;
+    this.setFlipX(dirToPlayer > 0);
     this.play('crypt_wraith_shriek_anim', true);
 
     juice.spawnFloatingText(this.scene, this.x, this.y - 30, 'SPECTRAL SHRIEK! 👻', '#38bdf8');
@@ -121,8 +123,10 @@ export default class CryptWraith extends Phaser.Physics.Arcade.Sprite {
     if (this.state === 'DEAD') return false;
 
     // Frontal attack vs backstab
-    const facingLeft = this.flipX;
-    const attackerFromBehind = (facingLeft && sourceX > this.x) || (!facingLeft && sourceX < this.x);
+    // flipX = false faces left (negative X). Back is towards positive X (sourceX > this.x).
+    // flipX = true faces right (positive X). Back is towards negative X (sourceX < this.x).
+    const facingRight = this.flipX;
+    const attackerFromBehind = (facingRight && sourceX < this.x) || (!facingRight && sourceX > this.x);
 
     let finalDamage = amount;
     const isCrit = attackerFromBehind || this.state === 'SHRIEK';
