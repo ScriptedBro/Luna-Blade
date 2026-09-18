@@ -101,6 +101,11 @@
 | **High Forest Bee** | Hovers overhead, winds up, and swoops diagonally | Use `UP ATTK` to swat them as they dive |
 | **Tusk Boar** | Roars, turns red, and charges at high speed | Time a slash for a counter-stagger, or jump stomp |
 | **Corrupted Flying Eye** | Patrols high airspace and fires concentrated lasers | Lure down and strike with upward aerial slash |
+| **Mirelurker (Ch 1)** | Water ambush amphibian; spits slowing mud and leaps | Stomp bounce mid-leap or slice mud balls out of the air |
+| **Royal Hornet Guard (Ch 2)** | Armored golden hornet with pollen shield & drill dive | Upward slash (`UP ATTK`) breaks shield; strike while embedded |
+| **Skeleton Legionnaire (Ch 3)** | Undead warrior with tower shield blocking front slashes | Stomp or upward-slash to break guard, or hit from behind for $3\times$ CRIT |
+| **Cinder Drake (Ch 4)** | Magma-gliding dragon immune to lava; spits fire globs | Time a slash during dive-bomb for a counter stagger |
+| **Astral Shade (Ch 5)** | Phasing void phantom; glides through platforms and casts rays | Punish during cast window and use upward slash to ground it |
 | **Boss Gorgok the Troll** | Massive stone troll; stomps shockwaves and charges across the arena | **Only deals damage during active Charge**. Stomp bounce his head to deal 25 damage! |
 | **Boss Malakor** | Blighted wizard; teleports across platforms and casts crimson lightning | Stay mobile, avoid lightning pillars, and strike during teleport recovery |
 

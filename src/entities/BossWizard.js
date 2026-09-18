@@ -2,6 +2,7 @@ import Phaser from 'phaser';
 import { GAME_CONFIG } from '../config.js';
 import { sound } from '../engine/Audio.js';
 import { storage } from '../engine/Storage.js';
+import { juice } from '../engine/JuiceEffects.js';
 import EnemyHealthBar from '../ui/EnemyHealthBar.js';
 
 export default class BossWizard extends Phaser.Physics.Arcade.Sprite {
@@ -273,22 +274,14 @@ export default class BossWizard extends Phaser.Physics.Arcade.Sprite {
       this.healthBar.updateHealth(this.hp, this.maxHp);
     }
 
-    // Damage popup
-    const dmgText = this.scene.add.text(this.x, this.y - 30, `-${finalDmg}`, {
-      fontFamily: 'Press Start 2P',
-      fontSize: '7.5px',
-      color: '#ff77ff',
-      stroke: '#000',
-      strokeThickness: 2
-    }).setOrigin(0.5);
-
-    this.scene.tweens.add({
-      targets: dmgText,
-      y: this.y - 50,
-      alpha: 0,
-      duration: 500,
-      onComplete: () => dmgText.destroy()
-    });
+    // Damage popup via JuiceEffects
+    if (isUpwardSlash) {
+      juice.spawnDamageNumber(this.scene, this.x, this.y - 28, finalDmg, 'crit', `UP-SLASH -${finalDmg}! 🗡️`);
+      juice.hitStopCrit(this.scene);
+    } else {
+      juice.spawnDamageNumber(this.scene, this.x, this.y - 28, finalDmg, 'normal');
+      juice.hitStopHeavy(this.scene);
+    }
 
     if (this.hp <= 0) {
       this.die();

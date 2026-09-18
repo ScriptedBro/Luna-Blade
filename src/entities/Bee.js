@@ -1,6 +1,7 @@
 import Phaser from 'phaser';
 import { GAME_CONFIG } from '../config.js';
 import { sound } from '../engine/Audio.js';
+import { juice } from '../engine/JuiceEffects.js';
 import EnemyHealthBar from '../ui/EnemyHealthBar.js';
 
 export default class Bee extends Phaser.Physics.Arcade.Sprite {
@@ -191,23 +192,17 @@ export default class Bee extends Phaser.Physics.Arcade.Sprite {
     this.hp -= finalDamage;
     sound.playHit();
 
-    // Damage / Counter popup
-    const popupText = isCounter ? `AERIAL COUNTER! -${finalDamage}` : `-${finalDamage}`;
-    const dmgText = this.scene.add.text(this.x, this.y - 12, popupText, {
-      fontFamily: 'Press Start 2P',
-      fontSize: isCounter ? '8px' : '7px',
-      color: isCounter ? '#ffea00' : '#ffffff',
-      stroke: '#000',
-      strokeThickness: 2
-    }).setOrigin(0.5);
-
-    this.scene.tweens.add({
-      targets: dmgText,
-      y: this.y - 26,
-      alpha: 0,
-      duration: 500,
-      onComplete: () => dmgText.destroy()
-    });
+    // Damage / Counter popup via JuiceEffects
+    if (isCounter) {
+      juice.spawnDamageNumber(this.scene, this.x, this.y - 12, finalDamage, 'counter', `AERIAL COUNTER! -${finalDamage}`);
+      juice.hitStopHeavy(this.scene);
+    } else if (isUpwardSlash) {
+      juice.spawnDamageNumber(this.scene, this.x, this.y - 12, finalDamage, 'upslash');
+      juice.hitStopLight(this.scene);
+    } else {
+      juice.spawnDamageNumber(this.scene, this.x, this.y - 12, finalDamage, 'normal');
+      juice.hitStopLight(this.scene);
+    }
 
     if (this.hp <= 0) {
       this.die();

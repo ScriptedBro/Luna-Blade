@@ -1,6 +1,7 @@
 import Phaser from 'phaser';
 import { GAME_CONFIG } from '../config.js';
 import { sound } from '../engine/Audio.js';
+import { juice } from '../engine/JuiceEffects.js';
 import EnemyHealthBar from '../ui/EnemyHealthBar.js';
 
 export default class Snail extends Phaser.Physics.Arcade.Sprite {
@@ -110,17 +111,23 @@ export default class Snail extends Phaser.Physics.Arcade.Sprite {
     if (this.state === 'WALK') {
       this.hp -= amount;
       sound.playHit();
+      juice.spawnDamageNumber(this.scene, this.x, this.y - 12, amount, isUpwardSlash ? 'upslash' : 'normal');
+      juice.hitStopLight(this.scene);
 
       // Enter shelled state
       this.enterShelled();
       return { killed: false, pts: 0, shelled: true };
     } else if (this.state === 'SLIDING') {
       // Any sword strike on a sliding shell shatters it immediately!
+      juice.spawnDamageNumber(this.scene, this.x, this.y - 12, 99, 'shatter');
+      juice.hitStopHeavy(this.scene);
       this.shatter();
       return { killed: true, pts: GAME_CONFIG.MOBS.SNAIL.PTS * 1.5, shattered: true };
     } else if (this.state === 'SHELLED') {
       if (isUpwardSlash) {
         // Upward slash shatters the stationary shell directly
+        juice.spawnDamageNumber(this.scene, this.x, this.y - 12, 99, 'shatter');
+        juice.hitStopHeavy(this.scene);
         this.shatter();
         return { killed: true, pts: GAME_CONFIG.MOBS.SNAIL.PTS * 1.5, shattered: true };
       } else {

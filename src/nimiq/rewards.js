@@ -1,14 +1,18 @@
 import { apiFetch } from "./api.js";
 import { getToken, getAddress } from "./session.js";
 import { signWireMessage } from "./auth.js";
-import { todaySeedString } from "./leaderboard.js";
+import { getDeviceId, todaySeedString } from "./leaderboard.js";
 
 /** Fetch reward eligibility and current daily crystal status for connected wallet */
 export async function fetchRewardsStatus() {
   const token = getToken();
   if (!token) return null;
   try {
-    return await apiFetch("/api/rewards/status", { token });
+    const deviceId = await getDeviceId();
+    const path = deviceId
+      ? `/api/rewards/status?deviceId=${encodeURIComponent(deviceId)}`
+      : "/api/rewards/status";
+    return await apiFetch(path, { token });
   } catch (e) {
     console.warn("[rewards] failed to fetch status", e?.message);
     return null;
@@ -28,6 +32,7 @@ export async function claimFirstStoryBossReward({ chapterId, bossName, durationM
   const boss = String(bossName || "Gorgok");
   const message = `Luna Blade Boss Proof: Chapter ${ch} | Boss: ${boss} | Player: ${addr}`;
   const { signerPublicKey, signature } = await signWireMessage(message);
+  const deviceId = await getDeviceId();
 
   return apiFetch("/api/rewards/claim-boss", {
     method: "POST",
@@ -40,6 +45,7 @@ export async function claimFirstStoryBossReward({ chapterId, bossName, durationM
       bossName: boss,
       durationMs: Math.round(durationMs || 0),
       kills: Math.round(kills || 0),
+      deviceId,
     }),
   });
 }
@@ -58,6 +64,7 @@ export async function bankCrystalHarvest({ crystalsCollected, durationMs, kills 
   const dateSeed = todaySeedString();
   const message = `Luna Blade Crystal Proof: ${count} | Date: ${dateSeed} | Player: ${addr}`;
   const { signerPublicKey, signature } = await signWireMessage(message);
+  const deviceId = await getDeviceId();
 
   return apiFetch("/api/rewards/bank-crystals", {
     method: "POST",
@@ -70,6 +77,7 @@ export async function bankCrystalHarvest({ crystalsCollected, durationMs, kills 
       crystalsCollected: count,
       durationMs: Math.round(durationMs || 0),
       kills: Math.round(kills || 0),
+      deviceId,
     }),
   });
 }

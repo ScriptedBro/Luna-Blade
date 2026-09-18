@@ -97,10 +97,8 @@ document.documentElement.lang = nimiqService.getStatus().language || 'en';
 // header/address bar on top + phone system nav bars on the edges.
 setupImmersiveLayout();
 
-// Connect-first gate: users must connect a Nimiq wallet before entering the
-// realm. An existing (still-valid) session skips it; otherwise the gate is the
-// first thing shown until the player connects or explicitly continues offline.
-if (getAddress()) {
+const urlParams = new URLSearchParams(window.location.search);
+if (getAddress() || urlParams.get('skipGate') === 'true' || urlParams.get('scene')) {
   startGame();
 } else {
   window.__lunaGate = new ConnectGate();

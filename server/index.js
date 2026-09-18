@@ -4,7 +4,7 @@ import { config, DAILY_PRIZES_NIM, FIRST_BOSS_BOUNTY_NIM, LUNA_CRYSTAL_REWARD_NI
 import { createNonce, consumeNonce, signSession, requireAuth } from "./src/auth.js";
 import { verifySignedMessageDeriveAddress } from "./src/verifyNimiq.js";
 import { submitScore, getDailyBoard, getDailyRank, getDailyWinners, getAllTimeBoard, getAllTimeRank } from "./src/leaderboard.js";
-import { runPayoutCycle, getPayoutSummary, isPayoutSignerConfigured, startPayoutCron, queueFirstBossPayout, queueCrystalHarvestPayout } from "./src/payout.js";
+import { runPayoutCycle, getPayoutSummary, isPayoutSignerConfigured, startPayoutCron, queueFirstBossPayout, queueCrystalHarvestPayout, getPayoutTreasuryAddress, getTreasuryBalanceLuna } from "./src/payout.js";
 import { hasClaimedFirstBoss, recordFirstBossClaim, getDailyCrystalStatus, recordCrystalHarvestClaim } from "./src/claims.js";
 import { initCloudStorage } from "./src/db.js";
 
@@ -65,8 +65,9 @@ app.get("/api/config", (_req, res) => {
 app.get("/api/rewards/status", requireAuth, (req, res) => {
   const wallet = req.session.sub;
   const dateSeed = todaySeedString();
+  const deviceId = typeof req.query.deviceId === "string" ? req.query.deviceId : "";
   const firstBossClaimed = hasClaimedFirstBoss(wallet);
-  const crystalStatus = getDailyCrystalStatus(wallet, dateSeed);
+  const crystalStatus = getDailyCrystalStatus(wallet, dateSeed, deviceId);
   res.json({
     wallet,
     dateSeed,
@@ -99,6 +100,17 @@ app.post("/api/rewards/claim-boss", requireAuth, async (req, res) => {
     return res.status(401).json({ error: "invalid_boss_proof" });
   }
 
+  // Rewards are only claimable from a Nimiq Pay Mini App session.
+  if (req.session.nimiqPay !== true) {
+    return res.status(403).json({ error: "nimiq_pay_required" });
+  }
+
+  // Device identifier from the Mini App host (anti-farm: one bounty per device).
+  const deviceId = typeof req.body?.deviceId === "string" ? req.body.deviceId.trim() : "";
+  if (!deviceId) {
+    return res.status(400).json({ error: "device_required" });
+  }
+
   // Must be Story Mode boss (Chapters 1 to 5)
   if (ch < 1 || ch > 5) {
     return res.status(400).json({ error: "boss_reward_story_only" });
@@ -115,7 +127,10 @@ app.post("/api/rewards/claim-boss", requireAuth, async (req, res) => {
   }
 
   // Record claim
-  const record = recordFirstBossClaim(wallet, { chapterId: ch, bossName: boss });
+  const record = recordFirstBossClaim(wallet, { chapterId: ch, bossName: boss, deviceId });
+  if (record.deviceCapped) {
+    return res.status(429).json({ error: "device_boss_cap", deviceLimit: record.allowed });
+  }
   if (!record.ok) {
     return res.status(409).json({ error: "already_claimed" });
   }
@@ -154,8 +169,19 @@ app.post("/api/rewards/bank-crystals", requireAuth, async (req, res) => {
     return res.status(401).json({ error: "invalid_crystal_proof" });
   }
 
+  // Rewards are only claimable from a Nimiq Pay Mini App session.
+  if (req.session.nimiqPay !== true) {
+    return res.status(403).json({ error: "nimiq_pay_required" });
+  }
+
+  // Device identifier from the Mini App host (anti-farm: per-device daily cap).
+  const deviceId = typeof req.body?.deviceId === "string" ? req.body.deviceId.trim() : "";
+  if (!deviceId) {
+    return res.status(400).json({ error: "device_required" });
+  }
+
   if (count <= 0) {
-    const status = getDailyCrystalStatus(wallet, dSeed);
+    const status = getDailyCrystalStatus(wallet, dSeed, deviceId);
     return res.json({ ok: true, creditedNim: 0, creditedCrystals: 0, status });
   }
 
@@ -170,7 +196,7 @@ app.post("/api/rewards/bank-crystals", requireAuth, async (req, res) => {
     return res.status(400).json({ error: "crystal_count_anomaly" });
   }
 
-  const claimResult = recordCrystalHarvestClaim(wallet, dSeed, count);
+  const claimResult = recordCrystalHarvestClaim(wallet, dSeed, count, deviceId);
   if (claimResult.creditedNim > 0) {
     await queueCrystalHarvestPayout(wallet, dSeed, claimResult.creditedNim);
   }
@@ -294,8 +320,24 @@ app.post("/api/payouts/trigger-run", requireAuth, async (req, res) => {
   }
 });
 
-app.get("/api/payouts/status", (_req, res) => {
-  res.json({ ...getPayoutSummary(), signerConfigured: isPayoutSignerConfigured() });
+app.get("/api/payouts/status", async (_req, res) => {
+  let treasuryAddress = null;
+  let balanceNim = null;
+  if (isPayoutSignerConfigured()) {
+    try {
+      treasuryAddress = await getPayoutTreasuryAddress();
+      const balLuna = await getTreasuryBalanceLuna();
+      balanceNim = Number(balLuna) / 1e5;
+    } catch (e) {
+      console.warn("[payout] balance query error", e?.message);
+    }
+  }
+  res.json({
+    ...getPayoutSummary(),
+    signerConfigured: isPayoutSignerConfigured(),
+    treasuryAddress,
+    balanceNim
+  });
 });
 
 // --- Boot ---

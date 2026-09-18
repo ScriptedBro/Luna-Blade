@@ -1,6 +1,7 @@
 import Phaser from 'phaser';
 import { GAME_CONFIG } from '../config.js';
 import { sound } from '../engine/Audio.js';
+import { juice } from '../engine/JuiceEffects.js';
 import EnemyHealthBar from '../ui/EnemyHealthBar.js';
 
 export default class FlyingEye extends Phaser.Physics.Arcade.Sprite {
@@ -178,24 +179,14 @@ export default class FlyingEye extends Phaser.Physics.Arcade.Sprite {
     this.hp -= finalDmg;
     sound.playHit();
 
-    // Damage popup text
-    const color = isAntiAir ? '#ffd700' : '#ffffff';
-    const textMsg = isAntiAir ? `ANTI-AIR -${finalDmg}!` : `-${finalDmg}`;
-    const dmgText = this.scene.add.text(this.x, this.y - 18, textMsg, {
-      fontFamily: 'Press Start 2P',
-      fontSize: isAntiAir ? '8px' : '7px',
-      color: color,
-      stroke: '#000',
-      strokeThickness: 2
-    }).setOrigin(0.5);
-
-    this.scene.tweens.add({
-      targets: dmgText,
-      y: this.y - 32,
-      alpha: 0,
-      duration: 500,
-      onComplete: () => dmgText.destroy()
-    });
+    // Damage popup via JuiceEffects
+    if (isAntiAir) {
+      juice.spawnDamageNumber(this.scene, this.x, this.y - 18, finalDmg, 'crit', `ANTI-AIR -${finalDmg}! 🗡️`);
+      juice.hitStopHeavy(this.scene);
+    } else {
+      juice.spawnDamageNumber(this.scene, this.x, this.y - 18, finalDmg, 'normal');
+      juice.hitStopLight(this.scene);
+    }
 
     // Knockback
     const knockDir = attackFromX < this.x ? 1 : -1;
