@@ -93,6 +93,10 @@ export default class StoryScene extends Phaser.Scene {
 
     this.isGameOver = false;
     this.isVictory = false;
+    if (this.physics) {
+      this.physics.resume();
+      if (this.physics.world) this.physics.world.isPaused = false;
+    }
 
     if (this.bossApproachBanner) {
       this.bossApproachBanner.destroy();
@@ -333,6 +337,15 @@ export default class StoryScene extends Phaser.Scene {
         this.triggerChapterOpeningDialogue();
       } else {
         this.showChapterIntroCard();
+      }
+    } else {
+      if (this.physics) {
+        this.physics.resume();
+        if (this.physics.world) this.physics.world.isPaused = false;
+      }
+      pauseService.showButtons();
+      if (typeof window !== 'undefined' && window.touchController) {
+        window.touchController.show();
       }
     }
   }

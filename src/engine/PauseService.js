@@ -262,20 +262,22 @@ export class PauseService {
 
   retry() {
     if (!this.activeScene) return;
-    const sceneToRestart = this.activeScene;
-    this.isPaused = false;
-    if (this.modal) {
-      this.modal.classList.add('hidden');
-    }
-    if (sceneToRestart.physics && sceneToRestart.physics.world) {
-      sceneToRestart.physics.resume();
-    }
-    sound.playCoin();
+    try {
+      const sceneToRestart = this.activeScene;
+      this.isPaused = false;
+      if (this.modal) {
+        this.modal.classList.add('hidden');
+      }
+      if (sceneToRestart.physics && sceneToRestart.physics.world) {
+        sceneToRestart.physics.resume();
+        sceneToRestart.physics.world.isPaused = false;
+      }
+      sound.playCoin();
 
-    if (sceneToRestart.chapterId) {
-      sceneToRestart.scene.restart({ chapter: sceneToRestart.chapterId, skipIntroCard: true, skipDialogue: true });
-    } else {
-      sceneToRestart.scene.restart();
+      const chId = sceneToRestart.chapterId || 1;
+      sceneToRestart.scene.restart({ chapter: chId, skipIntroCard: true, skipDialogue: true });
+    } catch (err) {
+      console.error('Error in retry():', err);
     }
   }
 
