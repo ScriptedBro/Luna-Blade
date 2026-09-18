@@ -40,6 +40,11 @@ export default class LeaderboardScene extends Phaser.Scene {
 
     this.buildTabs();
     this.renderBottomBar(w, h);
+    this.addHeaderBackButton(w);
+
+    if (this.input?.keyboard) {
+      this.input.keyboard.on('keydown-ESC', () => this.scene.start('MenuScene'));
+    }
 
     this.loadingText = this.add.text(w / 2, h / 2, 'LOADING ON-CHAIN SCORES…', {
       fontFamily: 'Press Start 2P',
@@ -297,9 +302,36 @@ export default class LeaderboardScene extends Phaser.Scene {
     this.bottomBarLayer.add(spoilsTxt);
   }
 
+  addHeaderBackButton(w) {
+    const x = 60;
+    const y = 14;
+    const backBtn = this.add.rectangle(x, y, 78, 20, 0x1a2e1a)
+      .setStrokeStyle(1, 0x3d5c3d)
+      .setDepth(50)
+      .setInteractive({ useHandCursor: true });
+    const backTxt = this.add.text(x, y, '◄ MENU', {
+      fontFamily: 'Press Start 2P',
+      fontSize: '6px',
+      color: '#fff'
+    }).setOrigin(0.5).setDepth(51);
+    const goBack = () => {
+      sound.playCoin();
+      this.scene.start('MenuScene');
+    };
+    backBtn.on('pointerdown', goBack);
+    backTxt.setInteractive({ useHandCursor: true });
+    backTxt.on('pointerdown', goBack);
+    this.headerBackBtn = backBtn;
+    this.headerBackTxt = backTxt;
+  }
+
   onViewportResize(w, h) {
     if (this.bgTile) this.bgTile.setSize(w, h);
     if (this.titleText) this.titleText.setPosition(w / 2, 14);
+    if (this.headerBackBtn && this.headerBackTxt) {
+      this.headerBackBtn.setPosition(60, 14);
+      this.headerBackTxt.setPosition(60, 14);
+    }
     if (this.tabButtons) {
       this.tabButtons.forEach((t) => {
         if (t.key === 'alltime') {
