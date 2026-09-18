@@ -9,7 +9,8 @@ function bool(v, def = false) {
   return v === "1" || v === "true" || v === "yes";
 }
 
-// NOTE: @nimiq/core accepts "main" for MainAlbatross; "mainnet" is rejected.
+// NOTE: use "mainalbatross" for mainnet and "testalbatross" for testnet. The bare
+// "main" resolves to the legacy network id "Main", which the Albatross client rejects.
 const network = String(process.env.NIMIQ_NETWORK || "testalbatross").toLowerCase().trim();
 
 export const config = {

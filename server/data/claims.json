@@ -1,50 +1,6 @@
 {
-  "firstBoss": {
-    "NQ48JCB2FVNAU7RBBVQF8K4BXCFSXCJ93TGB": {
-      "wallet": "NQ48JCB2FVNAU7RBBVQF8K4BXCFSXCJ93TGB",
-      "chapterId": 1,
-      "bossName": "Gorgok",
-      "txId": null,
-      "deviceId": "e4f7421eba55ad06f60baae570ff32cc778cc9e4c969beb264852a307553bce1",
-      "claimedAt": 1789671945825
-    }
-  },
-  "dailyCrystals": {
-    "2099-12-31:NQ95G6XGC3GJG5ASCUA8D0D82M5TL0GAVR3F": {
-      "wallet": "NQ95G6XGC3GJG5ASCUA8D0D82M5TL0GAVR3F",
-      "dateSeed": "2099-12-31",
-      "nimEarned": 10,
-      "crystalsCollected": 100,
-      "updatedAt": 1789671945834
-    },
-    "2099-12-31:NQ80311ULP7LKHE52YDDKPTMHEHXTVATMM82": {
-      "wallet": "NQ80311ULP7LKHE52YDDKPTMHEHXTVATMM82",
-      "dateSeed": "2099-12-31",
-      "nimEarned": 2.5,
-      "crystalsCollected": 25,
-      "updatedAt": 1789671945839
-    }
-  },
-  "firstBossDevices": {
-    "e4f7421eba55ad06f60baae570ff32cc778cc9e4c969beb264852a307553bce1": {
-      "wallet": "NQ48JCB2FVNAU7RBBVQF8K4BXCFSXCJ93TGB",
-      "claimedAt": 1789671945825
-    }
-  },
-  "dailyDevices": {
-    "2099-12-31:25db6ccbe1f2574dd55d16b74c03042ca5ee3de8c7bd10824d5db1c39a7ba1f3": {
-      "nimEarned": 10,
-      "wallets": {
-        "NQ95G6XGC3GJG5ASCUA8D0D82M5TL0GAVR3F": 10
-      },
-      "updatedAt": 1789671945834
-    },
-    "2099-12-31:e17b7cab99b69eaca59c5b2587ed7944f4deceed5c17c47f12f264a06ebf11c6": {
-      "nimEarned": 2.5,
-      "wallets": {
-        "NQ80311ULP7LKHE52YDDKPTMHEHXTVATMM82": 2.5
-      },
-      "updatedAt": 1789671945839
-    }
-  }
+  "firstBoss": {},
+  "dailyCrystals": {},
+  "firstBossDevices": {},
+  "dailyDevices": {}
 }

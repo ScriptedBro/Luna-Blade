@@ -4,7 +4,7 @@ import { config, DAILY_PRIZES_NIM, FIRST_BOSS_BOUNTY_NIM, LUNA_CRYSTAL_REWARD_NI
 import { createNonce, consumeNonce, signSession, requireAuth } from "./src/auth.js";
 import { verifySignedMessageDeriveAddress } from "./src/verifyNimiq.js";
 import { submitScore, getDailyBoard, getDailyRank, getDailyWinners, getAllTimeBoard, getAllTimeRank } from "./src/leaderboard.js";
-import { runPayoutCycle, getPayoutSummary, isPayoutSignerConfigured, startPayoutCron, queueFirstBossPayout, queueCrystalHarvestPayout, getPayoutTreasuryAddress, getTreasuryBalanceLuna } from "./src/payout.js";
+import { runPayoutCycle, getPayoutSummary, isPayoutSignerConfigured, startPayoutCron, queueFirstBossPayout, queueCrystalHarvestPayout, getTreasurySnapshot } from "./src/payout.js";
 import { hasClaimedFirstBoss, recordFirstBossClaim, getDailyCrystalStatus, recordCrystalHarvestClaim } from "./src/claims.js";
 import { initCloudStorage } from "./src/db.js";
 
@@ -322,23 +322,16 @@ app.post("/api/payouts/trigger-run", requireAuth, async (req, res) => {
   }
 });
 
-app.get("/api/payouts/status", async (_req, res) => {
-  let treasuryAddress = null;
-  let balanceNim = null;
-  if (isPayoutSignerConfigured()) {
-    try {
-      treasuryAddress = await getPayoutTreasuryAddress();
-      const balLuna = await getTreasuryBalanceLuna();
-      balanceNim = Number(balLuna) / 1e5;
-    } catch (e) {
-      console.warn("[payout] balance query error", e?.message);
-    }
-  }
+app.get("/api/payouts/status", (_req, res) => {
+  const treasury = isPayoutSignerConfigured()
+    ? getTreasurySnapshot()
+    : { address: null, balanceNim: null, updatedAt: 0 };
   res.json({
     ...getPayoutSummary(),
     signerConfigured: isPayoutSignerConfigured(),
-    treasuryAddress,
-    balanceNim
+    treasuryAddress: treasury.address,
+    balanceNim: treasury.balanceNim,
+    balanceUpdatedAt: treasury.updatedAt || null
   });
 });
 

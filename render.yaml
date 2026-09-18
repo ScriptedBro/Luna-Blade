@@ -11,12 +11,14 @@ services:
       - key: PORT
         value: 10000
       - key: NIMIQ_NETWORK
-        value: main
+        value: mainalbatross
       - key: UPSTASH_REDIS_REST_URL
         sync: false
       - key: UPSTASH_REDIS_REST_TOKEN
         sync: false
       - key: NIM_PAYOUT_PRIVATE_KEY
+        sync: false
+      - key: PAYOUT_ADMIN_ADDRESS
         sync: false
       - key: JWT_SECRET
         generateValue: true
