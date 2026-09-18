@@ -2449,6 +2449,8 @@ export default class StoryScene extends Phaser.Scene {
       if (this.player.flipX && enemyCenterX > this.player.x) return;
     }
 
+    const dmg = this.player.getAttackDamage();
+    const isUpward = this.player.attackType === 'upward';
     const res = enemy.takeDamage(dmg, this.player.x, isUpward);
 
     if ((res && res.killed) || enemy.state === 'DEAD' || (enemy.hp !== undefined && enemy.hp <= 0)) {

@@ -114,7 +114,7 @@ export class PauseService {
     }
 
     window.addEventListener('keydown', (e) => {
-      if (e.code === 'KeyP' || (e.code === 'Escape' && this.isPaused)) {
+      if (e.code === 'KeyP' || e.code === 'Escape') {
         if (this.activeScene) {
           if (this.isPaused) {
             e.preventDefault();
@@ -273,7 +273,7 @@ export class PauseService {
     sound.playCoin();
 
     if (sceneToRestart.chapterId) {
-      sceneToRestart.scene.restart({ chapter: sceneToRestart.chapterId, skipIntroCard: true });
+      sceneToRestart.scene.restart({ chapter: sceneToRestart.chapterId, skipIntroCard: true, skipDialogue: true });
     } else {
       sceneToRestart.scene.restart();
     }
