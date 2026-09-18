@@ -7,6 +7,11 @@ import Mushroom from '../entities/Mushroom.js';
 import FlyingEye from '../entities/FlyingEye.js';
 import Goblin from '../entities/Goblin.js';
 import BossGorgok from '../entities/BossGorgok.js';
+import BogLurker from '../entities/BogLurker.js';
+import DreadBat from '../entities/DreadBat.js';
+import CryptWraith from '../entities/CryptWraith.js';
+import BasaltGolem from '../entities/BasaltGolem.js';
+import VoidStalker from '../entities/VoidStalker.js';
 import Projectile from '../entities/Projectile.js';
 import BossHealthBar from '../ui/BossHealthBar.js';
 import HeroHealthBar from '../ui/HeroHealthBar.js';
@@ -17,6 +22,7 @@ import { storage } from '../engine/Storage.js';
 import { getTodaySeedString, generateDailySurvivalSpec } from '../engine/PRNG.js';
 import { pauseService } from '../engine/PauseService.js';
 import { nimiqService } from '../engine/NimiqService.js';
+import { juice } from '../engine/JuiceEffects.js';
 import confetti from 'canvas-confetti';
 import LunaCrystalDrop from '../entities/LunaCrystalDrop.js';
 import { bankCrystalHarvest } from '../nimiq/rewards.js';
@@ -754,11 +760,17 @@ export default class SurvivalScene extends Phaser.Scene {
 
         for (let i = 0; i < openSlots; i++) {
           const types = ['boar', 'snail', 'bee', 'mushroom', 'flying_eye', 'goblin'];
+          if ((this.currentWaveIndex || 0) >= 2) types.push('bog_lurker');
+          if ((this.currentWaveIndex || 0) >= 3) types.push('dread_bat');
+          if ((this.currentWaveIndex || 0) >= 4) types.push('crypt_wraith');
+          if ((this.currentWaveIndex || 0) >= 5) types.push('basalt_golem');
+          if ((this.currentWaveIndex || 0) >= 6) types.push('void_stalker');
+
           const chosen = Phaser.Utils.Array.GetRandom(types);
           const spawnX = Math.random() < 0.5 ? 80 : 760;
           let spawnY = 280;
-          if (chosen === 'bee' || chosen === 'flying_eye') spawnY = Phaser.Math.Between(80, 140);
-          else if (chosen === 'mushroom' || chosen === 'goblin') spawnY = Math.random() < 0.5 ? 150 : 210;
+          if (chosen === 'bee' || chosen === 'flying_eye' || chosen === 'dread_bat' || chosen === 'crypt_wraith') spawnY = Phaser.Math.Between(80, 140);
+          else if (chosen === 'mushroom' || chosen === 'goblin' || chosen === 'void_stalker') spawnY = Math.random() < 0.5 ? 150 : 210;
 
           this.inFlightSpawns++;
           this.showSpawnTelegraph(spawnX, spawnY);
@@ -900,6 +912,16 @@ export default class SurvivalScene extends Phaser.Scene {
       enemy = new FlyingEye(this, x, y);
     } else if (type === 'goblin') {
       enemy = new Goblin(this, x, y);
+    } else if (type === 'bog_lurker') {
+      enemy = new BogLurker(this, x, y);
+    } else if (type === 'dread_bat') {
+      enemy = new DreadBat(this, x, y);
+    } else if (type === 'crypt_wraith') {
+      enemy = new CryptWraith(this, x, y);
+    } else if (type === 'basalt_golem') {
+      enemy = new BasaltGolem(this, x, y);
+    } else if (type === 'void_stalker') {
+      enemy = new VoidStalker(this, x, y);
     } else if (type === 'boss_gorgok') {
       if (!this.bossBar) {
         this.bossBar = new BossHealthBar(this, GAME_CONFIG.MOBS.BOSS_GORGOK.NAME, GAME_CONFIG.MOBS.BOSS_GORGOK.HP);
@@ -1073,21 +1095,8 @@ export default class SurvivalScene extends Phaser.Scene {
       sound.playBoarChargeHit();
       sound.playRicochet();
 
-      const stompText = this.add.text(enemy.x, enemy.y - 18, '💥 STOMP! -35', {
-        fontFamily: 'Press Start 2P',
-        fontSize: '6.5px',
-        color: '#ffd166',
-        stroke: '#000000',
-        strokeThickness: 2
-      }).setOrigin(0.5).setDepth(200);
-
-      this.tweens.add({
-        targets: stompText,
-        y: stompText.y - 22,
-        alpha: 0,
-        duration: 650,
-        onComplete: () => stompText.destroy()
-      });
+      juice.spawnDamageNumber(this, enemy.x, enemy.y - 18, 35, 'stomp', '💥 STOMP! -35');
+      juice.hitStopHeavy(this);
 
       if (enemy.mobType === 'snail') {
         if (enemy.state === 'WALK') {
@@ -1555,9 +1564,18 @@ export default class SurvivalScene extends Phaser.Scene {
       strokeThickness: 2
     }).setOrigin(0.5).setDepth(250);
 
+    txt.setScale(1.25);
     this.tweens.add({
       targets: txt,
-      y: y - 24,
+      scaleX: 1.0,
+      scaleY: 1.0,
+      duration: 130,
+      ease: 'Back.easeOut'
+    });
+
+    this.tweens.add({
+      targets: txt,
+      y: y - 26,
       alpha: 0,
       duration: 750,
       ease: 'Cubic.easeOut',

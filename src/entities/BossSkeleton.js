@@ -2,6 +2,7 @@ import Phaser from 'phaser';
 import { GAME_CONFIG } from '../config.js';
 import { sound } from '../engine/Audio.js';
 import { storage } from '../engine/Storage.js';
+import { juice } from '../engine/JuiceEffects.js';
 import EnemyHealthBar from '../ui/EnemyHealthBar.js';
 
 export default class BossSkeleton extends Phaser.Physics.Arcade.Sprite {
@@ -226,7 +227,16 @@ export default class BossSkeleton extends Phaser.Physics.Arcade.Sprite {
     }
 
     sound.playHit();
-    this.scene.showFloatingText(this.x, this.y - 25, `-${finalDmg}`, isBackstab ? '#ffdd44' : '#ff4444');
+    if (isBackstab) {
+      juice.spawnDamageNumber(this.scene, this.x, this.y - 25, finalDmg, 'crit', `CRIT -${finalDmg}! 🗡️`);
+      juice.hitStopCrit(this.scene);
+    } else if (isCounter) {
+      juice.spawnDamageNumber(this.scene, this.x, this.y - 25, finalDmg, 'counter', `COUNTER -${finalDmg}! 💥`);
+      juice.hitStopHeavy(this.scene);
+    } else {
+      juice.spawnDamageNumber(this.scene, this.x, this.y - 25, finalDmg, 'normal');
+      juice.hitStopHeavy(this.scene);
+    }
 
     if (this.hp <= 0) {
       this.die();

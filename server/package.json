@@ -7,7 +7,8 @@
   "scripts": {
     "start": "node index.js",
     "dev": "node --watch index.js",
-    "test": "node --test"
+    "test": "node --test",
+    "derive-key": "node scripts/derive-treasury-key.mjs"
   },
   "dependencies": {
     "@nimiq/core": "2.20.0",

@@ -197,6 +197,33 @@
       "kills": 24,
       "deviceId": null,
       "signedAt": 1789578565419
+    },
+    {
+      "wallet": "NQ32 V26K 3C69 XNX5 7QNR DBQ7 C49P MMJ4 287S",
+      "dateSeed": "2026-09-16",
+      "score": 4200,
+      "durationMs": 65000,
+      "kills": 24,
+      "deviceId": null,
+      "signedAt": 1789636835338
+    },
+    {
+      "wallet": "NQ56 35BV 0760 13LN 690A KF1R KC9X 90TN XQCB",
+      "dateSeed": "2026-09-16",
+      "score": 4200,
+      "durationMs": 65000,
+      "kills": 24,
+      "deviceId": null,
+      "signedAt": 1789660437776
+    },
+    {
+      "wallet": "NQ65 N08P 615R 69F1 6TNP A8SE 0B0C VC93 J90B",
+      "dateSeed": "2026-09-16",
+      "score": 4200,
+      "durationMs": 65000,
+      "kills": 24,
+      "deviceId": null,
+      "signedAt": 1789671946035
     }
   ]
 }

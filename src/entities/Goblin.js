@@ -1,6 +1,7 @@
 import Phaser from 'phaser';
 import { GAME_CONFIG } from '../config.js';
 import { sound } from '../engine/Audio.js';
+import { juice } from '../engine/JuiceEffects.js';
 import EnemyHealthBar from '../ui/EnemyHealthBar.js';
 
 export default class Goblin extends Phaser.Physics.Arcade.Sprite {
@@ -135,23 +136,8 @@ export default class Goblin extends Phaser.Physics.Arcade.Sprite {
 
     this.hp -= amount;
     sound.playHit();
-
-    // Damage popup text
-    const dmgText = this.scene.add.text(this.x, this.y - 18, `-${amount}`, {
-      fontFamily: 'Press Start 2P',
-      fontSize: '7px',
-      color: '#ffffff',
-      stroke: '#000',
-      strokeThickness: 2
-    }).setOrigin(0.5);
-
-    this.scene.tweens.add({
-      targets: dmgText,
-      y: this.y - 32,
-      alpha: 0,
-      duration: 500,
-      onComplete: () => dmgText.destroy()
-    });
+    juice.spawnDamageNumber(this.scene, this.x, this.y - 18, amount, isUpwardSlash ? 'upslash' : 'normal');
+    juice.hitStopLight(this.scene);
 
     // Knockback
     const knockDir = attackFromX < this.x ? 1 : -1;

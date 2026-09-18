@@ -1,6 +1,7 @@
 import Phaser from 'phaser';
 import { GAME_CONFIG } from '../config.js';
 import { sound } from '../engine/Audio.js';
+import { juice } from '../engine/JuiceEffects.js';
 import EnemyHealthBar from '../ui/EnemyHealthBar.js';
 
 export default class Boar extends Phaser.Physics.Arcade.Sprite {
@@ -192,30 +193,21 @@ export default class Boar extends Phaser.Physics.Arcade.Sprite {
     this.hp -= finalDamage;
     sound.playHit();
 
-    // Damage popup text
-    const color = isBackstab ? '#ffd700' : (isCounter ? '#ff9900' : '#ffffff');
-    let textMsg = `-${finalDamage}`;
+    // Damage popup via JuiceEffects
     if (isBackstab) {
-      textMsg = `CRIT -${finalDamage}! 🗡️`;
+      juice.spawnDamageNumber(this.scene, this.x, this.y - 16, finalDamage, 'crit', `CRIT -${finalDamage}! 🗡️`);
+      juice.hitStopCrit(this.scene);
     } else if (isCounter) {
-      textMsg = isUpwardSlash ? `UP-COUNTER -${finalDamage}! ⚔️` : `COUNTER -${finalDamage}! 💥`;
+      const counterLabel = isUpwardSlash ? `UP-COUNTER -${finalDamage}! ⚔️` : `COUNTER -${finalDamage}! 💥`;
+      juice.spawnDamageNumber(this.scene, this.x, this.y - 16, finalDamage, 'counter', counterLabel);
+      juice.hitStopHeavy(this.scene);
+    } else if (isUpwardSlash) {
+      juice.spawnDamageNumber(this.scene, this.x, this.y - 16, finalDamage, 'upslash');
+      juice.hitStopLight(this.scene);
+    } else {
+      juice.spawnDamageNumber(this.scene, this.x, this.y - 16, finalDamage, 'normal');
+      juice.hitStopLight(this.scene);
     }
-
-    const dmgText = this.scene.add.text(this.x, this.y - 16, textMsg, {
-      fontFamily: 'Press Start 2P',
-      fontSize: (isBackstab || isCounter) ? '8px' : '7px',
-      color: color,
-      stroke: '#000',
-      strokeThickness: 2
-    }).setOrigin(0.5);
-
-    this.scene.tweens.add({
-      targets: dmgText,
-      y: this.y - 32,
-      alpha: 0,
-      duration: 600,
-      onComplete: () => dmgText.destroy()
-    });
 
     // Stagger / Stun the boar and interrupt charge immediately
     const stunDuration = wasCharging ? 950 : 350;
@@ -226,7 +218,6 @@ export default class Boar extends Phaser.Physics.Arcade.Sprite {
 
     if (isCounter) {
       sound.playSlash(2);
-      this.scene.cameras.main.shake(90, 0.01);
     }
 
     // Knockback

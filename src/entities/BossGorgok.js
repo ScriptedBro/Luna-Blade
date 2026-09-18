@@ -2,6 +2,7 @@ import Phaser from 'phaser';
 import { GAME_CONFIG } from '../config.js';
 import { sound } from '../engine/Audio.js';
 import { storage } from '../engine/Storage.js';
+import { juice } from '../engine/JuiceEffects.js';
 import EnemyHealthBar from '../ui/EnemyHealthBar.js';
 
 export default class BossGorgok extends Phaser.Physics.Arcade.Sprite {
@@ -270,24 +271,14 @@ export default class BossGorgok extends Phaser.Physics.Arcade.Sprite {
       this.healthBar.updateHealth(this.hp, this.maxHp);
     }
 
-    // Damage popup text
-    const color = isCrit ? '#ffd700' : '#ffddaa';
-    const textMsg = isCrit ? `BACK-SLASH -${finalDmg}!` : `GUARD -${finalDmg}`;
-    const dmgText = this.scene.add.text(this.x, this.y - 30, textMsg, {
-      fontFamily: 'Press Start 2P',
-      fontSize: isCrit ? '8.5px' : '6.5px',
-      color: color,
-      stroke: '#000',
-      strokeThickness: 2
-    }).setOrigin(0.5);
-
-    this.scene.tweens.add({
-      targets: dmgText,
-      y: this.y - 50,
-      alpha: 0,
-      duration: 600,
-      onComplete: () => dmgText.destroy()
-    });
+    // Damage popup via JuiceEffects
+    if (isCrit) {
+      juice.spawnDamageNumber(this.scene, this.x, this.y - 25, finalDmg, 'crit', `BACK-SLASH -${finalDmg}! 🗡️`);
+      juice.hitStopCrit(this.scene);
+    } else {
+      juice.spawnDamageNumber(this.scene, this.x, this.y - 25, finalDmg, 'normal', `GUARD -${finalDmg}`);
+      juice.hitStopHeavy(this.scene);
+    }
 
     // Knockback resistance (heavy colossus)
     const knockDir = attackFromX < this.x ? 1 : -1;

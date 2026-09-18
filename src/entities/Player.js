@@ -2,6 +2,7 @@ import Phaser from 'phaser';
 import { GAME_CONFIG } from '../config.js';
 import { sound } from '../engine/Audio.js';
 import { storage } from '../engine/Storage.js';
+import { juice } from '../engine/JuiceEffects.js';
 
 export default class Player extends Phaser.Physics.Arcade.Sprite {
   constructor(scene, x, y) {
@@ -369,6 +370,8 @@ export default class Player extends Phaser.Physics.Arcade.Sprite {
     this.health = Math.max(0, this.health - amount);
     this.invulnerableUntil = this.scene.time.now + GAME_CONFIG.PLAYER.INVULNERABILITY_MS;
     sound.playHit();
+    juice.spawnDamageNumber(this.scene, this.x, this.y - 18, amount, 'player');
+    juice.hitStopLight(this.scene);
 
     // Knockback
     this.setVelocityX(dir * 160);

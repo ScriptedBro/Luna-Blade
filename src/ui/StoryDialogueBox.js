@@ -8,8 +8,8 @@ const SPEAKER_CONFIGS = {
     color: '#48cae4',
     bgColor: 0x032830,
     borderColor: 0x00b4d8,
-    spriteKey: 'char_idle',
-    scale: 0.65,
+    spriteKey: 'portrait_luna',
+    scale: 0.95,
     frame: 0,
     soundPitch: true
   },
@@ -28,18 +28,18 @@ const SPEAKER_CONFIGS = {
     color: '#f77f00',
     bgColor: 0x2e1003,
     borderColor: 0xd62828,
-    spriteKey: 'chieftain_idle',
-    scale: 1.1,
+    spriteKey: 'portrait_gorgok',
+    scale: 0.9,
     frame: 0,
     soundPitch: false
   },
   MALAKOR: {
     name: 'ARCHMAGE MALAKOR',
-    color: '#c77dff',
-    bgColor: 0x240046,
-    borderColor: 0x9d4edd,
-    spriteKey: 'wizard_idle',
-    scale: 0.38,
+    color: '#ff7744',
+    bgColor: 0x2e0808,
+    borderColor: 0xdd3838,
+    spriteKey: 'portrait_malakor',
+    scale: 0.95,
     frame: 0,
     soundPitch: false
   },
@@ -48,8 +48,9 @@ const SPEAKER_CONFIGS = {
     color: '#06d6a0',
     bgColor: 0x022e23,
     borderColor: 0x118ab2,
-    spriteKey: null,
-    icon: '✨',
+    spriteKey: 'portrait_shrine',
+    scale: 0.95,
+    frame: 0,
     soundPitch: true
   },
   VORGATH: {
@@ -57,8 +58,8 @@ const SPEAKER_CONFIGS = {
     color: '#e0e1dd',
     bgColor: 0x1b263b,
     borderColor: 0x778da9,
-    spriteKey: 'skeleton_idle',
-    scale: 0.35,
+    spriteKey: 'portrait_vorgath',
+    scale: 0.95,
     frame: 0,
     soundPitch: false
   },
@@ -67,8 +68,8 @@ const SPEAKER_CONFIGS = {
     color: '#ff7b00',
     bgColor: 0x3d0000,
     borderColor: 0xff5400,
-    spriteKey: 'demon_idle',
-    scale: 0.6,
+    spriteKey: 'portrait_ignis',
+    scale: 0.95,
     frame: 0,
     soundPitch: false
   },
@@ -77,8 +78,8 @@ const SPEAKER_CONFIGS = {
     color: '#b5179e',
     bgColor: 0x10002b,
     borderColor: 0x7209b7,
-    spriteKey: 'nightborne_idle',
-    scale: 0.55,
+    spriteKey: 'portrait_umbra',
+    scale: 0.95,
     frame: 0,
     soundPitch: false
   }

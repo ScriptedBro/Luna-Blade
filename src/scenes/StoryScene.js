@@ -11,6 +11,16 @@ import BossWizard from '../entities/BossWizard.js';
 import BossSkeleton from '../entities/BossSkeleton.js';
 import BossDemon from '../entities/BossDemon.js';
 import BossNightBorne from '../entities/BossNightBorne.js';
+import Mirelurker from '../entities/Mirelurker.js';
+import HornetGuard from '../entities/HornetGuard.js';
+import SkeletonWarrior from '../entities/SkeletonWarrior.js';
+import CinderDrake from '../entities/CinderDrake.js';
+import AstralShade from '../entities/AstralShade.js';
+import BogLurker from '../entities/BogLurker.js';
+import DreadBat from '../entities/DreadBat.js';
+import CryptWraith from '../entities/CryptWraith.js';
+import BasaltGolem from '../entities/BasaltGolem.js';
+import VoidStalker from '../entities/VoidStalker.js';
 import Projectile from '../entities/Projectile.js';
 import Crate from '../entities/Crate.js';
 import Obelisk from '../entities/Obelisk.js';
@@ -21,6 +31,8 @@ import { GAME_CONFIG } from '../config.js';
 import { sound } from '../engine/Audio.js';
 import { storage } from '../engine/Storage.js';
 import { pauseService } from '../engine/PauseService.js';
+import { juice } from '../engine/JuiceEffects.js';
+import WeatherManager from '../engine/WeatherManager.js';
 import confetti from 'canvas-confetti';
 import LunaCrystalDrop from '../entities/LunaCrystalDrop.js';
 import { claimFirstStoryBossReward, bankCrystalHarvest, fetchRewardsStatus } from '../nimiq/rewards.js';
@@ -34,6 +46,9 @@ export default class StoryScene extends Phaser.Scene {
 
   init(data) {
     this.chapterId = data.chapter || 1;
+    this.showcaseMob = data && data.showcaseMob ? data.showcaseMob : null;
+    this.spawnPlayerX = (data && typeof data.playerX === 'number') ? data.playerX : 60;
+    this.spawnPlayerY = (data && typeof data.playerY === 'number') ? data.playerY : 346;
     this.chapterConfig = GAME_CONFIG.CHAPTERS.find(c => c.id === this.chapterId) || GAME_CONFIG.CHAPTERS[0];
     this.killsCount = 0;
     this.isGameOver = false;
@@ -59,6 +74,7 @@ export default class StoryScene extends Phaser.Scene {
     this.arenaGateWall = null;
     this.arenaGateVisual = null;
     this.skipIntroCard = Boolean(data && data.skipIntroCard);
+    this.skipDialogue = Boolean(data && data.skipDialogue);
     this.startTime = performance.now();
     this.secondsElapsed = 0;
   }
@@ -104,6 +120,10 @@ export default class StoryScene extends Phaser.Scene {
         this.activeVictoryCleanup();
         this.activeVictoryCleanup = null;
       }
+      if (this.weatherManager) {
+        this.weatherManager.destroy();
+        this.weatherManager = null;
+      }
       pauseService.detachScene();
       sound.stopBGM();
     });
@@ -113,6 +133,9 @@ export default class StoryScene extends Phaser.Scene {
 
     // Lush Parallax High Forest Background & Atmosphere
     this.createForestBackground();
+
+    // Dynamic Weather Overlays (Rain/Lightning in Whispering Woods, Embers/Ash in Obsidian Caldera)
+    this.weatherManager = new WeatherManager(this, this.chapterId);
 
     // Platform, Hazard, Crate, Enemy, Projectile, and Luna Crystal groups
     this.platforms = this.physics.add.staticGroup();
@@ -130,8 +153,23 @@ export default class StoryScene extends Phaser.Scene {
     // Build the Level Geometry & Spawns
     this.buildChapterLevel();
 
+    if (this.showcaseMob) {
+      this.enemies.clear(true, true);
+      if (this.showcaseMob === 'bog_lurker' || this.showcaseMob === 'mirelurker') {
+        this.spawnMob('bog_lurker', 240, 340);
+      } else if (this.showcaseMob === 'dread_bat' || this.showcaseMob === 'hornet_guard') {
+        this.spawnMob('dread_bat', 240, 240);
+      } else if (this.showcaseMob === 'crypt_wraith' || this.showcaseMob === 'skeleton_warrior') {
+        this.spawnMob('crypt_wraith', 240, 320);
+      } else if (this.showcaseMob === 'basalt_golem' || this.showcaseMob === 'cinder_drake') {
+        this.spawnMob('basalt_golem', 240, 340);
+      } else if (this.showcaseMob === 'void_stalker' || this.showcaseMob === 'astral_shade') {
+        this.spawnMob('void_stalker', 240, 340);
+      }
+    }
+
     // Spawn Player standing on ground (Y=380)
-    this.player = new Player(this, 60, 346);
+    this.player = new Player(this, this.spawnPlayerX, this.spawnPlayerY);
     this.physics.add.collider(this.player, this.platforms);
 
     // Camera follow
@@ -239,10 +277,12 @@ export default class StoryScene extends Phaser.Scene {
     this.createStoryHUD();
 
     // Chapter Title Intro Card
-    if (this.skipIntroCard) {
-      this.triggerChapterOpeningDialogue();
-    } else {
-      this.showChapterIntroCard();
+    if (!this.skipDialogue) {
+      if (this.skipIntroCard) {
+        this.triggerChapterOpeningDialogue();
+      } else {
+        this.showChapterIntroCard();
+      }
     }
   }
 
@@ -272,7 +312,7 @@ export default class StoryScene extends Phaser.Scene {
     this.createPlatform(320, 250, 110);
 
     this.spawnMob('boar', 240, 340);
-    this.spawnMob('boar', 440, 340);
+    this.spawnMob('bog_lurker', 440, 340);
     this.spawnMob('snail', 340, 230);
     this.spawnCrate(330, 220);
 
@@ -289,7 +329,7 @@ export default class StoryScene extends Phaser.Scene {
     this.createPlatform(1010, 185, 90);
     this.spawnCrate(1030, 155);
 
-    this.spawnMob('boar', 780, 340);
+    this.spawnMob('bog_lurker', 780, 340);
     this.spawnMob('snail', 680, 340);
     this.spawnMob('snail', 860, 220);
     this.spawnMob('bee', 820, 150);
@@ -311,7 +351,7 @@ export default class StoryScene extends Phaser.Scene {
     this.spawnMob('snail', 1390, 220);
     this.spawnMob('flying_eye', 1460, 150);
     this.spawnMob('goblin', 1680, 340);
-    this.spawnMob('boar', 1760, 340);
+    this.spawnMob('bog_lurker', 1760, 340);
     this.spawnMob('mushroom', 1860, 340);
     this.spawnMob('goblin', 1980, 340);
 
@@ -328,7 +368,7 @@ export default class StoryScene extends Phaser.Scene {
     this.createPlatform(2440, 240, 110);
 
     this.spawnMob('boar', 2220, 340);
-    this.spawnMob('snail', 2280, 340);
+    this.spawnMob('bog_lurker', 2340, 340);
 
     this.spawnCrate(2280, 270);
     this.spawnCrate(2520, 350);
@@ -368,19 +408,19 @@ export default class StoryScene extends Phaser.Scene {
     this.createPlatform(2480, 270, 100);
 
     this.spawnMob('bee', 220, 160);
-    this.spawnMob('flying_eye', 440, 120);
+    this.spawnMob('dread_bat', 440, 120);
     this.spawnMob('snail', 460, 155);
     this.spawnMob('boar', 340, 340);
     this.spawnMob('mushroom', 600, 200);
     this.spawnMob('goblin', 780, 140);
-    this.spawnMob('bee', 900, 120);
+    this.spawnMob('dread_bat', 900, 120);
     this.spawnMob('boar', 820, 340);
     this.spawnMob('flying_eye', 1200, 140);
     this.spawnMob('mushroom', 1360, 190);
     this.spawnMob('goblin', 1520, 140);
-    this.spawnMob('bee', 1540, 120);
+    this.spawnMob('dread_bat', 1540, 120);
     this.spawnMob('boar', 1740, 340);
-    this.spawnMob('flying_eye', 1880, 140);
+    this.spawnMob('dread_bat', 1880, 140);
     this.spawnMob('snail', 1960, 180);
 
     this.spawnCrate(280, 205);
@@ -428,20 +468,20 @@ export default class StoryScene extends Phaser.Scene {
     this.createPlatform(2380, 200, 90);
 
     // Pre-arena Crypt Monsters
-    this.spawnMob('boar', 180, 340);
+    this.spawnMob('crypt_wraith', 180, 320);
     this.spawnMob('snail', 310, 200);
-    this.spawnMob('mushroom', 400, 340);
+    this.spawnMob('crypt_wraith', 400, 320);
     this.spawnMob('flying_eye', 480, 160);
     this.spawnMob('goblin', 700, 340);
-    this.spawnMob('boar', 820, 340);
+    this.spawnMob('crypt_wraith', 820, 320);
     this.spawnMob('bee', 850, 140);
-    this.spawnMob('mushroom', 1140, 340);
+    this.spawnMob('crypt_wraith', 1140, 320);
     this.spawnMob('goblin', 1280, 340);
     this.spawnMob('flying_eye', 1360, 160);
-    this.spawnMob('snail', 1540, 230);
-    this.spawnMob('boar', 1740, 340);
+    this.spawnMob('crypt_wraith', 1540, 230);
+    this.spawnMob('crypt_wraith', 1740, 320);
     this.spawnMob('mushroom', 1820, 140);
-    this.spawnMob('goblin', 1940, 200);
+    this.spawnMob('crypt_wraith', 1940, 320);
 
     this.spawnCrate(310, 195);
     this.spawnCrate(800, 215);
@@ -491,15 +531,15 @@ export default class StoryScene extends Phaser.Scene {
     this.createPlatform(2420, 210, 96);
 
     // Volcanic Foes
+    this.spawnMob('basalt_golem', 340, 340);
     this.spawnMob('goblin', 240, 340);
-    this.spawnMob('flying_eye', 340, 160);
-    this.spawnMob('boar', 680, 340);
+    this.spawnMob('basalt_golem', 510, 340);
     this.spawnMob('mushroom', 820, 340);
-    this.spawnMob('flying_eye', 960, 140);
+    this.spawnMob('basalt_golem', 960, 340);
     this.spawnMob('goblin', 1260, 340);
-    this.spawnMob('flying_eye', 1400, 160);
+    this.spawnMob('basalt_golem', 1400, 340);
     this.spawnMob('mushroom', 1480, 340);
-    this.spawnMob('boar', 1840, 340);
+    this.spawnMob('basalt_golem', 1840, 340);
     this.spawnMob('goblin', 1980, 180);
 
     // Crates
@@ -556,18 +596,16 @@ export default class StoryScene extends Phaser.Scene {
     this.createPlatform(2400, 200, 96);
 
     // Celestial Void Guardians
-    this.spawnMob('flying_eye', 220, 140);
-    this.spawnMob('goblin', 320, 340);
-    this.spawnMob('bee', 480, 140);
-    this.spawnMob('mushroom', 660, 340);
-    this.spawnMob('boar', 840, 340);
+    this.spawnMob('void_stalker', 220, 340);
+    this.spawnMob('flying_eye', 320, 140);
+    this.spawnMob('void_stalker', 480, 250);
+    this.spawnMob('void_stalker', 780, 270);
     this.spawnMob('flying_eye', 940, 130);
-    this.spawnMob('goblin', 1240, 340);
-    this.spawnMob('bee', 1380, 140);
-    this.spawnMob('mushroom', 1460, 340);
-    this.spawnMob('flying_eye', 1620, 130);
-    this.spawnMob('goblin', 1820, 340);
-    this.spawnMob('boar', 1960, 340);
+    this.spawnMob('void_stalker', 1240, 340);
+    this.spawnMob('flying_eye', 1380, 140);
+    this.spawnMob('void_stalker', 1610, 240);
+    this.spawnMob('flying_eye', 1760, 130);
+    this.spawnMob('void_stalker', 1940, 340);
 
     // Crates
     this.spawnCrate(300, 175);
@@ -1058,6 +1096,16 @@ export default class StoryScene extends Phaser.Scene {
       mob = new FlyingEye(this, x, y);
     } else if (type === 'goblin') {
       mob = new Goblin(this, x, y);
+    } else if (type === 'bog_lurker' || type === 'mirelurker') {
+      mob = new BogLurker(this, x, y);
+    } else if (type === 'dread_bat' || type === 'hornet_guard') {
+      mob = new DreadBat(this, x, y);
+    } else if (type === 'crypt_wraith' || type === 'skeleton_warrior') {
+      mob = new CryptWraith(this, x, y);
+    } else if (type === 'basalt_golem' || type === 'cinder_drake') {
+      mob = new BasaltGolem(this, x, y);
+    } else if (type === 'void_stalker' || type === 'astral_shade') {
+      mob = new VoidStalker(this, x, y);
     }
     if (mob) {
       mob.mobType = type;
@@ -1549,9 +1597,18 @@ export default class StoryScene extends Phaser.Scene {
       strokeThickness: 2
     }).setOrigin(0.5).setDepth(250);
 
+    txt.setScale(1.25);
     this.tweens.add({
       targets: txt,
-      y: y - 24,
+      scaleX: 1.0,
+      scaleY: 1.0,
+      duration: 130,
+      ease: 'Back.easeOut'
+    });
+
+    this.tweens.add({
+      targets: txt,
+      y: y - 26,
       alpha: 0,
       duration: 750,
       ease: 'Cubic.easeOut',
@@ -1844,6 +1901,16 @@ export default class StoryScene extends Phaser.Scene {
         storage.addMaterials({ amber: 1, iron: 1 });
       } else if (enemy.mobType === 'goblin') {
         storage.addMaterials({ iron: 2, bark: 1 });
+      } else if (enemy.mobType === 'bog_lurker' || enemy.mobType === 'mirelurker') {
+        storage.addMaterials({ bark: 1, amber: 1 });
+      } else if (enemy.mobType === 'dread_bat' || enemy.mobType === 'hornet_guard') {
+        storage.addMaterials({ amber: 2 });
+      } else if (enemy.mobType === 'crypt_wraith' || enemy.mobType === 'skeleton_warrior') {
+        storage.addMaterials({ iron: 2 });
+      } else if (enemy.mobType === 'basalt_golem' || enemy.mobType === 'cinder_drake') {
+        storage.addMaterials({ amber: 1, iron: 2 });
+      } else if (enemy.mobType === 'void_stalker' || enemy.mobType === 'astral_shade') {
+        storage.addMaterials({ amber: 2, iron: 1 });
       }
       this.updateHudMaterials();
 
@@ -1900,21 +1967,8 @@ export default class StoryScene extends Phaser.Scene {
       sound.playBoarChargeHit();
       sound.playRicochet();
 
-      const stompText = this.add.text(enemy.x, enemy.y - 18, '💥 STOMP! -35', {
-        fontFamily: 'Press Start 2P',
-        fontSize: '6.5px',
-        color: '#ffd166',
-        stroke: '#000000',
-        strokeThickness: 2
-      }).setOrigin(0.5).setDepth(200);
-
-      this.tweens.add({
-        targets: stompText,
-        y: stompText.y - 22,
-        alpha: 0,
-        duration: 650,
-        onComplete: () => stompText.destroy()
-      });
+      juice.spawnDamageNumber(this, enemy.x, enemy.y - 18, 35, 'stomp', '💥 STOMP! -35');
+      juice.hitStopHeavy(this);
 
       if (enemy.mobType === 'snail') {
         if (enemy.state === 'WALK') {

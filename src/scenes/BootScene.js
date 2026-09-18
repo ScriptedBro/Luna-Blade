@@ -129,6 +129,16 @@ export default class BootScene extends Phaser.Scene {
     this.load.spritesheet('nightborne_hit', 'assets/mobs/nightborne/hit.png', { frameWidth: 80, frameHeight: 80 });
     this.load.spritesheet('nightborne_dead', 'assets/mobs/nightborne/death.png', { frameWidth: 80, frameHeight: 80 });
 
+    // 5 Unique Chapter-Exclusive Monster Spritesheets
+    this.load.spritesheet('bog_lurker_walk', 'assets/mobs/bog_lurker/walk.png', { frameWidth: 24, frameHeight: 38 });
+    this.load.spritesheet('dread_bat_idle', 'assets/mobs/dread_bat/idle.png', { frameWidth: 64, frameHeight: 64 });
+    this.load.spritesheet('dread_bat_attack', 'assets/mobs/dread_bat/attack.png', { frameWidth: 64, frameHeight: 64 });
+    this.load.spritesheet('crypt_wraith_idle', 'assets/mobs/crypt_wraith/idle.png', { frameWidth: 64, frameHeight: 80 });
+    this.load.spritesheet('crypt_wraith_shriek', 'assets/mobs/crypt_wraith/shriek.png', { frameWidth: 64, frameHeight: 80 });
+    this.load.spritesheet('basalt_golem_idle', 'assets/mobs/basalt_golem/idle.png', { frameWidth: 90, frameHeight: 64 });
+    this.load.spritesheet('basalt_golem_attack', 'assets/mobs/basalt_golem/attack.png', { frameWidth: 90, frameHeight: 64 });
+    this.load.spritesheet('void_stalker_run', 'assets/mobs/void_stalker/run.png', { frameWidth: 85, frameHeight: 36 });
+
     // Environment & Parallax High Forest Layers
     this.load.image('env_bg', 'assets/env/forest_backdrop.png');
     this.load.image('sky_backdrop', 'assets/env/sky_backdrop.png');
@@ -181,10 +191,20 @@ export default class BootScene extends Phaser.Scene {
     // Companion Sprite & Portrait (Sylva, the Moon Sprite)
     this.load.image('fairy_portrait', 'assets/companion/fairy_portrait.png');
     this.load.spritesheet('fairy_fly', 'assets/companion/fairy_fly.png', { frameWidth: 36, frameHeight: 38 });
+
+    // Dialogue & Boss Portraits (Faithful to in-game sprites)
+    this.load.image('portrait_luna', 'assets/portraits/portrait_luna.png');
+    this.load.image('portrait_gorgok', 'assets/portraits/portrait_gorgok.png');
+    this.load.image('portrait_malakor', 'assets/portraits/portrait_malakor.png');
+    this.load.image('portrait_vorgath', 'assets/portraits/portrait_vorgath.png');
+    this.load.image('portrait_ignis', 'assets/portraits/portrait_ignis.png');
+    this.load.image('portrait_umbra', 'assets/portraits/portrait_umbra.png');
+    this.load.image('portrait_shrine', 'assets/portraits/portrait_shrine.png');
   }
 
   create() {
     LunaCrystalDrop.ensureTexture(this);
+    this.ensureWeatherTextures();
     this.createAnimations();
 
     // Ensure Phaser scale dimensions match target orientation before launching scenes
@@ -201,7 +221,11 @@ export default class BootScene extends Phaser.Scene {
     if (targetScene === 'story') {
       const ch = parseInt(urlParams.get('chapter') || '1', 10);
       const skipIntroCard = urlParams.get('skipIntro') === 'true';
-      this.scene.start('StoryScene', { chapter: ch, skipIntroCard });
+      const skipDialogue = urlParams.get('skipDialogue') === 'true';
+      const showcaseMob = urlParams.get('showcaseMob') || undefined;
+      const playerX = urlParams.has('playerX') ? parseFloat(urlParams.get('playerX')) : undefined;
+      const playerY = urlParams.has('playerY') ? parseFloat(urlParams.get('playerY')) : undefined;
+      this.scene.start('StoryScene', { chapter: ch, skipIntroCard, skipDialogue, playerX, playerY, showcaseMob });
     } else if (targetScene === 'survival') {
       this.scene.start('SurvivalScene');
     } else if (targetScene === 'forge') {
@@ -212,6 +236,78 @@ export default class BootScene extends Phaser.Scene {
       this.scene.start('StoryIntroScene');
     } else {
       this.scene.start('MenuScene');
+    }
+  }
+
+  ensureWeatherTextures() {
+    // 1. Raindrop: slanted translucent pixel streak
+    if (!this.textures.exists('raindrop')) {
+      const g = this.add.graphics();
+      g.fillStyle(0xffffff, 0.9);
+      g.beginPath();
+      g.moveTo(2, 0);
+      g.lineTo(3, 0);
+      g.lineTo(1, 8);
+      g.lineTo(0, 8);
+      g.closePath();
+      g.fillPath();
+      g.generateTexture('raindrop', 4, 8);
+      g.destroy();
+    }
+
+    // 2. Ash Particle: soft circular flake
+    if (!this.textures.exists('ash_particle')) {
+      const g = this.add.graphics();
+      g.fillStyle(0xffffff, 1.0);
+      g.fillCircle(2, 2, 1.8);
+      g.generateTexture('ash_particle', 4, 4);
+      g.destroy();
+    }
+
+    // 3. Mud Glob: toxic bubbling swamp mud projectile
+    if (!this.textures.exists('mud_glob')) {
+      const g = this.add.graphics();
+      g.fillStyle(0x2d4a22, 1.0);
+      g.fillCircle(4, 4, 4);
+      g.fillStyle(0x4ade80, 0.8);
+      g.fillCircle(3, 3, 2);
+      g.generateTexture('mud_glob', 8, 8);
+      g.destroy();
+    }
+
+    // 4. Hornet Quill: sharp golden stinger projectile
+    if (!this.textures.exists('hornet_quill')) {
+      const g = this.add.graphics();
+      g.fillStyle(0xf59e0b, 1.0);
+      g.fillRect(0, 1, 10, 2);
+      g.fillStyle(0xfffbeb, 1.0);
+      g.fillRect(8, 0, 4, 4);
+      g.generateTexture('hornet_quill', 12, 4);
+      g.destroy();
+    }
+
+    // 5. Magma Glob: fiery rolling volcanic core
+    if (!this.textures.exists('magma_glob')) {
+      const g = this.add.graphics();
+      g.fillStyle(0xff4500, 1.0);
+      g.fillCircle(5, 5, 5);
+      g.fillStyle(0xfacc15, 1.0);
+      g.fillCircle(5, 5, 2.5);
+      g.generateTexture('magma_glob', 10, 10);
+      g.destroy();
+    }
+
+    // 6. Lunar Crescent: glowing astral crescent projectile
+    if (!this.textures.exists('lunar_crescent')) {
+      const g = this.add.graphics();
+      g.fillStyle(0xc084fc, 1.0);
+      g.beginPath();
+      g.arc(7, 7, 6, -0.6, 2.2, false);
+      g.arc(8, 7, 4, 2.2, -0.6, true);
+      g.closePath();
+      g.fillPath();
+      g.generateTexture('lunar_crescent', 14, 14);
+      g.destroy();
     }
   }
 
@@ -656,6 +752,64 @@ export default class BootScene extends Phaser.Scene {
       frames: this.anims.generateFrameNumbers('nightborne_dead', { start: 0, end: 22 }),
       frameRate: 12,
       repeat: 0
+    });
+
+    // 1. Bog Lurker (Chapter 1)
+    this.anims.create({
+      key: 'bog_lurker_walk_anim',
+      frames: this.anims.generateFrameNumbers('bog_lurker_walk', { start: 0, end: 3 }),
+      frameRate: 6,
+      repeat: -1
+    });
+
+    // 2. Dread Bat (Chapter 2)
+    this.anims.create({
+      key: 'dread_bat_idle_anim',
+      frames: this.anims.generateFrameNumbers('dread_bat_idle', { start: 0, end: 8 }),
+      frameRate: 10,
+      repeat: -1
+    });
+    this.anims.create({
+      key: 'dread_bat_attack_anim',
+      frames: this.anims.generateFrameNumbers('dread_bat_attack', { start: 0, end: 7 }),
+      frameRate: 12,
+      repeat: 0
+    });
+
+    // 3. Crypt Wraith (Chapter 3)
+    this.anims.create({
+      key: 'crypt_wraith_idle_anim',
+      frames: this.anims.generateFrameNumbers('crypt_wraith_idle', { start: 0, end: 6 }),
+      frameRate: 7,
+      repeat: -1
+    });
+    this.anims.create({
+      key: 'crypt_wraith_shriek_anim',
+      frames: this.anims.generateFrameNumbers('crypt_wraith_shriek', { start: 0, end: 3 }),
+      frameRate: 8,
+      repeat: 0
+    });
+
+    // 4. Basalt Golem (Chapter 4)
+    this.anims.create({
+      key: 'basalt_golem_idle_anim',
+      frames: this.anims.generateFrameNumbers('basalt_golem_idle', { start: 0, end: 7 }),
+      frameRate: 7,
+      repeat: -1
+    });
+    this.anims.create({
+      key: 'basalt_golem_attack_anim',
+      frames: this.anims.generateFrameNumbers('basalt_golem_attack', { start: 0, end: 10 }),
+      frameRate: 10,
+      repeat: 0
+    });
+
+    // 5. Void Stalker (Chapter 5)
+    this.anims.create({
+      key: 'void_stalker_run_anim',
+      frames: this.anims.generateFrameNumbers('void_stalker_run', { start: 0, end: 3 }),
+      frameRate: 10,
+      repeat: -1
     });
   }
 }

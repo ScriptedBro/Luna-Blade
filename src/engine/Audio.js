@@ -489,6 +489,18 @@ class SoundEngine {
     this.playHit();
   }
 
+  playWhoosh() {
+    this.playSlash(1);
+  }
+
+  playMonsterDeath() {
+    this.playEnemyDeath();
+  }
+
+  playBossStomp() {
+    this.playRumble();
+  }
+
   playEnemyAttack() {
     if (this.muted || this.soundMuted || !this.ctx) return;
     this.resume();
@@ -529,6 +541,66 @@ class SoundEngine {
     gain.connect(this.sfxGain);
     osc.start(t);
     osc.stop(t + 0.8);
+  }
+
+  playThunder() {
+    if (this.muted || this.soundMuted || !this.ctx) return;
+    this.resume();
+    const t = this.ctx.currentTime;
+    const duration = 2.2;
+
+    // Noise buffer for atmospheric crackle & rumble
+    const bufferSize = Math.floor(this.ctx.sampleRate * duration);
+    const buffer = this.ctx.createBuffer(1, bufferSize, this.ctx.sampleRate);
+    const data = buffer.getChannelData(0);
+    let lastOut = 0.0;
+    // Brown noise approximation for deep thunder rumble
+    for (let i = 0; i < bufferSize; i++) {
+      const white = Math.random() * 2 - 1;
+      data[i] = (lastOut + (0.04 * white)) / 1.04;
+      lastOut = data[i];
+      data[i] *= 3.5;
+    }
+
+    const noise = this.ctx.createBufferSource();
+    noise.buffer = buffer;
+
+    const filter = this.ctx.createBiquadFilter();
+    filter.type = 'lowpass';
+    filter.frequency.setValueAtTime(320, t);
+    filter.frequency.exponentialRampToValueAtTime(80, t + 0.6);
+    filter.frequency.exponentialRampToValueAtTime(50, t + duration);
+    filter.Q.value = 3.0;
+
+    const noiseGain = this.ctx.createGain();
+    noiseGain.gain.setValueAtTime(0.01, t);
+    noiseGain.gain.linearRampToValueAtTime(0.7, t + 0.06);
+    noiseGain.gain.exponentialRampToValueAtTime(0.3, t + 0.5);
+    noiseGain.gain.exponentialRampToValueAtTime(0.001, t + duration);
+
+    noise.connect(filter);
+    filter.connect(noiseGain);
+    noiseGain.connect(this.sfxGain);
+
+    noise.start(t);
+    noise.stop(t + duration);
+
+    // Deep sub-bass resonance oscillator
+    const subOsc = this.ctx.createOscillator();
+    const subGain = this.ctx.createGain();
+    subOsc.type = 'sine';
+    subOsc.frequency.setValueAtTime(55, t);
+    subOsc.frequency.exponentialRampToValueAtTime(26, t + 1.2);
+
+    subGain.gain.setValueAtTime(0.01, t);
+    subGain.gain.linearRampToValueAtTime(0.45, t + 0.08);
+    subGain.gain.exponentialRampToValueAtTime(0.001, t + 1.4);
+
+    subOsc.connect(subGain);
+    subGain.connect(this.sfxGain);
+
+    subOsc.start(t);
+    subOsc.stop(t + 1.4);
   }
 
   playBGM(key = 'title') {
