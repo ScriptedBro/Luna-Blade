@@ -3,7 +3,7 @@ import path from "node:path";
 import crypto from "node:crypto";
 import { config, DAILY_PRIZES_NIM, FIRST_BOSS_BOUNTY_NIM, LUNA_PER_NIM } from "../config.js";
 import { getDailyWinners } from "./leaderboard.js";
-import { ensureDataDir } from "./db.js";
+import { ensureDataDir, pushRemoteFile } from "./db.js";
 
 /**
  * Tier 2 automated payout worker for the verified daily leaderboard.
@@ -64,13 +64,16 @@ function writeOutbox(rows) {
   ensureDataDir();
   const file = outboxPath();
   const tmp = `${file}.${process.pid}.tmp`;
-  fs.writeFileSync(tmp, rows.map((r) => JSON.stringify(r)).join("\n") + "\n", "utf8");
+  const content = rows.map((r) => JSON.stringify(r)).join("\n") + "\n";
+  fs.writeFileSync(tmp, content, "utf8");
   fs.renameSync(tmp, file);
+  pushRemoteFile(OUTBOX_FILE, content).catch(() => {});
 }
 
 function appendOutbox(row) {
   ensureDataDir();
   fs.appendFileSync(outboxPath(), JSON.stringify(row) + "\n", "utf8");
+  pushRemoteFile(OUTBOX_FILE, fs.readFileSync(outboxPath(), "utf8")).catch(() => {});
 }
 
 async function getClient() {
@@ -110,6 +113,38 @@ export async function getTreasuryBalanceLuna() {
     const account = await client.getAccount(kp.toAddress());
     return BigInt(account.balance);
   });
+}
+
+/**
+ * Non-blocking treasury snapshot for HTTP handlers.
+ *
+ * The p2p consensus handshake can take tens of seconds on a cold process, so
+ * request handlers must never await it. This returns the last known snapshot
+ * immediately and kicks off a background refresh when stale.
+ */
+let treasurySnapshot = { address: null, balanceNim: null, updatedAt: 0, error: null };
+let treasuryRefreshInFlight = null;
+
+function refreshTreasurySnapshot() {
+  if (treasuryRefreshInFlight) return treasuryRefreshInFlight;
+  treasuryRefreshInFlight = (async () => {
+    try {
+      const address = await getPayoutTreasuryAddress();
+      const luna = await getTreasuryBalanceLuna();
+      treasurySnapshot = { address, balanceNim: Number(luna) / 1e5, updatedAt: Date.now(), error: null };
+    } catch (e) {
+      treasurySnapshot = { ...treasurySnapshot, updatedAt: Date.now(), error: String(e?.message || e) };
+    } finally {
+      treasuryRefreshInFlight = null;
+    }
+  })();
+  return treasuryRefreshInFlight;
+}
+
+export function getTreasurySnapshot() {
+  const isStale = Date.now() - (treasurySnapshot.updatedAt || 0) > 60_000;
+  if (isStale) refreshTreasurySnapshot().catch(() => {});
+  return { ...treasurySnapshot, refreshing: Boolean(treasuryRefreshInFlight) };
 }
 
 async function sendOne(recipientAddress, amountLuna, memo) {

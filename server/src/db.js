@@ -55,26 +55,28 @@ export async function initCloudStorage() {
     return;
   }
   console.log("[db] Upstash Redis detected! Syncing persistent cloud state...");
-  const files = ["leaderboard.json", "claims.json"];
+  const files = ["leaderboard.json", "claims.json", "payouts.jsonl"];
   for (const name of files) {
     const key = `luna_blade:${name}`;
     const raw = await upstashCommand(["GET", key]);
     if (raw) {
       try {
-        const parsed = typeof raw === "string" ? JSON.parse(raw) : raw;
         ensureDataDir();
         const file = path.join(config.dataDir, name);
-        fs.writeFileSync(file, JSON.stringify(parsed, null, 2), "utf8");
-        cache.set(file, parsed);
+        const content = typeof raw === "string" ? raw : JSON.stringify(raw);
+        fs.writeFileSync(file, content, "utf8");
+        if (name.endsWith(".json")) {
+          cache.set(file, JSON.parse(content));
+        }
         console.log(`[upstash] Synced ${name} from Upstash cloud.`);
       } catch (e) {
         console.warn(`[upstash] Failed to parse ${name} from Upstash:`, e.message);
       }
     } else {
-      // Key not in Upstash yet — if local file exists, seed it into Upstash
-      const local = loadJson(name, null);
-      if (local) {
-        await upstashCommand(["SET", key, JSON.stringify(local)]);
+      const file = path.join(config.dataDir, name);
+      if (fs.existsSync(file)) {
+        const local = fs.readFileSync(file, "utf8");
+        await upstashCommand(["SET", key, local]);
         console.log(`[upstash] Seeded initial ${name} to Upstash.`);
       }
     }
@@ -123,5 +125,14 @@ export function appendLine(name, line) {
   if (isUpstashConfigured) {
     const key = `luna_blade:${name}`;
     upstashCommand(["RPUSH", key, line]).catch(() => {});
+  }
+}
+
+export async function pushRemoteFile(name, content) {
+  if (!isUpstashConfigured) return;
+  try {
+    await upstashCommand(["SET", `luna_blade:${name}`, content]);
+  } catch (err) {
+    console.warn(`[upstash] Failed to sync ${name}:`, err.message);
   }
 }
