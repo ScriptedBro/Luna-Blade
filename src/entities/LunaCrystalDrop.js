@@ -111,7 +111,7 @@ export default class LunaCrystalDrop extends Phaser.Physics.Arcade.Sprite {
     }
 
     // Float notification text
-    const text = this.scene.add.text(this.x, this.y - 12, '+0.1 NIM 💎', {
+    const text = this.scene.add.text(this.x, this.y - 12, '+0.001 NIM 💎', {
       fontFamily: 'Press Start 2P',
       fontSize: '6.5px',
       color: '#38e1ff',

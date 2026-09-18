@@ -105,7 +105,7 @@ export function getDailyCrystalStatus(wallet, dateSeed, deviceId) {
     crystalsCollected: 0,
   };
   const nimEarned = Number(entry.nimEarned) || 0;
-  const remainingNim = Math.max(0, Number((LUNA_CRYSTAL_DAILY_CAP_NIM - nimEarned).toFixed(2)));
+  const remainingNim = Math.max(0, Number((LUNA_CRYSTAL_DAILY_CAP_NIM - nimEarned).toFixed(5)));
   const status = {
     wallet: norm,
     dateSeed,
@@ -123,7 +123,7 @@ export function getDailyCrystalStatus(wallet, dateSeed, deviceId) {
     status.deviceDailyCapNim = PER_DEVICE_DAILY_CAP_NIM;
     status.deviceRemainingNim = Math.max(
       0,
-      Number((PER_DEVICE_DAILY_CAP_NIM - status.deviceNimEarned).toFixed(2))
+      Number((PER_DEVICE_DAILY_CAP_NIM - status.deviceNimEarned).toFixed(5))
     );
     status.isCapped = status.isCapped || status.deviceRemainingNim <= 0;
   }
@@ -153,7 +153,7 @@ export function recordCrystalHarvestClaim(wallet, dateSeed, crystalsCount, devic
   const current = store.dailyCrystals[key] || { nimEarned: 0, crystalsCollected: 0 };
 
   const currentNim = Number(current.nimEarned) || 0;
-  const roomNim = Math.max(0, Number((LUNA_CRYSTAL_DAILY_CAP_NIM - currentNim).toFixed(2)));
+  const roomNim = Math.max(0, Number((LUNA_CRYSTAL_DAILY_CAP_NIM - currentNim).toFixed(5)));
 
   // Anti-farm: also bound what a single device can earn per day across wallets.
   let deviceRoomNim = roomNim;
@@ -161,18 +161,18 @@ export function recordCrystalHarvestClaim(wallet, dateSeed, crystalsCount, devic
     const dev = readDailyDevice(store, devKey, dateSeed);
     deviceRoomNim = Math.max(
       0,
-      Number((PER_DEVICE_DAILY_CAP_NIM - Number(dev.nimEarned || 0)).toFixed(2))
+      Number((PER_DEVICE_DAILY_CAP_NIM - Number(dev.nimEarned || 0)).toFixed(5))
     );
   }
 
-  const potentialNim = Number((count * LUNA_CRYSTAL_REWARD_NIM).toFixed(2));
+  const potentialNim = Number((count * LUNA_CRYSTAL_REWARD_NIM).toFixed(5));
   const creditedNim = Math.min(potentialNim, roomNim, deviceRoomNim);
   const creditedCrystals = Math.round(creditedNim / LUNA_CRYSTAL_REWARD_NIM);
 
   store.dailyCrystals[key] = {
     wallet: norm,
     dateSeed,
-    nimEarned: Number((currentNim + creditedNim).toFixed(2)),
+    nimEarned: Number((currentNim + creditedNim).toFixed(5)),
     crystalsCollected: (current.crystalsCollected || 0) + creditedCrystals,
     updatedAt: Date.now(),
   };
@@ -180,9 +180,9 @@ export function recordCrystalHarvestClaim(wallet, dateSeed, crystalsCount, devic
   if (devKey && creditedNim > 0) {
     const dk = `${dateSeed}:${devKey}`;
     const device = store.dailyDevices[dk] || { nimEarned: 0, wallets: {} };
-    device.nimEarned = Number((Number(device.nimEarned || 0) + creditedNim).toFixed(2));
+    device.nimEarned = Number((Number(device.nimEarned || 0) + creditedNim).toFixed(5));
     if (!device.wallets) device.wallets = {};
-    device.wallets[norm] = Number((Number(device.wallets[norm] || 0) + creditedNim).toFixed(2));
+    device.wallets[norm] = Number((Number(device.wallets[norm] || 0) + creditedNim).toFixed(5));
     device.updatedAt = Date.now();
     store.dailyDevices[dk] = device;
   }

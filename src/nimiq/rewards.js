@@ -50,7 +50,7 @@ export async function claimFirstStoryBossReward({ chapterId, bossName, durationM
   });
 }
 
-/** Bank collected crystals from a run, crediting 0.1 NIM each up to 10 NIM/day */
+/** Bank collected crystals from a run, crediting 0.001 NIM each up to 0.1 NIM/day */
 export async function bankCrystalHarvest({ crystalsCollected, durationMs, kills }) {
   const addr = getAddress();
   const token = getToken();

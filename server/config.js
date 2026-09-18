@@ -42,12 +42,12 @@ export const LUNA_PER_NIM = 100000;
 export const JWT_TTL_SEC = 60 * 60 * 12;
 export const NONCE_TTL_MS = 5 * 60 * 1000;
 
-/** Daily spoils for the verified leaderboard top-3, in NIM: 1st=25, 2nd=15, 3rd=10 NIM */
-export const DAILY_PRIZES_NIM = [25, 15, 10];
+/** Daily spoils for the verified leaderboard top-3, in NIM: 1st=3, 2nd=2, 3rd=1 NIM */
+export const DAILY_PRIZES_NIM = [3, 2, 1];
 export const FIRST_BOSS_BOUNTY_NIM = 10;
-export const LUNA_CRYSTAL_REWARD_NIM = 0.1;
-export const LUNA_CRYSTAL_DAILY_CAP_NIM = 10.0;
+export const LUNA_CRYSTAL_REWARD_NIM = 0.001;
+export const LUNA_CRYSTAL_DAILY_CAP_NIM = 0.1;
 /** Anti-farm: max NIM a single Nimiq Pay device can earn per day across all wallets. */
-export const PER_DEVICE_DAILY_CAP_NIM = 10.0;
+export const PER_DEVICE_DAILY_CAP_NIM = 0.1;
 /** Anti-farm: how many First Boss bounties a single device may claim, permanently. */
 export const PER_DEVICE_FIRST_BOSS_LIMIT = 1;

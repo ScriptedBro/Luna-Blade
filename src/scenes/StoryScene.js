@@ -2237,8 +2237,8 @@ export default class StoryScene extends Phaser.Scene {
     this.hudContainer.add(this.txtMaterials);
     this.updateHudMaterials();
 
-    // Luna Crystal Harvest Counter (0.1 NIM per crystal)
-    this.txtHarvest = this.add.text(w - 12, 22, '💎 +0.0 NIM', {
+    // Luna Crystal Harvest Counter (0.001 NIM per crystal)
+    this.txtHarvest = this.add.text(w - 12, 22, '💎 +0.000 NIM', {
       fontFamily: 'Press Start 2P',
       fontSize: '5px',
       color: '#38e1ff'
@@ -2262,7 +2262,7 @@ export default class StoryScene extends Phaser.Scene {
 
   updateHudHarvest() {
     if (!this.txtHarvest) return;
-    const nim = ((this.sessionCrystalsCollected || 0) * 0.1).toFixed(1);
+    const nim = ((this.sessionCrystalsCollected || 0) * 0.001).toFixed(3);
     this.txtHarvest.setText(`💎 +${nim} NIM`);
   }
 
@@ -3023,7 +3023,7 @@ export default class StoryScene extends Phaser.Scene {
       rewardText = '🌟 FIRST BOSS SLAIN: +10 NIM TRANSMITTED TO WALLET!';
       rewardColor = '#ffd700';
     } else if (this.sessionCrystalsCollected > 0) {
-      const nim = (this.sessionCrystalsCollected * 0.1).toFixed(1);
+      const nim = (this.sessionCrystalsCollected * 0.001).toFixed(3);
       rewardText = `💎 LUNA HARVEST: +${nim} NIM QUEUED TO WALLET`;
       rewardColor = '#38e1ff';
     } else if (!getAddress()) {
@@ -3246,7 +3246,7 @@ export default class StoryScene extends Phaser.Scene {
     }).setOrigin(0.5).setScrollFactor(0).setDepth(501);
 
     const crystalBonus = this.sessionCrystalsCollected > 0
-      ? ` • 💎 +${(this.sessionCrystalsCollected * 0.1).toFixed(1)} NIM Saved`
+      ? ` • 💎 +${(this.sessionCrystalsCollected * 0.001).toFixed(3)} NIM Saved`
       : '';
     const subtitle = this.add.text(w / 2, h / 2 - 22, `Chapter ${this.chapterId}: ${this.chapterConfig.title}${crystalBonus}`, {
       fontFamily: 'Press Start 2P',

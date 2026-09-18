@@ -1005,7 +1005,7 @@ export default class SurvivalScene extends Phaser.Scene {
     }).setScrollFactor(0).setDepth(201);
 
     // Luna Crystal Harvest Counter
-    this.txtHarvest = this.add.text(12, 28, '💎 +0.0 NIM', {
+    this.txtHarvest = this.add.text(12, 28, '💎 +0.000 NIM', {
       fontFamily: 'Press Start 2P',
       fontSize: '5.5px',
       color: '#38e1ff'
@@ -1054,7 +1054,7 @@ export default class SurvivalScene extends Phaser.Scene {
 
   updateCrystalHarvestHud() {
     if (!this.txtHarvest) return;
-    const nim = ((this.sessionCrystalsCollected || 0) * 0.1).toFixed(1);
+    const nim = ((this.sessionCrystalsCollected || 0) * 0.001).toFixed(3);
     this.txtHarvest.setText(`💎 +${nim} NIM`);
   }
 
@@ -1308,7 +1308,7 @@ export default class SurvivalScene extends Phaser.Scene {
     }).setOrigin(0.5).setScrollFactor(0).setDepth(501);
 
     const crystalLine = this.sessionCrystalsCollected > 0
-      ? `💎 Luna Harvest: +${(this.sessionCrystalsCollected * 0.1).toFixed(1)} NIM Banked (${this.sessionCrystalsCollected} Crystals)`
+      ? `💎 Luna Harvest: +${(this.sessionCrystalsCollected * 0.001).toFixed(3)} NIM Banked (${this.sessionCrystalsCollected} Crystals)`
       : (getAddress() ? '💎 Luna Harvest: 0 Crystals' : '⚡ Connect Wallet to Bank NIM Harvests');
 
     const details = this.add.text(w / 2, h / 2 - 14, [

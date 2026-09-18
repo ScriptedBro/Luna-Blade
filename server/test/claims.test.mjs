@@ -52,10 +52,10 @@ test("Crystal harvest: wallet cap and cross-wallet device cap", () => {
   const walletA = freshWallet();
   const walletB = freshWallet();
 
-  // Wallet A harvests 1000 crystals -> credited only up to the 10 NIM wallet cap
+  // Wallet A harvests 1000 crystals -> credited only up to the 0.1 NIM wallet cap
   const a1 = recordCrystalHarvestClaim(walletA, dateSeed, 1000, deviceId);
   assert.equal(a1.ok, true);
-  assert.equal(a1.creditedNim, 10);
+  assert.equal(a1.creditedNim, 0.1);
   assert.equal(a1.status.isCapped, true);
 
   // Wallet B on the same device gets nothing more (device cap already consumed)
@@ -66,5 +66,5 @@ test("Crystal harvest: wallet cap and cross-wallet device cap", () => {
 
   // Same wallet B on a fresh device can still earn normally
   const fresh = recordCrystalHarvestClaim(walletB, dateSeed, 25, freshId("dev"));
-  assert.equal(fresh.creditedNim, 2.5);
+  assert.equal(fresh.creditedNim, 0.025);
 });

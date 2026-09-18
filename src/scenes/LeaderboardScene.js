@@ -120,8 +120,9 @@ export default class LeaderboardScene extends Phaser.Scene {
     const board = isDaily ? (this.daily || { entries: [], prizeNim: [] }) : (this.alltime || { entries: [] });
 
     if (isDaily && this.cfg) {
-      const prizes = Array.isArray(this.cfg.dailyPrizeNim) ? this.cfg.dailyPrizeNim : [25, 15, 10];
-      this.addToLayer(w / 2, 48, `🏆 DAILY POOL: 50 NIM • 1st: ${prizes[0]} | 2nd: ${prizes[1]} | 3rd: ${prizes[2]} NIM`, '4.8px', '#ffd166', 2);
+      const prizes = Array.isArray(this.cfg.dailyPrizeNim) ? this.cfg.dailyPrizeNim : [3, 2, 1];
+      const pool = prizes.reduce((a, b) => a + b, 0);
+      this.addToLayer(w / 2, 48, `🏆 DAILY POOL: ${pool} NIM • 1st: ${prizes[0]} | 2nd: ${prizes[1]} | 3rd: ${prizes[2]} NIM`, '4.8px', '#ffd166', 2);
     }
 
     const headerY = isDaily ? 62 : 56;
@@ -243,7 +244,9 @@ export default class LeaderboardScene extends Phaser.Scene {
     // If connected, show player's personal rewards status pill
     if (myWallet && this.rewardsStatus) {
       const bossText = this.rewardsStatus.firstBossClaimed ? 'CLAIMED (+10 NIM)' : 'UNCLAIMED (10 NIM)';
-      const harvestText = `${this.rewardsStatus.crystalStatus?.nimEarned || 0} / 10 NIM`;
+      const cap = this.rewardsStatus.crystalStatus?.dailyCapNim ?? 0.1;
+      const earned = Number(this.rewardsStatus.crystalStatus?.nimEarned || 0).toFixed(3);
+      const harvestText = `${earned} / ${cap} NIM`;
       const rewardsPill = `🏆 1st Boss: ${bossText}  |  💎 Harvest: ${harvestText}`;
       this.addToLayer(w / 2, isPortrait ? h - 60 : 218, rewardsPill, '4.2px', '#ffd700', 1);
     }
@@ -322,7 +325,7 @@ export default class LeaderboardScene extends Phaser.Scene {
     this.add.text(w / 2, 172, 'DAILY SPOILS SETTLEMENT', {
       fontFamily: 'Press Start 2P', fontSize: '5px', color: '#ffd166'
     }).setOrigin(0.5).setDepth(301);
-    const detail = 'Top-3 verified daily runs are paid 500/300/200 NIM on-chain at UTC midnight\n'
+    const detail = 'Top-3 verified daily runs are paid 3/2/1 NIM on-chain at UTC midnight\n'
       + 'by the Luna Blade payout worker. No manual claims — the worker settles\n'
       + 'winners automatically once a funded signer is configured.';
     this.add.text(w / 2, 196, detail, {

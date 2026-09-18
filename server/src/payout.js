@@ -318,7 +318,7 @@ export async function queueFirstBossPayout(wallet, bossName = "Boss") {
   return { queued: true, id, row };
 }
 
-/** Queue a Daily Luna Crystal Harvest payout (max 10 NIM/day). */
+/** Queue a Daily Luna Crystal Harvest payout (max 0.1 NIM/day). */
 export async function queueCrystalHarvestPayout(wallet, dateSeed, amountNim) {
   const norm = String(wallet || "").trim().replace(/\s+/g, "").toUpperCase();
   const nim = Number(amountNim) || 0;
